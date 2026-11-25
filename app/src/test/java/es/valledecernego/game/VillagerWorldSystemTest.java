@@ -86,6 +86,15 @@ public class VillagerWorldSystemTest {
         assertEquals(0.18f, idle.walkPhase(), 0.0001f);
     }
 
+    @Test public void idleResidentsLeaveHomeToStrollAroundTheVillage() {
+        VillagerSystem jobs = new VillagerSystem();
+        VillagerWorldSystem world = new VillagerWorldSystem();
+        world.update(31_000L, jobs.snapshot());
+        VillagerWorldSystem.Position[] residents = world.snapshot();
+        assertTrue(Math.abs(residents[0].x() - (-0.9f)) > 0.1f);
+        assertTrue(Math.abs(residents[1].z() - (-1.8f)) > 0.1f);
+    }
+
     @Test public void nonPositiveDeltaDoesNotMoveWorkers() {
         VillagerSystem jobs = new VillagerSystem();
         VillagerWorldSystem world = new VillagerWorldSystem();
