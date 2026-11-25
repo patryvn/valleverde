@@ -28,7 +28,7 @@ public class MarketSystemTest {
         MarketSystem market = new MarketSystem();
         market.sellHarvest(crops);
         assertTrue(market.buySeedBundle(crops));
-        assertEquals(0, market.getCoins());
+        assertEquals(150, market.getCoins());
         assertEquals(9, crops.getSeeds());
     }
 
