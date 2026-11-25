@@ -38,3 +38,11 @@ La APK `release-test` se firma con una clave de pruebas del proyecto: sirve para
 ## Alcance del juego
 
 La existencia de sistemas parciales en el código no equivale a un juego completo. Las funciones de vehículos, cuevas, prevención de incendios, supervivencia y simulación avanzada del pueblo siguen requiriendo integración y pruebas específicas. No se considera terminado hasta que las funciones principales estén conectadas, las pruebas pasen, haya una APK release instalable publicada y se documente la validación en dispositivo físico.
+
+## Incidencias de CI y criterio de aceptación visual
+
+La ejecución 45673544160 consiguió arrancar el emulador con TCG, instalar la APK y abrir la actividad, pero la captura guardada seguía mostrando la pantalla de arranque de Android. El registro contenía `DeadSystemException` de procesos del sistema y el gesto de movimiento terminó fallando porque faltaba el identificador de pantalla en el comando `input swipe`. Esa captura no sirve para validar el personaje.
+
+La ejecución 45679722682 perdió la variable `ANDROID_I_WANT_MY_TCG`; el emulador se lanzó con `-accel off` y no llegó a aparecer como dispositivo ADB. Tampoco es una prueba visual válida.
+
+El flujo actualizado vuelve a habilitar TCG, espera a que la actividad de juego esté en primer plano, despierta la pantalla y especifica el display ID en el gesto. Guarda captura inicial, captura tras movimiento, jerarquía de ventana y logcat completo. Una ejecución verde confirma que la actividad y el HUD responden; aun así, la imagen debe revisarse visualmente antes de declarar resuelto el rectángulo azul. La emulación TCG en este runner es muy lenta y no sustituye una prueba física.
