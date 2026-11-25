@@ -26,19 +26,19 @@ public final class PlayerModelTransform {
         float worldX = playerX + part.x * cosine + localZ * sine;
         float worldZ = playerZ - part.x * sine + localZ * cosine;
         return new Pose(worldX, playerY + localY, worldZ,
-            part.sx, part.sy, part.sz, facing, localPitch);
+            part.sx, part.sy, part.sz, facing, localPitch, part.roll);
     }
 
     public static final class Pose {
         public final float x, y, z;
         public final float sx, sy, sz;
-        public final float yaw, pitch;
+        public final float yaw, pitch, roll;
 
         private Pose(float x, float y, float z, float sx, float sy, float sz,
-                     float yaw, float pitch) {
+                     float yaw, float pitch, float roll) {
             this.x = x; this.y = y; this.z = z;
             this.sx = sx; this.sy = sy; this.sz = sz;
-            this.yaw = yaw; this.pitch = pitch;
+            this.yaw = yaw; this.pitch = pitch; this.roll = roll;
         }
     }
 }
