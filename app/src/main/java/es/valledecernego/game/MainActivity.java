@@ -343,6 +343,8 @@ public class MainActivity extends Activity {
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
         volatile float moveX,moveY,px=0,pz=5,yaw=0,pitch=0;
         float vy=0,py=0,lastX,lastY;
+        float playerFacing=0f,playerWalkPhase=0f;
+        boolean playerMoving=false;
         boolean jumping=false;
         long lastFrameNanos=0;
         final CropSystem crops=new CropSystem();
@@ -414,8 +416,9 @@ public class MainActivity extends Activity {
 
         public void onDrawFrame(GL10 gl){
             long now=System.nanoTime();
+            float deltaSeconds=lastFrameNanos==0?0f:Math.max(0f,Math.min(.05f,(now-lastFrameNanos)/1000000000f));
+            long delta=(long)(deltaSeconds*1000f);
             if(lastFrameNanos!=0){
-                long delta=Math.max(0,Math.min(1000,(now-lastFrameNanos)/1000000));
                 seasons.update(delta);
                 crops.update(delta, seasons.getSeason(), seasons.getWeather());
                 animals.update(delta, seasons.getSeason(), seasons.getWeather());
@@ -428,8 +431,16 @@ public class MainActivity extends Activity {
             GLES20.glClearColor(seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),1f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
             float speed=.075f;
-            px+=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX)*speed;
-            pz+=(float)(Math.cos(yaw)*(-moveY)-Math.sin(yaw)*moveX)*speed;
+            float moveLength=(float)Math.hypot(moveX,moveY);
+            playerMoving=moveLength>.08f;
+            float moveWorldX=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX);
+            float moveWorldZ=(float)(Math.cos(yaw)*(-moveY)-Math.sin(yaw)*moveX);
+            if(playerMoving){
+                px+=moveWorldX*speed;
+                pz+=moveWorldZ*speed;
+                playerFacing=(float)Math.atan2(moveWorldX,moveWorldZ);
+                playerWalkPhase+=deltaSeconds*9.5f;
+            }
             if(jumping){py+=vy;vy-=.008f;if(py<=0){py=0;jumping=false;}}
             float angle=.28f+pitch;
             float horizontal=6f*(float)Math.cos(angle);
@@ -518,7 +529,65 @@ public class MainActivity extends Activity {
             drawVillagers();
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
             draw(7,1.75f,-7,4,.7f,3.4f,.35f,.18f,.14f);
-            draw(px,.9f+py,pz,.55f,1.5f,.45f,.18f,.28f,.72f);
+            drawPlayer();
+        }
+
+        // Personaje principal low-poly: piezas separadas para evitar el bloque provisional.
+        void drawPlayer(){
+            float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            float leftLeg=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
+            float rightLeg=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,false);
+            float leftArm=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
+            float rightArm=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
+
+            // Botas y pantalón
+            drawPlayerLimb(-.115f,.58f,0f,.16f,.48f,.19f,.16f,.12f,.08f,leftLeg);
+            drawPlayerLimb(.115f,.58f,0f,.16f,.48f,.19f,.16f,.12f,.08f,rightLeg);
+            drawPlayerPart(-.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f);
+            drawPlayerPart(.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f);
+
+            // Chaqueta verde, cuello y cabeza
+            drawPlayerPart(0f,.98f+ bob,0f,.48f,.62f,.31f,.20f,.39f,.23f);
+            drawPlayerPart(0f,1.31f+bob,0f,.19f,.16f,.20f,.75f,.55f,.39f);
+            drawPlayerPart(0f,1.55f+bob,0f,.32f,.34f,.30f,.78f,.61f,.45f);
+            // Pelo y una pequeña visera para dar silueta al personaje
+            drawPlayerPart(0f,1.70f+bob,-.015f,.34f,.12f,.32f,.16f,.10f,.07f);
+            drawPlayerPart(0f,1.42f+bob,.145f,.28f,.055f,.08f,.18f,.12f,.08f);
+
+            // Brazos articulados y manos
+            drawPlayerLimb(-.30f,1.20f,0f,.14f,.43f,.16f,.20f,.38f,.22f,leftArm);
+            drawPlayerLimb(.30f,1.20f,0f,.14f,.43f,.16f,.20f,.38f,.22f,rightArm);
+            drawPlayerPart(-.30f,.94f,.025f,.13f,.12f,.13f,.75f,.55f,.39f);
+            drawPlayerPart(.30f,.94f,.025f,.13f,.12f,.13f,.75f,.55f,.39f);
+
+            // Mochila pequeña: visible desde la cámara trasera
+            drawPlayerPart(0f,1.02f,-.19f,.30f,.38f,.13f,.36f,.22f,.13f);
+        }
+
+        void drawPlayerPart(float localX,float y,float localZ,float sx,float sy,float sz,
+                            float r,float g,float b){
+            float c=(float)Math.cos(playerFacing);
+            float s=(float)Math.sin(playerFacing);
+            float x=px+localX*c+localZ*s;
+            float z=pz-localX*s+localZ*c;
+            drawFacingWithLocalX(x,y+py,z,sx,sy,sz,r,g,b,playerFacing,0f);
+        }
+
+        void drawPlayerLimb(float pivotX,float pivotY,float pivotZ,float sx,float sy,float sz,
+                            float r,float g,float b,float angle){
+            float halfLength=sy*.5f;
+            float centerY=pivotY+VillagerAnimationSystem.limbCenterYOffset(halfLength,angle);
+            float centerZ=pivotZ+VillagerAnimationSystem.limbCenterZOffset(halfLength,angle);
+            drawPlayerPartRotated(pivotX,centerY,centerZ,sx,sy,sz,r,g,b,angle);
+        }
+
+        void drawPlayerPartRotated(float localX,float y,float localZ,float sx,float sy,float sz,
+                                   float r,float g,float b,float rotationX){
+            float c=(float)Math.cos(playerFacing);
+            float s=(float)Math.sin(playerFacing);
+            float x=px+localX*c+localZ*s;
+            float z=pz-localX*s+localZ*c;
+            drawFacingWithLocalX(x,y+py,z,sx,sy,sz,r,g,b,playerFacing,rotationX);
         }
 
         void drawVillagers(){
