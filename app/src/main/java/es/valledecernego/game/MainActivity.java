@@ -274,10 +274,11 @@ public class MainActivity extends Activity {
 
     class Hud extends View {
         Paint p=new Paint(3);
-        // Joystick ampliado para pantallas táctiles: área cómoda y recorrido visible.
-        static final float JOY_CENTER_X=132f, JOY_BOTTOM=145f;
-        static final float JOY_BASE_RADIUS=88f, JOY_KNOB_RADIUS=36f;
-        static final float JOY_TOUCH_RADIUS=118f, JOY_RANGE=58f;
+        // Controles dimensionados respecto a la altura real de la pantalla en landscape.
+        // Evita que el HUD resulte diminuto en móviles de alta densidad o pantallas grandes.
+        static final float JOY_CENTER_X_FACTOR=.18f, JOY_BOTTOM_FACTOR=.19f;
+        static final float JOY_BASE_RADIUS_FACTOR=.16f, JOY_KNOB_RADIUS_FACTOR=.055f;
+        static final float JOY_TOUCH_RADIUS_FACTOR=.19f, JOY_RANGE_FACTOR=.095f;
         float jx=0,jy=0,baseX=0,baseY=0;
         boolean joy=false;
         int touchMode=0; // 1 joystick, 2 camera, 3 action button, 4 jump button
@@ -289,20 +290,25 @@ public class MainActivity extends Activity {
         protected void onDraw(Canvas c){
             super.onDraw(c);
             float w=getWidth(),h=getHeight();
-            float joyX=JOY_CENTER_X, joyY=h-JOY_BOTTOM;
-            p.setColor(0x665c5043); c.drawCircle(joyX,joyY,JOY_BASE_RADIUS,p);
-            p.setColor(0x99ffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(4);c.drawCircle(joyX,joyY,JOY_BASE_RADIUS,p);p.setStyle(Paint.Style.FILL);
-            p.setColor(0x335c5043);c.drawCircle(joyX,joyY,JOY_BASE_RADIUS-12,p);
-            p.setColor(0xffd7dfd0);c.drawCircle(joyX+jx*JOY_RANGE,joyY+jy*JOY_RANGE,JOY_KNOB_RADIUS,p);
-            p.setColor(0x99ffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3);c.drawCircle(joyX+jx*JOY_RANGE,joyY+jy*JOY_RANGE,JOY_KNOB_RADIUS,p);p.setStyle(Paint.Style.FILL);
-            button(c,w-100,h-110,62,"HACER",0xff6d8c55);
-            button(c,w-230,h-90,52,"SALTAR",0xff6b7e9b);
+            float unit=Math.min(h,w*.55f);
+            float joyX=unit*JOY_CENTER_X_FACTOR, joyY=h-unit*JOY_BOTTOM_FACTOR;
+            float joyBase=unit*JOY_BASE_RADIUS_FACTOR, joyKnob=unit*JOY_KNOB_RADIUS_FACTOR;
+            float joyRange=unit*JOY_RANGE_FACTOR;
+            p.setColor(0x775c5043); c.drawCircle(joyX,joyY,joyBase,p);
+            p.setColor(0xccffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Math.max(4,unit*.006f));c.drawCircle(joyX,joyY,joyBase,p);p.setStyle(Paint.Style.FILL);
+            p.setColor(0x445c5043);c.drawCircle(joyX,joyY,joyBase*.82f,p);
+            p.setColor(0xffe4eadf);c.drawCircle(joyX+jx*joyRange,joyY+jy*joyRange,joyKnob,p);
+            p.setColor(0xddffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Math.max(3,unit*.004f));c.drawCircle(joyX+jx*joyRange,joyY+jy*joyRange,joyKnob,p);p.setStyle(Paint.Style.FILL);
+            float actionX=w-unit*.13f, actionY=h-unit*.16f, actionR=unit*.09f;
+            float jumpX=w-unit*.31f, jumpY=h-unit*.13f, jumpR=unit*.078f;
+            button(c,actionX,actionY,actionR,"HACER",0xff6d8c55);
+            button(c,jumpX,jumpY,jumpR,"SALTAR",0xff6b7e9b);
             p.setColor(Color.WHITE);p.setTextSize(16);c.drawText("Joystick para moverte • Arrastra para mirar",w/2-170,h-25,p);
         }
 
         void button(Canvas c,float x,float y,float r,String s,int color){
             p.setColor(color);c.drawCircle(x,y,r,p);
-            p.setColor(Color.WHITE);p.setTextAlign(Paint.Align.CENTER);p.setTextSize(s.length()>5?16:18);
+            p.setColor(Color.WHITE);p.setTextAlign(Paint.Align.CENTER);p.setTextSize(Math.max(16,r*.29f));
             c.drawText(s,x,y+4,p);p.setTextAlign(Paint.Align.LEFT);
         }
 
@@ -314,13 +320,15 @@ public class MainActivity extends Activity {
         public boolean onTouchEvent(android.view.MotionEvent e){
             float x=e.getX(),y=e.getY(),w=getWidth(),h=getHeight();
             if(e.getAction()==MotionEvent.ACTION_DOWN){
-                if(insideCircle(x,y,JOY_CENTER_X,h-JOY_BOTTOM,JOY_TOUCH_RADIUS)){
-                    joy=true;touchMode=1;baseX=JOY_CENTER_X;baseY=h-JOY_BOTTOM;updateJoy(x,y);return true;
+                float unit=Math.min(h,w*.55f);
+                float joyX=unit*JOY_CENTER_X_FACTOR, joyY=h-unit*JOY_BOTTOM_FACTOR;
+                if(insideCircle(x,y,joyX,joyY,unit*JOY_TOUCH_RADIUS_FACTOR)){
+                    joy=true;touchMode=1;baseX=joyX;baseY=joyY;updateJoy(x,y);return true;
                 }
-                if(insideCircle(x,y,w-100,h-110,70)){
+                if(insideCircle(x,y,w-unit*.13f,h-unit*.16f,unit*.105f)){
                     touchMode=3;if(action!=null)action.run();return true;
                 }
-                if(insideCircle(x,y,w-230,h-90,60)){
+                if(insideCircle(x,y,w-unit*.31f,h-unit*.13f,unit*.092f)){
                     touchMode=4;if(jump!=null)jump.run();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);return true;
@@ -338,8 +346,9 @@ public class MainActivity extends Activity {
         }
 
         void updateJoy(float x,float y){
-            jx=Math.max(-1,Math.min(1,(x-baseX)/JOY_RANGE));
-            jy=Math.max(-1,Math.min(1,(y-baseY)/JOY_RANGE));
+            float range=Math.min(getHeight(),getWidth()*.55f)*JOY_RANGE_FACTOR;
+            jx=Math.max(-1,Math.min(1,(x-baseX)/range));
+            jy=Math.max(-1,Math.min(1,(y-baseY)/range));
             renderer.setMove(jx,jy);invalidate();
         }
     }
