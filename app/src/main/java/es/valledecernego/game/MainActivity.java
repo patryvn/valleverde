@@ -489,9 +489,9 @@ public class MainActivity extends Activity {
                 vb.put(faceNormals[face][0]).put(faceNormals[face][1]).put(faceNormals[face][2]);
             }
             vb.position(0);
-            sphereBuffer=createSphereBuffer(12,20);
+            sphereBuffer=createSphereBuffer(24,32);
             sphereVertexCount=sphereBuffer.limit()/6;
-            capsuleBuffer=createCapsuleBuffer(6,16);
+            capsuleBuffer=createCapsuleBuffer(10,24);
             capsuleVertexCount=capsuleBuffer.limit()/6;
             android.util.Log.i("ValleCernego","Render 3D listo; personaje procedural con "+PlayerModelSpec.size()+" piezas.");
         }
@@ -825,47 +825,73 @@ public class MainActivity extends Activity {
         }
 
         // Árbol de frondosa atlántica: tronco, ramas, copa en varios volúmenes y matices estacionales.
+        // Roble/castaño atlántico: raíces, tronco irregular, ramas y copas superpuestas.
+        // La variación es determinista para que cada árbol conserve su aspecto entre fotogramas.
         void drawTree(float x,float z){
             float leafR=seasons.foliageRed(),leafG=seasons.foliageGreen(),leafB=seasons.foliageBlue();
-            drawMesh(capsuleBuffer,capsuleVertexCount,x,.92f,z,.19f,.92f,.19f,.30f,.19f,.10f,1f,0f,0f);
-            drawMesh(capsuleBuffer,capsuleVertexCount,x-.34f,1.20f,z,.10f,.62f,.10f,.31f,.20f,.11f,1f,0f,0f,-.52f);
-            drawMesh(capsuleBuffer,capsuleVertexCount,x+.32f,1.28f,z+.04f,.10f,.68f,.10f,.31f,.20f,.11f,1f,0f,0f,.48f);
-            drawMesh(sphereBuffer,sphereVertexCount,x,2.12f,z,.82f,.92f,.78f,leafR,leafG,leafB,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.48f,1.92f,z+.12f,.57f,.67f,.58f,Math.min(1f,leafR*1.08f),Math.min(1f,leafG*1.08f),Math.min(1f,leafB*1.08f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+.47f,2.00f,z-.10f,.60f,.72f,.60f,Math.max(0f,leafR*.88f),Math.max(0f,leafG*.90f),Math.max(0f,leafB*.88f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x,2.60f,z,.48f,.54f,.48f,Math.min(1f,leafR*1.04f),Math.min(1f,leafG*1.05f),Math.min(1f,leafB*1.04f),1f,0f,0f);
+            float seed=(float)(Math.abs(Math.sin(x*12.73f+z*4.91f)));
+            float crown=1f+(seed-.5f)*.18f;
+            drawMesh(capsuleBuffer,capsuleVertexCount,x,.98f,z,.20f,.98f,.20f,.27f,.16f,.085f,1f,0f,0f);
+            // Raíces visibles sobre el terreno.
+            for(int i=0;i<4;i++){
+                float a=(float)(i*Math.PI*.5+seed*.7f);
+                drawMesh(capsuleBuffer,capsuleVertexCount,x+(float)Math.cos(a)*.22f,.13f,z+(float)Math.sin(a)*.22f,
+                    .075f,.42f,.075f,.29f,.18f,.095f,1f,0f,0f,(float)Math.cos(a)*.72f);
+            }
+            // Ramas principales que salen del tronco.
+            drawMesh(capsuleBuffer,capsuleVertexCount,x-.30f,1.38f,z,.105f,.78f,.105f,.30f,.18f,.095f,1f,0f,0f,-.68f);
+            drawMesh(capsuleBuffer,capsuleVertexCount,x+.30f,1.43f,z+.03f,.105f,.82f,.105f,.30f,.18f,.095f,1f,0f,0f,.66f);
+            drawMesh(capsuleBuffer,capsuleVertexCount,x+.02f,1.55f,z-.22f,.085f,.68f,.085f,.31f,.19f,.10f,1f,0f,0f,.32f);
+            // Copa formada por masas de follaje de distintos tamaños y tonos.
+            drawMesh(sphereBuffer,sphereVertexCount,x,2.18f,z,.76f*crown,.88f*crown,.73f*crown,leafR*.91f,leafG*.91f,leafB*.91f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.48f,2.02f,z+.12f,.54f,.62f,.55f,Math.min(1f,leafR*1.08f),Math.min(1f,leafG*1.08f),Math.min(1f,leafB*1.08f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.48f,2.06f,z-.12f,.57f,.68f,.58f,Math.max(0f,leafR*.86f),Math.max(0f,leafG*.90f),Math.max(0f,leafB*.86f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.16f,2.55f,z-.24f,.48f,.55f,.48f,Math.min(1f,leafR*1.04f),Math.min(1f,leafG*1.05f),Math.min(1f,leafB*1.04f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.30f,2.48f,z+.27f,.43f,.49f,.44f,leafR*.96f,leafG*.98f,leafB*.96f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.55f,2.32f,z-.25f,.35f,.42f,.36f,leafR*.94f,leafG*.97f,leafB*.94f,1f,0f,0f);
         }
 
-        // Vaca/cabrito construido con volúmenes redondeados, cuatro patas, hocico, orejas, cuernos y manchas.
+        // Ganado de raza cárnica: silueta más natural, cuello, articulaciones, pezuñas y rasgos faciales.
         void drawCow(float x,float z,float r,float g,float b,float scale,boolean calf){
-            float bodyY=.68f*scale, headX=.63f*scale, headY=1.02f*scale;
-            drawMesh(sphereBuffer,sphereVertexCount,x,bodyY,z, .72f*scale,.48f*scale,.48f*scale,r,g,b,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.05f*scale,.76f*scale,z-.02f*scale,.62f*scale,.38f*scale,.45f*scale,
+            float bodyY=.69f*scale, headX=.64f*scale, headY=1.04f*scale;
+            float legWidth=(calf?.078f:.095f)*scale;
+            drawMesh(sphereBuffer,sphereVertexCount,x,bodyY,z,.76f*scale,.46f*scale,.47f*scale,r,g,b,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.08f*scale,.77f*scale,z,.61f*scale,.36f*scale,.45f*scale,
                 Math.min(1f,r*1.04f),Math.min(1f,g*1.04f),Math.min(1f,b*1.04f),1f,0f,0f);
-            // Manchas oscuras visibles sobre el lomo.
-            float patch=calf?.16f:.22f;
-            drawMesh(sphereBuffer,sphereVertexCount,x-.22f*scale,bodyY+.16f*scale,z-.31f*scale,patch,.18f*scale,.045f*scale,.20f,.18f,.15f,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+.24f*scale,bodyY+.12f*scale,z+.30f*scale,patch,.15f*scale,.045f*scale,.22f,.20f,.17f,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+.43f*scale,.83f*scale,z,.25f*scale,.40f*scale,.27f*scale,r,g,b,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+headX,headY,z-.02f*scale,.29f*scale,.31f*scale,.28f*scale,r,g,b,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.12f)*scale,.88f*scale,z-.03f*scale,.22f*scale,.14f*scale,.22f*scale,.72f,.43f,.39f,1f,0f,0f);
-            // Ojos y orejas laterales.
+            // Pecho y cuello unidos al cuerpo para evitar una silueta de bloques.
+            drawMesh(sphereBuffer,sphereVertexCount,x+.43f*scale,.82f*scale,z,.34f*scale,.43f*scale,.34f*scale,r*.96f,g*.96f,b*.96f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+headX*.88f,1.00f*scale,z,.24f*scale,.34f*scale,.24f*scale,r,g,b,1f,0f,0f);
+            // Manchas irregulares distribuidas a ambos lados del lomo.
+            drawMesh(sphereBuffer,sphereVertexCount,x-.24f*scale,bodyY+.20f*scale,z-.39f*scale,.23f*scale,.17f*scale,.055f*scale,.17f,.15f,.13f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.20f*scale,bodyY+.16f*scale,z+.39f*scale,.25f*scale,.15f*scale,.055f*scale,.20f,.17f,.15f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.55f*scale,.73f*scale,z+.12f*scale,.15f*scale,.24f*scale,.19f*scale,.20f,.18f,.16f,1f,0f,0f);
+            // Cabeza, frente, hocico rosado y mandíbula.
+            drawMesh(sphereBuffer,sphereVertexCount,x+headX,headY,z,.30f*scale,.31f*scale,.29f*scale,r,g,b,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.12f)*scale,.87f*scale,z-.015f*scale,.235f*scale,.145f*scale,.235f*scale,.72f,.43f,.39f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.07f)*scale,.78f*scale,z-.015f*scale,.15f*scale,.09f*scale,.16f*scale,.63f,.36f,.33f,1f,0f,0f);
             for(int side=-1;side<=1;side+=2){
-                drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.02f)*scale,headY+.08f*scale,z+side*.22f*scale,.055f*scale,.05f*scale,.035f*scale,.10f,.075f,.055f,1f,0f,0f);
-                drawMesh(sphereBuffer,sphereVertexCount,x+(headX-.04f)*scale,headY+.14f*scale,z+side*.30f*scale,.17f*scale,.075f*scale,.11f*scale,.66f,.48f,.42f,1f,0f,0f);
-                if(!calf) drawMesh(capsuleBuffer,capsuleVertexCount,x+(headX-.04f)*scale,headY+.30f*scale,z+side*.12f*scale,.045f*scale,.16f*scale,.045f*scale,.88f,.82f,.62f,1f,0f,0f);
-            }
-            // Patas articuladas; el casco queda separado del suelo.
-            for(int side=-1;side<=1;side+=2){
-                for(int front=-1;front<=1;front+=2){
-                    float legX=x+(front*.43f)*scale,legZ=z+side*.27f*scale;
-                    drawMesh(capsuleBuffer,capsuleVertexCount,legX,.31f*scale,legZ,.095f*scale,.34f*scale,.095f*scale,r*.92f,g*.92f,b*.92f,1f,0f,0f);
-                    drawMesh(sphereBuffer,sphereVertexCount,legX,.075f*scale,legZ+.015f*scale,.105f*scale,.075f*scale,.12f*scale,.18f,.16f,.14f,1f,0f,0f);
+                // Ojo con blanco, iris y pupila.
+                drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.06f)*scale,headY+.09f*scale,z+side*.255f*scale,.075f*scale,.065f*scale,.035f*scale,.94f,.91f,.82f,1f,0f,0f);
+                drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.085f)*scale,headY+.09f*scale,z+side*.284f*scale,.031f*scale,.042f*scale,.018f*scale,.12f,.085f,.055f,1f,0f,0f);
+                drawMesh(sphereBuffer,sphereVertexCount,x+(headX-.08f)*scale,headY+.13f*scale,z+side*.32f*scale,.19f*scale,.075f*scale,.12f*scale,.66f,.47f,.40f,1f,0f,0f);
+                // Orificios nasales.
+                drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.27f)*scale,.89f*scale,z+side*.105f*scale,.025f*scale,.022f*scale,.018f*scale,.28f,.13f,.12f,1f,0f,0f);
+                if(!calf){
+                    drawMesh(capsuleBuffer,capsuleVertexCount,x+(headX-.04f)*scale,headY+.34f*scale,z+side*.13f*scale,.055f*scale,.20f*scale,.055f*scale,.88f,.82f,.62f,1f,0f,0f,side*.16f);
                 }
             }
-            // Cola fina con mechón.
-            drawMesh(capsuleBuffer,capsuleVertexCount,x-.70f*scale,.62f*scale,z,.045f*scale,.28f*scale,.045f*scale,.34f,.24f,.16f,1f,0f,0f,-.55f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.82f*scale,.45f*scale,z,.075f*scale,.10f*scale,.075f,.20f,.16f,.12f,1f,0f,0f);
+            // Cuatro patas con corvejones y pezuñas oscuras.
+            for(int side=-1;side<=1;side+=2){
+                for(int front=-1;front<=1;front+=2){
+                    float legX=x+(front*.46f)*scale,legZ=z+side*.27f*scale;
+                    drawMesh(capsuleBuffer,capsuleVertexCount,legX,.32f*scale,legZ,legWidth,.36f*scale,legWidth,r*.94f,g*.94f,b*.94f,1f,0f,0f);
+                    drawMesh(sphereBuffer,sphereVertexCount,legX,.105f*scale,legZ,.10f*scale,.10f*scale,.105f*scale,r*.88f,g*.88f,b*.88f,1f,0f,0f);
+                    drawMesh(sphereBuffer,sphereVertexCount,legX,.045f*scale,legZ+.018f*scale,.115f*scale,.065f*scale,.13f*scale,.16f,.145f,.13f,1f,0f,0f);
+                }
+            }
+            // Cola con mechón.
+            drawMesh(capsuleBuffer,capsuleVertexCount,x-.72f*scale,.62f*scale,z,.045f*scale,.31f*scale,.045f*scale,.32f,.22f,.14f,1f,0f,0f,-.58f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.84f*scale,.43f*scale,z,.075f*scale,.11f*scale,.075f,.18f,.13f,.09f,1f,0f,0f);
         }
 
         void drawVillagers(){
