@@ -339,8 +339,11 @@ public class MainActivity extends Activity {
 
     static class GameRenderer implements GLSurfaceView.Renderer {
         FloatBuffer vb;
-        int program,pos,color,mvp;
+        int program,pos,normalAttr,color,mvp,normalMatrixUniform;
+        FloatBuffer sphereBuffer;
+        int sphereVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
+        float[] normalTransform=new float[16],normalMatrixM=new float[16];
         volatile float moveX,moveY,px=0,pz=5,yaw=0,pitch=0;
         float vy=0,py=0,lastX,lastY;
         float playerFacing=0f,playerWalkPhase=0f;
@@ -374,14 +377,16 @@ public class MainActivity extends Activity {
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-            String vs="attribute vec3 aPos; uniform mat4 uMVP; void main(){gl_Position=uMVP*vec4(aPos,1.0);}";
-            String fs="precision mediump float; uniform vec4 uColor; void main(){gl_FragColor=uColor;}";
+            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.52+0.48*max(dot(n,lightDir),0.0); gl_Position=uMVP*vec4(aPos,1.0);} ";
+            String fs="precision mediump float; uniform vec4 uColor; varying float vLight; void main(){gl_FragColor=vec4(uColor.rgb*vLight,uColor.a);}";
             int v=shader(GLES20.GL_VERTEX_SHADER,vs),f=shader(GLES20.GL_FRAGMENT_SHADER,fs);
             program=GLES20.glCreateProgram();
             GLES20.glAttachShader(program,v);GLES20.glAttachShader(program,f);GLES20.glLinkProgram(program);
             pos=GLES20.glGetAttribLocation(program,"aPos");
+            normalAttr=GLES20.glGetAttribLocation(program,"aNormal");
             color=GLES20.glGetUniformLocation(program,"uColor");
             mvp=GLES20.glGetUniformLocation(program,"uMVP");
+            normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
             float[] cube={
                 -.5f,-.5f,-.5f, .5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,.5f,-.5f,
                 -.5f,-.5f,.5f, .5f,.5f,.5f, .5f,-.5f,.5f, -.5f,-.5f,.5f, -.5f,.5f,.5f, .5f,.5f,.5f,
@@ -390,8 +395,56 @@ public class MainActivity extends Activity {
                 -.5f,.5f,-.5f, .5f,.5f,-.5f, .5f,.5f,.5f, -.5f,.5f,-.5f, .5f,.5f,.5f, -.5f,.5f,.5f,
                 -.5f,-.5f,-.5f, .5f,-.5f,.5f, .5f,-.5f,-.5f, -.5f,-.5f,-.5f, -.5f,-.5f,.5f, .5f,-.5f,.5f
             };
-            vb=ByteBuffer.allocateDirect(cube.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-            vb.put(cube).position(0);
+            float[][] faceNormals={
+                {0f,0f,-1f},{0f,0f,1f},{-1f,0f,0f},
+                {1f,0f,0f},{0f,1f,0f},{0f,-1f,0f}
+            };
+            vb=ByteBuffer.allocateDirect(cube.length*2*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+            for(int vertex=0;vertex<cube.length/3;vertex++){
+                int face=vertex/6;
+                vb.put(cube[vertex*3]).put(cube[vertex*3+1]).put(cube[vertex*3+2]);
+                vb.put(faceNormals[face][0]).put(faceNormals[face][1]).put(faceNormals[face][2]);
+            }
+            vb.position(0);
+            sphereBuffer=createSphereBuffer(10,16);
+            sphereVertexCount=sphereBuffer.limit()/6;
+        }
+
+        FloatBuffer createSphereBuffer(int stacks,int slices){
+            ArrayList<Float> data=new ArrayList<>();
+            for(int stack=0;stack<stacks;stack++){
+                float lat0=(float)(-Math.PI*.5+Math.PI*stack/stacks);
+                float lat1=(float)(-Math.PI*.5+Math.PI*(stack+1)/stacks);
+                for(int slice=0;slice<slices;slice++){
+                    float lon0=(float)(Math.PI*2.0*slice/slices);
+                    float lon1=(float)(Math.PI*2.0*(slice+1)/slices);
+                    float[] a=spherePoint(lat0,lon0);
+                    float[] b=spherePoint(lat1,lon0);
+                    float[] c=spherePoint(lat1,lon1);
+                    float[] d=spherePoint(lat0,lon1);
+                    addSphereVertex(data,a);addSphereVertex(data,b);addSphereVertex(data,c);
+                    addSphereVertex(data,a);addSphereVertex(data,c);addSphereVertex(data,d);
+                }
+            }
+            FloatBuffer buffer=ByteBuffer.allocateDirect(data.size()*4)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            for(Float value:data)buffer.put(value);
+            buffer.position(0);
+            return buffer;
+        }
+
+        float[] spherePoint(float latitude,float longitude){
+            float ring=(float)Math.cos(latitude);
+            return new float[]{
+                ring*(float)Math.cos(longitude),
+                (float)Math.sin(latitude),
+                ring*(float)Math.sin(longitude)
+            };
+        }
+
+        void addSphereVertex(ArrayList<Float> data,float[] point){
+            data.add(point[0]);data.add(point[1]);data.add(point[2]);
+            data.add(point[0]);data.add(point[1]);data.add(point[2]);
         }
 
         int shader(int type,String src){
@@ -430,24 +483,20 @@ public class MainActivity extends Activity {
 
             GLES20.glClearColor(seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),1f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
-            float speed=.075f;
             float moveLength=(float)Math.hypot(moveX,moveY);
             playerMoving=moveLength>.08f;
             float moveWorldX=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX);
             float moveWorldZ=(float)(Math.cos(yaw)*(-moveY)-Math.sin(yaw)*moveX);
             if(playerMoving){
+                float speed=4.2f*deltaSeconds;
                 px+=moveWorldX*speed;
                 pz+=moveWorldZ*speed;
                 playerFacing=(float)Math.atan2(moveWorldX,moveWorldZ);
-                playerWalkPhase+=deltaSeconds*9.5f;
             }
+            playerWalkPhase+=deltaSeconds*(playerMoving?9.5f:1.35f);
             if(jumping){py+=vy;vy-=.008f;if(py<=0){py=0;jumping=false;}}
-            float angle=.28f+pitch;
-            float horizontal=6f*(float)Math.cos(angle);
-            float cx=px-(float)Math.sin(yaw)*horizontal;
-            float cz=pz+(float)Math.cos(yaw)*horizontal;
-            float cy=1.1f+py+6f*(float)Math.sin(angle);
-            Matrix.setLookAtM(view,0,cx,cy,cz,px,1.1f+py,pz,0,1,0);
+            ThirdPersonCamera.Pose camera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
+            Matrix.setLookAtM(view,0,camera.x(),camera.y(),camera.z(),px,camera.targetY(),pz,0,1,0);
 
             draw(0,-.35f,0,45,.5f,45,.25f,.42f,.23f);
             draw(-10,-.12f,-4,2,.12f,32,.18f,.48f,.62f);
@@ -532,7 +581,7 @@ public class MainActivity extends Activity {
             drawPlayer();
         }
 
-        // Personaje principal low-poly: piezas separadas para evitar el bloque provisional.
+        // Personaje rural 3D: silueta humana, ropa por capas, cabeza esferica y mochila.
         void drawPlayer(){
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
             float leftLeg=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
@@ -540,28 +589,59 @@ public class MainActivity extends Activity {
             float leftArm=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
             float rightArm=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
 
-            // Botas y pantalón
-            drawPlayerLimb(-.115f,.58f,0f,.16f,.48f,.19f,.16f,.12f,.08f,leftLeg);
-            drawPlayerLimb(.115f,.58f,0f,.16f,.48f,.19f,.16f,.12f,.08f,rightLeg);
-            drawPlayerPart(-.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f,.05f);
-            drawPlayerPart(.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f,.05f);
+            // Sombra de contacto suave bajo los pies (sin textura externa).
+            GLES20.glEnable(GLES20.GL_BLEND);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            drawMesh(sphereBuffer,sphereVertexCount,px,.012f,pz,.52f,.014f,.34f,
+                .045f,.055f,.045f,.28f,playerFacing,0f);
+            GLES20.glDisable(GLES20.GL_BLEND);
 
-            // Chaqueta verde, cuello y cabeza
-            drawPlayerPart(0f,.98f+ bob,0f,.48f,.62f,.31f,.20f,.39f,.23f);
-            drawPlayerPart(0f,1.31f+bob,0f,.19f,.16f,.20f,.75f,.55f,.39f);
-            drawPlayerPart(0f,1.55f+bob,0f,.32f,.34f,.30f,.78f,.61f,.45f);
-            // Pelo y una pequeña visera para dar silueta al personaje
-            drawPlayerPart(0f,1.70f+bob,-.015f,.34f,.12f,.32f,.16f,.10f,.07f);
-            drawPlayerPart(0f,1.42f+bob,.145f,.28f,.055f,.08f,.18f,.12f,.08f);
+            // Botas, pantalones y rodillas.
+            drawPlayerPart(-.13f,.14f,.09f,.23f,.16f,.35f,.12f,.085f,.055f);
+            drawPlayerPart(.13f,.14f,.09f,.23f,.16f,.35f,.12f,.085f,.055f);
+            drawPlayerLimb(-.13f,.61f,0f,.17f,.50f,.18f,.14f,.17f,.15f,leftLeg);
+            drawPlayerLimb(.13f,.61f,0f,.17f,.50f,.18f,.14f,.17f,.15f,rightLeg);
 
-            // Brazos articulados y manos
-            drawPlayerLimb(-.30f,1.20f,0f,.14f,.43f,.16f,.20f,.38f,.22f,leftArm);
-            drawPlayerLimb(.30f,1.20f,0f,.14f,.43f,.16f,.20f,.38f,.22f,rightArm);
-            drawPlayerPart(-.30f,.94f,.025f,.13f,.12f,.13f,.75f,.55f,.39f);
-            drawPlayerPart(.30f,.94f,.025f,.13f,.12f,.13f,.75f,.55f,.39f);
+            // Chaqueta de campo, bajo, cuello, cremallera y bolsillos.
+            drawPlayerPart(0f,.99f+bob,0f,.52f,.64f,.32f,.15f,.36f,.23f);
+            drawPlayerPart(0f,.72f+bob,.012f,.53f,.12f,.33f,.11f,.27f,.17f);
+            drawPlayerPart(0f,1.31f+bob,.015f,.19f,.14f,.20f,.72f,.69f,.55f);
+            drawPlayerPart(0f,1.00f+bob,.166f,.025f,.45f,.014f,.76f,.70f,.52f);
+            drawPlayerPart(-.15f,.98f+bob,.17f,.12f,.13f,.025f,.20f,.42f,.27f);
+            drawPlayerPart(.15f,.98f+bob,.17f,.12f,.13f,.025f,.20f,.42f,.27f);
 
-            // Mochila pequeña: visible desde la cámara trasera
-            drawPlayerPart(0f,1.02f,-.19f,.30f,.38f,.13f,.36f,.22f,.13f);
+            // Hombros redondeados y mangas articuladas.
+            drawPlayerSphere(-.29f,1.20f+bob,0f,.16f,.16f,.16f,.15f,.36f,.23f,1f);
+            drawPlayerSphere(.29f,1.20f+bob,0f,.16f,.16f,.16f,.15f,.36f,.23f,1f);
+            drawPlayerLimb(-.31f,1.20f+bob,0f,.15f,.44f,.17f,.17f,.39f,.25f,leftArm);
+            drawPlayerLimb(.31f,1.20f+bob,0f,.15f,.44f,.17f,.17f,.39f,.25f,rightArm);
+            drawPlayerSphere(-.32f,.82f+bob,.025f,.09f,.11f,.09f,.75f,.54f,.38f,1f);
+            drawPlayerSphere(.32f,.82f+bob,.025f,.09f,.11f,.09f,.75f,.54f,.38f,1f);
+
+            // Cuello y cabeza ovalada: proporciones humanas y rasgos faciales.
+            drawPlayerPart(0f,1.35f+bob,.015f,.17f,.18f,.17f,.72f,.51f,.36f);
+            drawPlayerSphere(0f,1.57f+bob,.005f,.30f,.35f,.28f,.79f,.59f,.43f,1f);
+            drawPlayerSphere(-.30f,1.57f+bob,.005f,.065f,.095f,.075f,.72f,.51f,.36f,1f);
+            drawPlayerSphere(.30f,1.57f+bob,.005f,.065f,.095f,.075f,.72f,.51f,.36f,1f);
+            drawPlayerSphere(0f,1.53f+bob,.245f,.045f,.055f,.045f,.68f,.46f,.32f,1f);
+            drawPlayerSphere(-.095f,1.60f+bob,.238f,.035f,.027f,.018f,.07f,.055f,.04f,1f);
+            drawPlayerSphere(.095f,1.60f+bob,.238f,.035f,.027f,.018f,.07f,.055f,.04f,1f);
+
+            // Pelo oscuro, gorra de trabajo y mochila con correas.
+            drawPlayerSphere(0f,1.72f+bob,-.045f,.31f,.17f,.29f,.12f,.075f,.045f,1f);
+            drawPlayerSphere(0f,1.82f+bob,.005f,.34f,.085f,.31f,.22f,.17f,.09f,1f);
+            drawPlayerPart(0f,1.02f+bob,-.205f,.34f,.42f,.15f,.30f,.19f,.11f);
+            drawPlayerPart(-.19f,1.16f+bob,-.115f,.055f,.38f,.055f,.11f,.23f,.15f);
+            drawPlayerPart(.19f,1.16f+bob,-.115f,.055f,.38f,.055f,.11f,.23f,.15f);
+        }
+
+        void drawPlayerPart(float localX,float y,float localZ,float sx,float sy,float sz,        void drawPlayerSphere(float localX,float y,float localZ,float sx,float sy,float sz,
+                              float r,float g,float b,float alpha){
+            float c=(float)Math.cos(playerFacing);
+            float s=(float)Math.sin(playerFacing);
+            float x=px+localX*c+localZ*s;
+            float z=pz-localX*s+localZ*c;
+            drawMesh(sphereBuffer,sphereVertexCount,x,y+py,z,sx,sy,sz,r,g,b,alpha,playerFacing,0f);
         }
 
         void drawPlayerPart(float localX,float y,float localZ,float sx,float sy,float sz,
@@ -649,6 +729,13 @@ public class MainActivity extends Activity {
 
         void drawFacingWithLocalX(float x,float y,float z,float sx,float sy,float sz,
                                   float r,float g,float b,float angle,float localRotationX){
+            drawMesh(vb,36,x,y,z,sx,sy,sz,r,g,b,1f,angle,localRotationX);
+        }
+
+        void drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
+                      float sx,float sy,float sz,float r,float g,float b,float alpha,
+                      float angle,float localRotationX){
+            if(mesh==null || vertexCount<=0)return;
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
@@ -656,16 +743,29 @@ public class MainActivity extends Activity {
             Matrix.scaleM(model,0,sx,sy,sz);
             Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
+
+            Matrix.setIdentityM(normalTransform,0);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.multiplyMM(normalMatrixM,0,view,0,normalTransform,0);
+
             GLES20.glUseProgram(program);
             GLES20.glUniformMatrix4fv(mvp,1,false,mvpM,0);
-            GLES20.glUniform4f(color,r,g,b,1);
+            GLES20.glUniformMatrix4fv(normalMatrixUniform,1,false,normalMatrixM,0);
+            GLES20.glUniform4f(color,r,g,b,alpha);
             GLES20.glEnableVertexAttribArray(pos);
-            GLES20.glVertexAttribPointer(pos,3,GLES20.GL_FLOAT,false,0,vb);
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,36);
+            GLES20.glEnableVertexAttribArray(normalAttr);
+            mesh.position(0);
+            GLES20.glVertexAttribPointer(pos,3,GLES20.GL_FLOAT,false,6*4,mesh);
+            mesh.position(3);
+            GLES20.glVertexAttribPointer(normalAttr,3,GLES20.GL_FLOAT,false,6*4,mesh);
+            mesh.position(0);
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertexCount);
             GLES20.glDisableVertexAttribArray(pos);
+            GLES20.glDisableVertexAttribArray(normalAttr);
         }
 
-        float nearby(){
+        float nearby(){        float nearby(){
             float best=999;
             for(float[] o:objects)if(o[3]>0){
                 float d=(float)Math.hypot(px-o[0],pz-o[1]);

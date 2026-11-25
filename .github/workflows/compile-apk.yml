@@ -1,4 +1,4 @@
-name: Build Valle de Cernego APK
+name: Build and test Valle de Cernego APKs
 
 on:
   workflow_dispatch:
@@ -12,47 +12,47 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar proyecto
+      - name: Checkout development branch
         uses: actions/checkout@v4
 
-      - name: Preparar Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Preparar Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
 
-      - name: Instalar SDK Android
+      - name: Install Android platform and build tools
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
 
-      - name: Preparar Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Verificar estructura del proyecto
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f settings.gradle
-          test -f build.gradle
-          test -f app/build.gradle
-          test -f app/src/main/AndroidManifest.xml
-          echo "Proyecto Android del repositorio localizado correctamente."
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --no-daemon
 
-      - name: Ejecutar pruebas unitarias
-        run: gradle testDebugUnitTest --no-daemon
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon
 
-      - name: Compilar APK debug
-        run: gradle assembleDebug --no-daemon
+      - name: Build installable release-test APK
+        run: gradle :app:assembleRelease --no-daemon
 
-      - name: Publicar APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: ValleDeCernego-debug
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload release-test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ValleDeCernego-release-test
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error

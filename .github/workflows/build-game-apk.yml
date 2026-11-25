@@ -1,10 +1,11 @@
-name: Build Valle de Cernego APK
+name: Manual Valle de Cernego APK build
+
 on:
-  push:
-    branches: [game/first-3d-playable]
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,8 +15,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # The runner already provides Android command-line tools. Install only
-      # platform-tools here: the legacy SDK package "tools" no longer exists.
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
@@ -24,12 +23,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Run farming, livestock, building, market and villager logic tests
+      - name: Run unit tests
         run: gradle :app:testDebugUnitTest --no-daemon
-      - name: Compile APK
+      - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
-      - uses: actions/upload-artifact@v4
+      - name: Build release-test APK
+        run: gradle :app:assembleRelease --no-daemon
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
         with:
-          name: Valle-de-Cernego-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ValleDeCernego-APK-manual
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
           if-no-files-found: error
