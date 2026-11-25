@@ -17,6 +17,17 @@ public class ThirdPersonCameraTest {
         assertEquals(3f, pose.z(), 0.0001f);
     }
 
+    @Test public void cameraKeepsAStableCloserThirdPersonDistance() {
+        float[] yaws = {0f, .8f, 1.5707963f, -2.2f};
+        for (float yaw : yaws) {
+            ThirdPersonCamera.Pose pose = ThirdPersonCamera.follow(3f, -4f, .7f, yaw, .12f);
+            double dx = pose.x() - 3f;
+            double dy = pose.y() - pose.targetY();
+            double dz = pose.z() + 4f;
+            assertEquals(4.8, Math.sqrt(dx*dx + dy*dy + dz*dz), .001);
+        }
+    }
+
     @Test public void cameraFollowsPlayerTranslationAndJumpHeight() {
         ThirdPersonCamera.Pose first = ThirdPersonCamera.follow(1f, 2f, 0f, .3f, .1f);
         ThirdPersonCamera.Pose moved = ThirdPersonCamera.follow(4f, -3f, 1.2f, .3f, .1f);
