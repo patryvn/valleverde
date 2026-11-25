@@ -406,6 +406,8 @@ public class MainActivity extends Activity {
         int program,pos,normalAttr,color,mvp,normalMatrixUniform;
         volatile boolean rendererReady=false;
         volatile int playerDrawCalls=0,playerGlError=0;
+        volatile boolean playerFrameRendered=false;
+        boolean playerDrawInProgress=false;
         FloatBuffer sphereBuffer,capsuleBuffer;
         int sphereVertexCount,capsuleVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
@@ -445,6 +447,9 @@ public class MainActivity extends Activity {
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
+            playerFrameRendered=false;
+            playerDrawCalls=0;
+            playerGlError=GLES20.GL_NO_ERROR;
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
@@ -468,7 +473,8 @@ public class MainActivity extends Activity {
             color=GLES20.glGetUniformLocation(program,"uColor");
             mvp=GLES20.glGetUniformLocation(program,"uMVP");
             normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
-            rendererReady=pos>=0 && color>=0 && mvp>=0;
+            rendererReady=pos>=0 && color>=0 && mvp>=0
+                && (normalAttr<0 || normalMatrixUniform>=0);
             if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
 
             float[] cube={
@@ -781,11 +787,15 @@ public class MainActivity extends Activity {
 
         String getRenderStatus(){
             if(!rendererReady)return "3D NO DISPONIBLE";
-            if(playerDrawCalls<PlayerModelSpec.size())return "3D OK · preparando personaje";
+            if(!playerFrameRendered)return "3D OK · esperando primer fotograma";
             if(playerGlError!=GLES20.GL_NO_ERROR){
-                return "3D OK · error GL 0x"+Integer.toHexString(playerGlError);
+                return "3D ERROR GL 0x"+Integer.toHexString(playerGlError)
+                    +" · "+playerDrawCalls+"/"+PlayerModelSpec.size();
             }
-            return "3D OK · "+PlayerModelSpec.size()+" piezas · GL OK";
+            if(playerDrawCalls<PlayerModelSpec.size()){
+                return "3D INCOMPLETO · "+playerDrawCalls+"/"+PlayerModelSpec.size()+" piezas";
+            }
+            return "3D OK · "+playerDrawCalls+" piezas enviadas · GL OK";
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
@@ -793,12 +803,17 @@ public class MainActivity extends Activity {
             if(!rendererReady)return;
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
             int submittedParts=0;
+            playerDrawCalls=0;
+            playerGlError=GLES20.GL_NO_ERROR;
+            playerDrawInProgress=true;
 
-            // Sombra de contacto elíptica bajo los pies.
+            // La sombra translúcida no escribe profundidad: no puede tapar las botas.
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            GLES20.glDepthMask(false);
             drawMesh(sphereBuffer,sphereVertexCount,px,.012f,pz,.52f,.014f,.34f,
                 .045f,.055f,.045f,.28f,playerFacing,0f);
+            GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
 
             for(int i=0;i<PlayerModelSpec.size();i++){
@@ -815,28 +830,25 @@ public class MainActivity extends Activity {
                 }
                 PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
                     px,py,pz,playerFacing,bob,part,angle);
+                boolean submitted;
                 if(part.shape==PlayerModelSpec.Shape.LIMB){
                     // El mesh cápsula mide 2 unidades de alto; sy/2 conserva las dimensiones del modelo.
-                    drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
+                    submitted=drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
                         pose.yaw,pose.pitch,pose.roll);
                 }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
-                    drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
+                    submitted=drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
                         pose.yaw,pose.pitch,pose.roll);
                 }else{
-                    drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
+                    submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
                         part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll);
                 }
-                submittedParts++;
+                if(submitted)submittedParts++;
             }
             playerDrawCalls=submittedParts;
-            int glError=GLES20.glGetError();
-            if(glError!=GLES20.GL_NO_ERROR && playerGlError!=glError){
-                android.util.Log.w("ValleCernego","OpenGL reportó 0x"+Integer.toHexString(glError)
-                    +" al enviar las piezas del personaje.");
-            }
-            playerGlError=glError;
+            playerDrawInProgress=false;
+            playerFrameRendered=true;
         }
 
         // Árbol de frondosa atlántica: tronco, ramas, copa en varios volúmenes y matices estacionales.
@@ -982,16 +994,16 @@ public class MainActivity extends Activity {
             drawMesh(vb,36,x,y,z,sx,sy,sz,r,g,b,1f,angle,localRotationX);
         }
 
-        void drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
-                      float sx,float sy,float sz,float r,float g,float b,float alpha,
-                      float angle,float localRotationX){
-            drawMesh(mesh,vertexCount,x,y,z,sx,sy,sz,r,g,b,alpha,angle,localRotationX,0f);
+        boolean drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
+                         float sx,float sy,float sz,float r,float g,float b,float alpha,
+                         float angle,float localRotationX){
+            return drawMesh(mesh,vertexCount,x,y,z,sx,sy,sz,r,g,b,alpha,angle,localRotationX,0f);
         }
 
-        void drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
-                      float sx,float sy,float sz,float r,float g,float b,float alpha,
-                      float angle,float localRotationX,float localRotationZ){
-            if(!rendererReady || mesh==null || vertexCount<=0)return;
+        boolean drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
+                         float sx,float sy,float sz,float r,float g,float b,float alpha,
+                         float angle,float localRotationX,float localRotationZ){
+            if(!rendererReady || mesh==null || vertexCount<=0)return false;
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
@@ -1002,7 +1014,7 @@ public class MainActivity extends Activity {
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
 
             // Inversa transpuesta analítica de la parte lineal: R * escala inversa.
-            // Mantiene la iluminación coherente en las 58 piezas, incluidas las rotadas y escaladas.
+            // Mantiene la iluminación coherente en las piezas rotadas y escaladas.
             Matrix.setIdentityM(normalTransform,0);
             Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
             Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
@@ -1012,7 +1024,9 @@ public class MainActivity extends Activity {
 
             GLES20.glUseProgram(program);
             GLES20.glUniformMatrix4fv(mvp,1,false,mvpM,0);
-            GLES20.glUniformMatrix4fv(normalMatrixUniform,1,false,normalMatrixM,0);
+            if(normalMatrixUniform>=0){
+                GLES20.glUniformMatrix4fv(normalMatrixUniform,1,false,normalMatrixM,0);
+            }
             GLES20.glUniform4f(color,r,g,b,alpha);
             GLES20.glEnableVertexAttribArray(pos);
             mesh.position(0);
@@ -1026,6 +1040,16 @@ public class MainActivity extends Activity {
             GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertexCount);
             GLES20.glDisableVertexAttribArray(pos);
             if(normalAttr>=0)GLES20.glDisableVertexAttribArray(normalAttr);
+            if(playerDrawInProgress){
+                int glError=GLES20.glGetError();
+                if(glError!=GLES20.GL_NO_ERROR){
+                    if(playerGlError==GLES20.GL_NO_ERROR)playerGlError=glError;
+                    android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(glError)
+                        +" al dibujar una pieza del personaje.");
+                    return false;
+                }
+            }
+            return true;
         }
 
         float nearby(){
