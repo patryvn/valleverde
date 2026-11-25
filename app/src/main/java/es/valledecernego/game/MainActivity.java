@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
         renderer.loadMarket(preferences.getString("market", ""));
+        renderer.loadQuests(preferences.getString("quests", ""));
         renderer.loadVillagers(preferences.getString("villagers", ""));
         renderer.loadVillagerWorld(preferences.getString("villager_world", ""));
         renderer.loadSeason(preferences.getString("season", ""));
@@ -65,6 +66,11 @@ public class MainActivity extends Activity {
         status.setTextSize(14);
         status.setText(statusText());
         top.addView(status);
+        Button journal=new Button(this);
+        journal.setText("DIARIO · TAREAS");
+        journal.setTextSize(12);
+        journal.setOnClickListener(v -> showQuestJournal());
+        top.addView(journal,new LinearLayout.LayoutParams(-2,-2));
         FrameLayout.LayoutParams tp=new FrameLayout.LayoutParams(-1,-2,Gravity.TOP);
         root.addView(top,tp);
 
@@ -89,6 +95,7 @@ public class MainActivity extends Activity {
             .putString("animals", renderer.saveAnimals())
             .putString("buildings", renderer.saveBuildings())
             .putString("market", renderer.saveMarket())
+            .putString("quests", renderer.saveQuests())
             .putString("villagers", renderer.saveVillagers())
             .putString("villager_world", renderer.saveVillagerWorld())
             .putString("season", renderer.saveSeason())
@@ -112,7 +119,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    void action(){
+    void showQuestJournal(){\n        new AlertDialog.Builder(this)\n            .setTitle("Diario del Valle")\n            .setMessage(renderer.getQuestJournal())\n            .setPositiveButton("Continuar", null)\n            .show();\n    }\n\n    void rewardQuest(int coins,int seeds){\n        if(coins>0) renderer.addCoins(coins);\n        if(seeds>0) renderer.addSeeds(seeds);\n        if(coins>0 || seeds>0){\n            String reward=(coins>0?coins+" monedas":"")+(coins>0 && seeds>0?" y ":"")+(seeds>0?seeds+" semillas":"");\n            toast("¡Misión completada! Recompensa: "+reward);\n        }\n    }\n\n    void action(){
         float cropDistance=renderer.cropDistance();
         float objectDistance=renderer.nearby();
         if(cropDistance<2.4f && cropDistance<=objectDistance){
@@ -120,13 +127,13 @@ public class MainActivity extends Activity {
             if(result==CropSystem.PLANTED) toast("Parcela sembrada. Pulsa HACER otra vez para regarla.");
             else if(result==CropSystem.WATERED) toast("Parcela regada. El cultivo crecerá con el tiempo.");
             else if(result==CropSystem.GROWING) toast("El cultivo todavía está creciendo.");
-            else if(result==CropSystem.HARVESTED) toast("¡Cosecha recogida! +3 productos y +1 semilla.");
+            else if(result==CropSystem.HARVESTED){ toast("¡Cosecha recogida! +3 productos y +1 semilla."); rewardQuest(renderer.recordHarvestQuest(),0); }
             else if(result==CropSystem.OUT_OF_SEEDS) toast("No tienes semillas suficientes.");
             else toast("Acércate a una parcela de cultivo.");
         } else if(objectDistance<2.4f){
             int k=renderer.nearbyKind();
-            if(k==1){wood+=2;renderer.removeNearby();toast("Has recogido madera +2");}
-            else if(k==2){stone+=2;renderer.removeNearby();toast("Has recogido piedra +2");}
+            if(k==1){wood+=2;renderer.removeNearby();toast("Has recogido madera +2");rewardQuest(renderer.recordWoodQuest(2),0);}
+            else if(k==2){stone+=2;renderer.removeNearby();toast("Has recogido piedra +2");rewardQuest(renderer.recordStoneQuest(2),0);}
             else if(k==3){renderer.collectForage();toast("Has recogido hierba para el ganado +2");}
             else if(k==4 || k==5){
                 int feedResult=renderer.feedNearestAnimal();
@@ -374,6 +381,8 @@ public class MainActivity extends Activity {
         final VillagerSystem villagers=new VillagerSystem();
         final VillagerWorldSystem villagerWorld=new VillagerWorldSystem();
         final SeasonSystem seasons=new SeasonSystem();
+        final QuestSystem quests=new QuestSystem();
+        int lastQuestSeedReward=0;
         final float[] modelViewMatrix=new float[16];
 
         GameRenderer(){
@@ -803,7 +812,7 @@ public class MainActivity extends Activity {
             int stored=buildings.storeHay(animals.getForage());
             return animals.removeForage(stored);
         }
-        String saveMarket(){return market.saveState();}
+        String saveMarket(){return market.saveState();}\n        String saveQuests(){return quests.saveState();}\n        void loadQuests(String state){quests.loadState(state);}\n        String getQuestJournal(){return quests.getJournal();}\n        int recordWoodQuest(int amount){return quests.recordWood(amount);}\n        int recordStoneQuest(int amount){return quests.recordStone(amount);}\n        int recordHarvestQuest(){return quests.recordHarvest();}\n        int recordPlantQuest(){lastQuestSeedReward=quests.recordPlant();return 0;}\n        int getLastQuestSeedReward(){int reward=lastQuestSeedReward;lastQuestSeedReward=0;return reward;}\n        void addCoins(int amount){market.addCoins(amount);}\n        void addSeeds(int amount){crops.addSeeds(amount);}
         void loadMarket(String state){market.loadState(state);}
         int getCoins(){return market.getCoins();}
         int getHarvest(){return crops.getHarvest();}
