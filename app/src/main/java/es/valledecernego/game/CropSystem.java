@@ -136,7 +136,7 @@ public final class CropSystem {
         if (parts.length != plots.size() + 2) return;
         try {
             int loadedSeeds = Math.max(0, Integer.parseInt(parts[0]));
-            int loadedHarvest = Math.max(0, Integer.parseInt(parts[1]));
+            int loadedHarvest = Math.max(0, Math.min(MAX_HARVEST, Integer.parseInt(parts[1])));
             int[] stages = new int[plots.size()];
             long[] growth = new long[plots.size()];
             boolean[] watered = new boolean[plots.size()];

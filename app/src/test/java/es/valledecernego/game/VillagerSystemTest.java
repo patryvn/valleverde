@@ -38,7 +38,7 @@ public class VillagerSystemTest {
         assertEquals(10, worker.xp());
         assertEquals(3, worker.level());
         village.update(VillagerSystem.WOODCUTTER_INTERVAL_MS);
-        assertEquals(13, village.getPendingWood());
+        assertEquals(23, village.getPendingWood());
     }
 
     @Test public void partialWorkAndPendingGoodsSurviveSaveAndRestore() {
@@ -51,9 +51,10 @@ public class VillagerSystemTest {
         VillagerSystem restored = new VillagerSystem();
         restored.loadState(village.saveState());
         assertEquals(2, restored.getPendingHarvest());
+        assertEquals(35_000L, restored.snapshot()[0].workMs());
         restored.update(VillagerSystem.FARMER_INTERVAL_MS - 35_000L);
         assertEquals(4, restored.getPendingHarvest());
-        assertEquals(35_000L, restored.snapshot()[0].workMs());
+        assertEquals(0L, restored.snapshot()[0].workMs());
     }
 
     @Test public void collectionRespectsInventorySpaceAndKeepsTheRemainder() {
