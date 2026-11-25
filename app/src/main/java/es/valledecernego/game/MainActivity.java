@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary();
+        return "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
     }
 
     void saveProgress() {
@@ -404,7 +404,7 @@ public class MainActivity extends Activity {
     static class GameRenderer implements GLSurfaceView.Renderer {
         FloatBuffer vb;
         int program,pos,normalAttr,color,mvp,normalMatrixUniform;
-        boolean rendererReady=false;
+        volatile boolean rendererReady=false;
         FloatBuffer sphereBuffer,capsuleBuffer;
         int sphereVertexCount,capsuleVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
@@ -493,6 +493,7 @@ public class MainActivity extends Activity {
             sphereVertexCount=sphereBuffer.limit()/6;
             capsuleBuffer=createCapsuleBuffer(6,16);
             capsuleVertexCount=capsuleBuffer.limit()/6;
+            android.util.Log.i("ValleCernego","Render 3D listo; personaje procedural con "+PlayerModelSpec.size()+" piezas.");
         }
 
         FloatBuffer createSphereBuffer(int stacks,int slices){
@@ -755,6 +756,10 @@ public class MainActivity extends Activity {
             drawPlayer();
         }
 
+        String getRenderStatus(){
+            return rendererReady ? "3D OK · "+PlayerModelSpec.size()+" piezas" : "3D NO DISPONIBLE";
+        }
+
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
         void drawPlayer(){
             if(!rendererReady)return;
@@ -785,7 +790,7 @@ public class MainActivity extends Activity {
                     // El mesh cápsula mide 2 unidades de alto; sy/2 conserva las dimensiones del modelo.
                     drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch);
+                        pose.yaw,pose.pitch,pose.roll);
                 }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
                     drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
@@ -862,11 +867,18 @@ public class MainActivity extends Activity {
         void drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
                       float sx,float sy,float sz,float r,float g,float b,float alpha,
                       float angle,float localRotationX){
+            drawMesh(mesh,vertexCount,x,y,z,sx,sy,sz,r,g,b,alpha,angle,localRotationX,0f);
+        }
+
+        void drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
+                      float sx,float sy,float sz,float r,float g,float b,float alpha,
+                      float angle,float localRotationX,float localRotationZ){
             if(!rendererReady || mesh==null || vertexCount<=0)return;
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
             Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationZ),0f,0f,1f);
             Matrix.scaleM(model,0,sx,sy,sz);
             Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
@@ -876,6 +888,7 @@ public class MainActivity extends Activity {
             Matrix.setIdentityM(normalTransform,0);
             Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
             Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationZ),0f,0f,1f);
             Matrix.scaleM(normalTransform,0,1f/sx,1f/sy,1f/sz);
             Matrix.multiplyMM(normalMatrixM,0,view,0,normalTransform,0);
 
