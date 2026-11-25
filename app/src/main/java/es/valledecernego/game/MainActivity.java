@@ -48,6 +48,7 @@ public class MainActivity extends Activity {
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
+        renderer.loadHouse(preferences.getString("house", ""));
         renderer.loadMarket(preferences.getString("market", ""));
         renderer.loadQuests(preferences.getString("quests", ""));
         renderer.loadVillagers(preferences.getString("villagers", ""));
@@ -83,7 +84,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getVillagerSummary();
+        return "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary();
     }
 
     void saveProgress() {
@@ -94,6 +95,7 @@ public class MainActivity extends Activity {
             .putString("farm", renderer.saveFarm())
             .putString("animals", renderer.saveAnimals())
             .putString("buildings", renderer.saveBuildings())
+            .putString("house", renderer.saveHouse())
             .putString("market", renderer.saveMarket())
             .putString("quests", renderer.saveQuests())
             .putString("villagers", renderer.saveVillagers())
@@ -177,6 +179,21 @@ public class MainActivity extends Activity {
             }
             else if(k==7){showMarket();}
             else if(k==8){showVillageBoard();}
+            else if(k==9){
+                if(renderer.isHouseBuilt()){
+                    new AlertDialog.Builder(this).setTitle("Mi casa de Cernego")
+                        .setMessage("Tu casa está construida. Aquí empieza tu vida en el valle. Próximamente podrás ampliarla y decorarla.")
+                        .setPositiveButton("¡A seguir!",null).show();
+                } else {
+                    int result=renderer.buildHouse(wood,stone);
+                    if(result==HouseSystem.BUILT){
+                        wood-=HouseSystem.WOOD_COST; stone-=HouseSystem.STONE_COST;
+                        toast("¡Tu primera casa está construida! Ya tienes un hogar en Cernego.");
+                    } else if(result==HouseSystem.INSUFFICIENT_MATERIALS){
+                        toast("Para construir tu casa reúne 10 de madera y 6 de piedra.");
+                    }
+                }
+            }
             else {toast("No hay nada con lo que interactuar");}
         } else {
             toast("Acércate a un árbol, piedra, parcela, animal o tablón de trabajos");
@@ -394,6 +411,7 @@ public class MainActivity extends Activity {
         final AnimalSystem animals=new AnimalSystem();
         ArrayList<float[]> objects=new ArrayList<>();
         final BuildingSystem buildings=new BuildingSystem();
+        final HouseSystem house=new HouseSystem();
         final MarketSystem market=new MarketSystem();
         final VillagerSystem villagers=new VillagerSystem();
         final VillagerWorldSystem villagerWorld=new VillagerWorldSystem();
@@ -414,6 +432,7 @@ public class MainActivity extends Activity {
             objects.add(new float[]{-5,-10,6,1});
             objects.add(new float[]{10,-10,7,1});
             objects.add(new float[]{-10,4,8,1});
+            objects.add(new float[]{-2,-5,9,1});
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
@@ -594,6 +613,20 @@ public class MainActivity extends Activity {
                     draw(o[0]+.62f,.95f,o[1],.12f,.55f,.12f,.30f,.19f,.10f);
                     draw(o[0],1.48f,o[1]-.34f,1.75f,.92f,.12f,.52f,.36f,.20f);
                     draw(o[0],1.5f,o[1]-.42f,1.35f,.10f,.06f,.83f,.70f,.38f);
+                }
+                if(t==9){
+                    if(house.isBuilt()){
+                        draw(o[0],.92f,o[1],3.1f,1.85f,2.7f,.78f,.68f,.52f);
+                        draw(o[0],2.05f,o[1],3.5f,.28f,3.05f,.43f,.20f,.14f);
+                        draw(o[0],.62f,o[1]-1.38f,.72f,1.2f,.12f,.30f,.16f,.10f);
+                        draw(o[0]-.82f,1.15f,o[1]-1.39f,.48f,.48f,.10f,.40f,.67f,.78f);
+                        draw(o[0]+.82f,1.15f,o[1]-1.39f,.48f,.48f,.10f,.40f,.67f,.78f);
+                    } else {
+                        draw(o[0],.10f,o[1],3.4f,.16f,3.0f,.58f,.43f,.27f);
+                        draw(o[0]-1.45f,.34f,o[1],.14f,.58f,.14f,.38f,.25f,.14f);
+                        draw(o[0]+1.45f,.34f,o[1],.14f,.58f,.14f,.38f,.25f,.14f);
+                        draw(o[0],.30f,o[1]-1.38f,3.0f,.5f,.14f,.38f,.25f,.14f);
+                    }
                 }
             }
 
@@ -819,6 +852,11 @@ public class MainActivity extends Activity {
         String saveAnimals(){return animals.saveState();}
         void loadAnimals(String state){animals.loadState(state);}
         String getBuildingSummary(){return buildings.getSummary();}
+        String getHouseSummary(){return house.isBuilt()?"Casa propia construida":"Casa pendiente";}
+        boolean isHouseBuilt(){return house.isBuilt();}
+        int buildHouse(int availableWood,int availableStone){return house.build(availableWood,availableStone);}
+        String saveHouse(){return house.saveState();}
+        void loadHouse(String state){house.loadState(state);}
         String saveBuildings(){return buildings.saveState();}
         void loadBuildings(String state){buildings.loadState(state);}
         boolean isStableBuilt(){return buildings.isStableBuilt();}
