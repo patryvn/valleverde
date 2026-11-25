@@ -5,7 +5,7 @@ public final class HouseSystem {
     public static final int BUILT = 1;
     public static final int INSUFFICIENT_MATERIALS = 2;
     public static final int WOOD_COST = 10;
-    public static final int STONE_COST = 6;
+    public static final int STONE_COST = 4;
 
     private boolean built;
 
