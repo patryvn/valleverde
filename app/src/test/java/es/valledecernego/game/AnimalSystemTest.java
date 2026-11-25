@@ -51,6 +51,26 @@ public class AnimalSystemTest {
         assertTrue(restored.hasCalf());
     }
 
+    @Test public void stableFeedTargetsHungriestAdultWithoutUsingLooseForage() {
+        AnimalSystem herd = new AnimalSystem();
+        herd.update(60_000L);
+
+        assertTrue(herd.feedFromStable());
+        assertEquals(49.0f, herd.getCowHunger(), 0.01f);
+        assertEquals(79.0f, herd.getBullHunger(), 0.01f);
+        assertEquals(0, herd.getForage());
+    }
+
+    @Test public void removingForageReturnsOnlyWhatWasAvailable() {
+        AnimalSystem herd = new AnimalSystem();
+        herd.addForage(3);
+        assertEquals(2, herd.removeForage(2));
+        assertEquals(1, herd.getForage());
+        assertEquals(1, herd.removeForage(99));
+        assertEquals(0, herd.getForage());
+        assertEquals(0, herd.removeForage(-1));
+    }
+
     @Test public void interactionOutsideThePastureDoesNothing() {
         AnimalSystem herd = new AnimalSystem();
         herd.addForage(2);

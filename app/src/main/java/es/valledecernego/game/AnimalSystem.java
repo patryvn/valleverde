@@ -34,6 +34,26 @@ public final class AnimalSystem {
         return forage;
     }
 
+    /** Removes loose forage and returns the amount transferred to a building. */
+    public synchronized int removeForage(int amount) {
+        if (amount <= 0) return 0;
+        int removed = Math.min(amount, forage);
+        forage -= removed;
+        return removed;
+    }
+
+    /** Stable feeding consumes stored hay, prioritizing the hungriest adult. */
+    public synchronized boolean feedFromStable() {
+        float hungriest = Math.max(cowHunger, bullHunger);
+        if (hungriest <= 35.0f) return false;
+        if (cowHunger >= bullHunger) {
+            cowHunger = Math.max(0.0f, cowHunger - 30.0f);
+        } else {
+            bullHunger = Math.max(0.0f, bullHunger - 30.0f);
+        }
+        return true;
+    }
+
     public synchronized int feedNearest(float x, float z) {
         float cowDistance = distance(x, z, 3.0f, -1.0f);
         float bullDistance = distance(x, z, 6.0f, -2.0f);

@@ -130,15 +130,19 @@ public class MainActivity extends Activity {
                 else toast("Acércate a una vaca o al toro.");
             }
             else if(k==6){
-                int buildResult=renderer.buildStable(wood,stone);
-                if(buildResult==BuildingSystem.BUILT){
-                    wood-=BuildingSystem.STABLE_WOOD_COST;
-                    stone-=BuildingSystem.STABLE_STONE_COST;
-                    toast("¡Cuadra construida! Ya tienes un refugio para el ganado.");
-                } else if(buildResult==BuildingSystem.INSUFFICIENT_MATERIALS){
-                    toast("Necesitas 6 de madera y 4 de piedra para construir la cuadra.");
+                if(renderer.isStableBuilt()){
+                    showStable();
                 } else {
-                    toast("La cuadra ya está construida.");
+                    int buildResult=renderer.buildStable(wood,stone);
+                    if(buildResult==BuildingSystem.BUILT){
+                        wood-=BuildingSystem.STABLE_WOOD_COST;
+                        stone-=BuildingSystem.STABLE_STONE_COST;
+                        toast("¡Cuadra construida! Ahora puedes almacenar forraje y alimentar al ganado.");
+                    } else if(buildResult==BuildingSystem.INSUFFICIENT_MATERIALS){
+                        toast("Necesitas 6 de madera y 4 de piedra para construir la cuadra.");
+                    } else {
+                        toast("No se ha podido construir la cuadra.");
+                    }
                 }
             }
             else if(k==7){showMarket();}
@@ -148,6 +152,33 @@ public class MainActivity extends Activity {
         }
         saveProgress();
         if(status!=null) status.setText(statusText());
+    }
+
+    void showStable(){
+        final int looseForage=renderer.getForage();
+        final int storedHay=renderer.getStableHay();
+        final int capacity=renderer.getStableHayCapacity();
+        ArrayList<String> options=new ArrayList<>();
+        if(looseForage>0 && storedHay<capacity){
+            options.add("Guardar forraje disponible ("+looseForage+")");
+        }
+        options.add("Cerrar");
+        new AlertDialog.Builder(this)
+            .setTitle("Cuadra de Valdemonte")
+            .setMessage("Heno almacenado: "+storedHay+"/"+capacity
+                +"\\nForraje disponible: "+looseForage
+                +"\\nLa cuadra consume una unidad cada 60 segundos de juego cuando el ganado necesita alimento.")
+            .setItems(options.toArray(new String[options.size()]),new DialogInterface.OnClickListener(){
+                @Override public void onClick(DialogInterface dialog,int which){
+                    if(looseForage>0 && storedHay<capacity && which==0){
+                        int moved=renderer.storeForageInStable();
+                        if(moved>0) toast("Has guardado "+moved+" unidades de forraje en la cuadra.");
+                        else toast("La cuadra está llena o no queda forraje.");
+                    }
+                    saveProgress();
+                    if(status!=null) status.setText(statusText());
+                }
+            }).show();
     }
 
     void showMarket(){
@@ -318,6 +349,7 @@ public class MainActivity extends Activity {
                 long delta=Math.max(0,Math.min(1000,(now-lastFrameNanos)/1000000));
                 crops.update(delta);
                 animals.update(delta);
+                buildings.updateStable(delta,animals);
             }
             lastFrameNanos=now;
 
@@ -363,6 +395,10 @@ public class MainActivity extends Activity {
                         draw(o[0],.68f,o[1],2.3f,1.35f,2.3f,.48f,.32f,.18f);
                         draw(o[0],1.48f,o[1],2.6f,.32f,2.6f,.30f,.16f,.11f);
                         draw(o[0],.48f,o[1]-1.16f,.72f,.92f,.10f,.22f,.13f,.08f);
+                        int hayBales=Math.min(3,(buildings.getStoredHay()+9)/10);
+                        for(int bale=0;bale<hayBales;bale++){
+                            draw(o[0]-.48f+bale*.46f,.38f,o[1]+.48f,.38f,.38f,.38f,.76f,.62f,.22f);
+                        }
                     } else {
                         draw(o[0],.12f,o[1],2.5f,.18f,2.5f,.46f,.34f,.20f);
                         draw(o[0]-1.05f,.62f,o[1]-1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
@@ -442,6 +478,14 @@ public class MainActivity extends Activity {
         String getBuildingSummary(){return buildings.getSummary();}
         String saveBuildings(){return buildings.saveState();}
         void loadBuildings(String state){buildings.loadState(state);}
+        boolean isStableBuilt(){return buildings.isStableBuilt();}
+        int getForage(){return animals.getForage();}
+        int getStableHay(){return buildings.getStoredHay();}
+        int getStableHayCapacity(){return BuildingSystem.MAX_STABLE_HAY;}
+        int storeForageInStable(){
+            int stored=buildings.storeHay(animals.getForage());
+            return animals.removeForage(stored);
+        }
         String saveMarket(){return market.saveState();}
         void loadMarket(String state){market.loadState(state);}
         int getCoins(){return market.getCoins();}
