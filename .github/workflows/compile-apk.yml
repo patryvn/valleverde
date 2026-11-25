@@ -51,7 +51,7 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game' versionCode='12' versionName='0.12.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game' versionCode='13' versionName='0.13.0'"
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
