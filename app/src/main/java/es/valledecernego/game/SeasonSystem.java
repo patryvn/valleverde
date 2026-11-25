@@ -19,6 +19,7 @@ public final class SeasonSystem {
         {CLOUDY, FOG, RAIN, SUNNY}
     };
 
+    private int seasonIndex;
     private long seasonElapsedMs;
     private long weatherElapsedMs;
     private int weatherIndex;
@@ -38,13 +39,14 @@ public final class SeasonSystem {
             }
             if (seasonElapsedMs >= SEASON_LENGTH_MS) {
                 seasonElapsedMs = 0L;
+                seasonIndex = (seasonIndex + 1) % 4;
                 weatherIndex = 0;
             }
         }
     }
 
     public synchronized int getSeason() {
-        return (int) ((seasonElapsedMs / SEASON_LENGTH_MS) % 4L);
+        return seasonIndex;
     }
 
     public synchronized int getWeather() {
@@ -105,21 +107,24 @@ public final class SeasonSystem {
     }
 
     public synchronized String saveState() {
-        return "1|" + seasonElapsedMs + "|" + weatherElapsedMs + "|" + weatherIndex;
+        return "1|" + seasonIndex + "|" + seasonElapsedMs + "|" + weatherElapsedMs + "|" + weatherIndex;
     }
 
     /** Invalid saves are ignored without partially changing the current calendar. */
     public synchronized void loadState(String saved) {
         if (saved == null || saved.trim().isEmpty()) return;
         String[] fields = saved.split("\\|", -1);
-        if (fields.length != 4 || !"1".equals(fields[0])) return;
+        if (fields.length != 5 || !"1".equals(fields[0])) return;
         try {
-            long season = Long.parseLong(fields[1]);
-            long weather = Long.parseLong(fields[2]);
-            int index = Integer.parseInt(fields[3]);
-            if (season < 0L || season >= SEASON_LENGTH_MS
+            int savedSeason = Integer.parseInt(fields[1]);
+            long season = Long.parseLong(fields[2]);
+            long weather = Long.parseLong(fields[3]);
+            int index = Integer.parseInt(fields[4]);
+            if (savedSeason < 0 || savedSeason > 3
+                || season < 0L || season >= SEASON_LENGTH_MS
                 || weather < 0L || weather >= WEATHER_LENGTH_MS
                 || index < 0 || index > 3) return;
+            seasonIndex = savedSeason;
             seasonElapsedMs = season;
             weatherElapsedMs = weather;
             weatherIndex = index;
