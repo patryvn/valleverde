@@ -44,6 +44,7 @@ public class MainActivity extends Activity {
         surface.setEGLContextClientVersion(2);
         renderer=new GameRenderer();
         renderer.loadFarm(preferences.getString("farm", ""));
+        renderer.loadAnimals(preferences.getString("animals", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -69,7 +70,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  " + renderer.getFarmSummary();
+        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary();
     }
 
     void saveProgress() {
@@ -78,6 +79,7 @@ public class MainActivity extends Activity {
             .putInt("wood", wood)
             .putInt("stone", stone)
             .putString("farm", renderer.saveFarm())
+            .putString("animals", renderer.saveAnimals())
             .apply();
     }
 
@@ -113,7 +115,14 @@ public class MainActivity extends Activity {
             int k=renderer.nearbyKind();
             if(k==1){wood+=2;renderer.removeNearby();toast("Has recogido madera +2");}
             else if(k==2){stone+=2;renderer.removeNearby();toast("Has recogido piedra +2");}
-            else if(k==4){toast("La vaca está tranquila. Pronto podrás darle alimento.");}
+            else if(k==3){renderer.collectForage();toast("Has recogido hierba para el ganado +2");}
+            else if(k==4 || k==5){
+                int feedResult=renderer.feedNearestAnimal();
+                if(feedResult==AnimalSystem.FED) toast("Has alimentado al animal. El ganado está mejor cuidado.");
+                else if(feedResult==AnimalSystem.NO_FORAGE) toast("No tienes forraje. Recoge hierba de los matorrales.");
+                else if(feedResult==AnimalSystem.NOT_HUNGRY) toast("Este animal está bien alimentado.");
+                else toast("Acércate a una vaca o al toro.");
+            }
             else {toast("No hay nada con lo que interactuar");}
         } else {
             toast("Acércate a un árbol, piedra, parcela o animal");
@@ -198,6 +207,7 @@ public class MainActivity extends Activity {
         boolean jumping=false;
         long lastFrameNanos=0;
         final CropSystem crops=new CropSystem();
+        final AnimalSystem animals=new AnimalSystem();
         ArrayList<float[]> objects=new ArrayList<>();
 
         GameRenderer(){
@@ -205,6 +215,10 @@ public class MainActivity extends Activity {
             objects.add(new float[]{5,-4,2,1});
             objects.add(new float[]{-3,-7,2,1});
             objects.add(new float[]{3,-1,4,1});
+            objects.add(new float[]{6,-2,5,1});
+            objects.add(new float[]{-7,-1,3,1});
+            objects.add(new float[]{0,-9,3,1});
+            objects.add(new float[]{8,2,3,1});
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
@@ -255,6 +269,7 @@ public class MainActivity extends Activity {
             if(lastFrameNanos!=0){
                 long delta=Math.max(0,Math.min(1000,(now-lastFrameNanos)/1000000));
                 crops.update(delta);
+                animals.update(delta);
             }
             lastFrameNanos=now;
 
@@ -283,9 +298,17 @@ public class MainActivity extends Activity {
                     draw(o[0],1.8f,o[1],1.8f,2,1.8f,.12f,.36f,.16f);
                 }
                 if(t==2)draw(o[0],.35f,o[1],1.1f,.7f,1,.48f,.48f,.46f);
+                if(t==3){
+                    draw(o[0],.34f,o[1],1.15f,.42f,.9f,.18f,.39f,.13f);
+                    draw(o[0]-.25f,.52f,o[1]+.18f,.48f,.34f,.48f,.23f,.48f,.16f);
+                }
                 if(t==4){
                     draw(o[0],.55f,o[1],1.2f,.8f,1.8f,.83f,.82f,.72f);
                     draw(o[0]+.45f,.9f,o[1]-.2f,.55f,.6f,.55f,.82f,.82f,.72f);
+                }
+                if(t==5){
+                    draw(o[0],.55f,o[1],1.35f,.9f,1.9f,.48f,.34f,.22f);
+                    draw(o[0]+.5f,.9f,o[1]-.2f,.58f,.65f,.58f,.48f,.34f,.22f);
                 }
             }
 
@@ -302,6 +325,11 @@ public class MainActivity extends Activity {
                         }
                     }
                 }
+            }
+
+            if(animals.hasCalf()){
+                draw(4.1f,.38f,-1.6f,.75f,.55f,.95f,.78f,.73f,.62f);
+                draw(4.35f,.62f,-1.78f,.38f,.38f,.38f,.78f,.73f,.62f);
             }
 
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
@@ -341,6 +369,11 @@ public class MainActivity extends Activity {
         }
         String saveFarm(){return crops.saveState();}
         void loadFarm(String state){crops.loadState(state);}
+        String getAnimalSummary(){return animals.getSummary();}
+        String saveAnimals(){return animals.saveState();}
+        void loadAnimals(String state){animals.loadState(state);}
+        int feedNearestAnimal(){return animals.feedNearest(px,pz);}
+        void collectForage(){animals.addForage(2);removeNearby();}
 
         int nearbyKind(){
             float best=999;int kind=0;
