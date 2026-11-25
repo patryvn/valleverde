@@ -2,7 +2,7 @@ package es.valledecernego.game;
 
 /** Third-person camera orbit kept behind the direction the player is facing. */
 public final class ThirdPersonCamera {
-    private static final float DISTANCE = 4.8f;
+    private static final float DISTANCE = 4.2f;
     private static final float TARGET_HEIGHT = 1.1f;
     private static final float BASE_ELEVATION = 0.28f;
 
