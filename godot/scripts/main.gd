@@ -68,7 +68,7 @@ func _build_player() -> void:
 	player.add_child(camera_pivot)
 	camera = Camera3D.new()
 	camera.position = Vector3(0, 2.4, 6.5)
-	camera.rotation_degrees.x = -14
+	camera.rotation_degrees.x = 14
 	camera.current = true
 	camera_pivot.add_child(camera)
 
