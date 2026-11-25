@@ -63,3 +63,10 @@ El workflow ahora espera explícitamente a que `cmd package list packages` devue
 - El shader aplica variaciones de baja amplitud basadas en coordenadas locales; si el shader iluminado no compila, el shader plano de compatibilidad sigue disponible, pero sin estos patrones.
 - `GLSurfaceView` solicita RGBA8888 y profundidad de 16 bits; al inicio de cada fotograma se restablecen la máscara de profundidad, la prueba de profundidad y la mezcla para evitar heredar estados GL.
 - Las pruebas unitarias verifican la asignación de estilos. No validan el resultado de píxeles: eso requiere una captura real del emulador o, preferiblemente, del Poco X6 Pro.
+
+
+## Ajuste de contacto con el suelo (0.17.0)
+
+El terreno de juego se dibuja ahora con su cara superior en `PlayerModelSpec.GROUND_LEVEL` (0,05 unidades), coincidente con la parte inferior de las suelas. Antes, el terreno terminaba en Y=-0,10 y los pies comenzaban en Y=0,055, dejando un hueco visible de 0,155 unidades. La sombra aplanada se ha recolocado sobre ese plano y se ha ensanchado ligeramente en vertical para que el test de profundidad no la deje suspendida sobre el suelo. Una prueba unitaria comprueba el contacto de ambas botas con el plano. Esto corrige una desalineación geométrica real, pero no demuestra que el rectángulo azul comunicado por la usuaria haya desaparecido; la inspección de píxeles sigue pendiente.
+
+La ejecución de CI debe forzar explícitamente TCG mediante `ANDROID_I_WANT_MY_TCG=yes`: los registros de la ejecución 45711019642 mostraron que el emulador se cerraba inmediatamente con `Software CPU emulation (-accel off) is not supported` porque esa variable no estaba definida. Se amplía el arranque a 15 minutos y se reduce el AVD a 2 núcleos y 2 GB para reducir presión de memoria. Esta prueba es una comprobación de entorno, no una sustitución de la validación en el Poco X6 Pro.
