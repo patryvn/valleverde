@@ -10,6 +10,7 @@ public final class VillagerWorldSystem {
     private static final float ARRIVAL_DISTANCE = 0.04f;
     private static final float TWO_PI = (float) (Math.PI * 2.0d);
     private static final float MAX_SAVE_COORDINATE = 100.0f;
+    private long idleClockMs = 0L;
 
     private static final float[] HOME_X = {-0.9f, 0.0f, 0.9f};
     private static final float HOME_Z = -1.8f;
@@ -24,6 +25,9 @@ public final class VillagerWorldSystem {
     public synchronized void update(long deltaMs, VillagerSystem.Worker[] workers) {
         if (deltaMs <= 0L || workers == null) return;
         int count = Math.min(states.length, workers.length);
+        if (Long.MAX_VALUE - idleClockMs < deltaMs) idleClockMs = 0L;
+        else idleClockMs += deltaMs;
+        int idlePhase = (int) ((idleClockMs / 30_000L) % 3L);
         double maxStep = WALK_SPEED * (deltaMs / 1000.0d);
 
         for (int i = 0; i < count; i++) {
@@ -31,8 +35,10 @@ public final class VillagerWorldSystem {
             VillagerSystem.Worker worker = workers[i];
             state.job = worker.job();
 
-            float targetX = targetX(state.job, i);
-            float targetZ = targetZ(state.job);
+            float targetX = state.job == VillagerSystem.IDLE
+                ? idleTargetX(i, idlePhase) : targetX(state.job, i);
+            float targetZ = state.job == VillagerSystem.IDLE
+                ? idleTargetZ(i, idlePhase) : targetZ(state.job);
             float dx = targetX - state.x;
             float dz = targetZ - state.z;
             float distance = (float) Math.hypot(dx, dz);
@@ -69,6 +75,24 @@ public final class VillagerWorldSystem {
             case VillagerSystem.WOODCUTTER: return -8.2f;
             default: return HOME_X[workerIndex];
         }
+    }
+
+    private static float idleTargetX(int index, int phase) {
+        float[][] stops = {
+            {-1.2f, 0.8f, 1.4f},
+            {-2.6f, 1.6f, 0.4f},
+            {-0.6f, -1.8f, 2.2f}
+        };
+        return stops[index][phase];
+    }
+
+    private static float idleTargetZ(int index, int phase) {
+        float[][] stops = {
+            {-2.8f, -3.1f, -1.1f},
+            {-2.6f, -3.4f, -1.0f},
+            {-2.9f, -3.2f, -1.2f}
+        };
+        return stops[index][phase];
     }
 
     static float targetZ(int job) {
