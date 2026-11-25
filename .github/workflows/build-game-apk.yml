@@ -14,7 +14,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      # The runner already provides Android command-line tools. Install only
+      # platform-tools here: the legacy SDK package "tools" no longer exists.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
