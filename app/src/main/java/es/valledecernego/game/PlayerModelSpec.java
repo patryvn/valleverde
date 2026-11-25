@@ -8,12 +8,20 @@ public final class PlayerModelSpec {
     public enum Shape { BOX, SPHERE, LIMB }
     public enum Motion { NONE, LEFT_LEG, RIGHT_LEG, LEFT_ARM, RIGHT_ARM }
 
+    public static final int MATERIAL_SOLID = 0;
+    public static final int MATERIAL_FABRIC = 1;
+    public static final int MATERIAL_COTTON = 2;
+    public static final int MATERIAL_LEATHER = 3;
+    public static final int MATERIAL_SKIN = 4;
+    public static final int MATERIAL_METAL = 5;
+
     public static final class Part {
         public final String id;
         public final Shape shape;
         public final Motion motion;
         public final float x, y, z, sx, sy, sz;
         public final float r, g, b, alpha, roll;
+        public final int materialStyle;
         public final boolean followsBody;
 
         private Part(String id, Shape shape, Motion motion,
@@ -23,8 +31,18 @@ public final class PlayerModelSpec {
             this.x=x; this.y=y; this.z=z;
             this.sx=sx; this.sy=sy; this.sz=sz;
             this.r=r; this.g=g; this.b=b; this.alpha=alpha; this.roll=roll;
+            this.materialStyle=materialStyleFor(id);
             this.followsBody=followsBody;
         }
+    }
+
+    private static int materialStyleFor(String id) {
+        if (id.contains("zipper") || id.contains("buckle")) return MATERIAL_METAL;
+        if (id.contains("shirt")) return MATERIAL_COTTON;
+        if (id.contains("backpack") || id.contains("satchel") || id.contains("strap")) return MATERIAL_LEATHER;
+        if (id.equals("head") || id.equals("neck") || id.contains("ear") || id.equals("nose") || id.contains("hand")) return MATERIAL_SKIN;
+        if (id.contains("boot") || id.contains("leg") || id.contains("jacket") || id.contains("pocket") || id.contains("shoulder") || id.contains("arm") || id.contains("sleeve") || id.equals("torso") || id.equals("collar") || id.equals("cap")) return MATERIAL_FABRIC;
+        return MATERIAL_SOLID;
     }
 
     private static Part part(String id, Shape shape, Motion motion,
