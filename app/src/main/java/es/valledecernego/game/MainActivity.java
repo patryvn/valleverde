@@ -543,8 +543,8 @@ public class MainActivity extends Activity {
             // Botas y pantalón
             drawPlayerLimb(-.115f,.58f,0f,.16f,.48f,.19f,.16f,.12f,.08f,leftLeg);
             drawPlayerLimb(.115f,.58f,0f,.16f,.48f,.19f,.16f,.12f,.08f,rightLeg);
-            drawPlayerPart(-.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f);
-            drawPlayerPart(.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f);
+            drawPlayerPart(-.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f,.05f);
+            drawPlayerPart(.115f,.12f,.08f,.22f,.13f,.34f,.12f,.08f,.05f);
 
             // Chaqueta verde, cuello y cabeza
             drawPlayerPart(0f,.98f+ bob,0f,.48f,.62f,.31f,.20f,.39f,.23f);
