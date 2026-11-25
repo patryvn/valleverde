@@ -8,6 +8,9 @@ public final class PlayerModelSpec {
     public enum Shape { BOX, SPHERE, LIMB }
     public enum Motion { NONE, LEFT_LEG, RIGHT_LEG, LEFT_ARM, RIGHT_ARM }
 
+    /** Height of the walkable ground plane; boot soles are authored to meet it. */
+    public static final float GROUND_LEVEL = 0.05f;
+
     public static final int MATERIAL_SOLID = 0;
     public static final int MATERIAL_FABRIC = 1;
     public static final int MATERIAL_COTTON = 2;
