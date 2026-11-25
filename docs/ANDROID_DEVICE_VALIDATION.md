@@ -1,0 +1,40 @@
+# Validación de renderizado en Android
+
+## Estado de la rama
+
+El personaje se construye con `PlayerModelSpec` y `PlayerModelTransform`: piezas 3D procedurales de cabeza, torso, brazos, piernas, ropa, gorra y mochila. La escena usa OpenGL ES 2.0, iluminación direccional por shader y una sombra translúcida bajo el personaje. El modelo no usa todavía texturas fotográficas; sus materiales son colores sólidos.
+
+Las pruebas unitarias existentes comprueban:
+- silueta y piezas principales del personaje;
+- dimensiones y materiales dentro de rango;
+- simetría de brazos y piernas;
+- transformaciones con distintas orientaciones y fases de animación;
+- seguimiento de cámara al trasladar y elevar al jugador;
+- permanencia de las piezas dentro del volumen visible de la cámara.
+
+Estas pruebas validan matemáticas y datos del modelo; no pueden demostrar por sí solas que un controlador gráfico real dibuje correctamente los píxeles.
+
+## Prueba automatizada en CI
+
+El flujo de GitHub Actions:
+1. ejecuta `testDebugUnitTest`;
+2. genera APK debug y release de prueba y verifica firma/paquete;
+3. instala la APK debug en un emulador Android 35 en orientación horizontal;
+4. comprueba que `MainActivity` sigue en primer plano y que el HUD informa de las 60 piezas enviadas sin error OpenGL;
+5. guarda capturas antes y después de arrastrar el joystick, además del logcat.
+
+La captura debe inspeccionarse visualmente: el contador confirma llamadas de dibujo sin error GL, pero no prueba que el modelo sea reconocible, esté libre de oclusiones o se vea bien en todos los controladores gráficos.
+
+## Validación física pendiente
+
+No hay un dispositivo Android físico conectado a GitHub Actions. En particular, falta validar en un Poco X6 Pro con Android 16:
+- que el personaje completo (cabeza, torso, brazos, piernas, gorra y mochila) sea visible;
+- que caminar, reposar, girar y saltar no deformen ni oculten el modelo;
+- que la cámara mantenga el encuadre al moverse en varias direcciones;
+- que no aparezcan errores GL, parpadeos, caída de FPS o consumo térmico excesivo.
+
+La APK `release-test` se firma con una clave de pruebas del proyecto: sirve para instalación local, pero no es una firma de distribución de Google Play. Si Android detecta una firma distinta de una APK anterior, puede ser necesario desinstalar la anterior; eso puede borrar la partida local.
+
+## Alcance del juego
+
+La existencia de sistemas parciales en el código no equivale a un juego completo. Las funciones de vehículos, cuevas, prevención de incendios, supervivencia y simulación avanzada del pueblo siguen requiriendo integración y pruebas específicas. No se considera terminado hasta que las funciones principales estén conectadas, las pruebas pasen, haya una APK release instalable publicada y se documente la validación en dispositivo físico.
