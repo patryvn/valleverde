@@ -344,6 +344,13 @@ public class MainActivity extends Activity {
             float jumpX=w-unit*.355f, jumpY=h-unit*.15f, jumpR=unit*.098f;
             button(c,actionX,actionY,actionR,"HACER",0xff6d8c55);
             button(c,jumpX,jumpY,jumpR,"SALTAR",0xff6b7e9b);
+            String hint=renderer==null?"":renderer.getInteractionHint();
+            if(!hint.isEmpty()){
+                p.setColor(0xdd172018);p.setTextAlign(Paint.Align.CENTER);
+                p.setTextSize(Math.max(15,unit*.030f));
+                c.drawText(hint,actionX,actionY-actionR-14,p);
+                p.setTextAlign(Paint.Align.LEFT);
+            }
             p.setColor(Color.WHITE);p.setTextSize(16);c.drawText("Joystick para moverte • Arrastra para mirar",w/2-170,h-25,p);
         }
 
@@ -891,12 +898,29 @@ public class MainActivity extends Activity {
         }
 
         float nearby(){
-            float best=999;
-            for(float[] o:objects)if(o[3]>0){
-                float d=(float)Math.hypot(px-o[0],pz-o[1]);
-                if(d<best)best=d;
+            int index=ResourceInteraction.nearestIndex(objects,px,pz,Float.POSITIVE_INFINITY);
+            if(index<0)return 999f;
+            float[] item=objects.get(index);
+            return (float)Math.hypot(px-item[0],pz-item[1]);
+        }
+
+        String getInteractionHint(){
+            int index=ResourceInteraction.nearestIndex(objects,px,pz,2.4f);
+            if(index<0){
+                float distance=nearby();
+                return distance<999f?"ACÉRCATE A UN RECURSO":"EXPLORA PARA ENCONTRAR RECURSOS";
             }
-            return best;
+            int kind=(int)objects.get(index)[2];
+            if(kind==1)return "ÁRBOL · HACER: +2 MADERA";
+            if(kind==2)return "ROCA · HACER: +2 PIEDRA";
+            if(kind==3)return "MATORRAL · HACER: +2 FORRAJE";
+            if(kind==4)return "VACA · HACER: ALIMENTAR";
+            if(kind==5)return "TORO · HACER: ALIMENTAR";
+            if(kind==6)return "CUADRA · HACER: CONSTRUIR/ABRIR";
+            if(kind==7)return "MERCADO · HACER: COMERCIAR";
+            if(kind==8)return "TABLÓN · HACER: OFICIOS";
+            if(kind==9)return "CASA · HACER: CONSTRUIR/VER";
+            return "HACER · INTERACTUAR";
         }
 
         float cropDistance(){return crops.nearestDistance(px,pz);}
@@ -969,24 +993,13 @@ public class MainActivity extends Activity {
         void collectForage(){animals.addForage(2);removeNearby();}
 
         int nearbyKind(){
-            float best=999;int kind=0;
-            for(float[] o:objects)if(o[3]>0){
-                float d=(float)Math.hypot(px-o[0],pz-o[1]);
-                if(d<best){best=d;kind=(int)o[2];}
-            }
-            return kind;
+            int index=ResourceInteraction.nearestIndex(objects,px,pz,2.4f);
+            return index<0?0:(int)objects.get(index)[2];
         }
 
         void removeNearby(){
-            float best=999;int ix=-1;
-            for(int i=0;i<objects.size();i++){
-                float[] o=objects.get(i);
-                if(o[3]>0){
-                    float d=(float)Math.hypot(px-o[0],pz-o[1]);
-                    if(d<best){best=d;ix=i;}
-                }
-            }
-            if(ix>=0&&best<2.4f)objects.get(ix)[3]=0;
+            int index=ResourceInteraction.nearestIndex(objects,px,pz,2.4f);
+            if(index>=0)objects.get(index)[3]=0;
         }
     }
 }
