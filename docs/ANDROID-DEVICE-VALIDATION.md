@@ -1,33 +1,34 @@
 # Validación del personaje y cámara en Android
 
-## Cambios incluidos en 0.13.0
+## Cambios incluidos en 0.14.0
 
 - El personaje se construye en el renderizador OpenGL ES 2.0 con piezas 3D separadas y reutiliza la misma especificación en las pruebas.
 - La silueta incluye cabeza, cuello, torso, chaqueta abierta, brazos, manos, pantalón, piernas, botas con suela y cordones, gorro tejido, pelo, ojos verdes, pupilas, boca y bandolera.
 - El diseño usa materiales de color con iluminación por normales; no incorpora todavía texturas fotográficas ni mapas UV. La franja naranja de la camiseta y la correa de la bandolera tienen rotación 3D explícita.
 - Brazos y piernas mantienen canales de animación opuestos; el torso acompaña el paso con un balanceo leve y conserva una animación de reposo.
-- La cámara de tercera persona sigue la posición y altura del jugador y conserva su órbita. El HUD muestra el estado del renderizador (3D OK y número de piezas) para distinguir un fallo de shader de un problema de encuadre.
-- La matriz normal aplica las mismas rotaciones y la escala inversa para que la iluminación no se deforme en las piezas elípticas.
+- La cámara de tercera persona sigue la posición y altura del jugador y conserva su órbita; se ha acercado de 4,8 m a 4,2 m para mejorar el encuadre móvil. El HUD informa del número de piezas enviadas y de los errores GL detectados.
+- La mochila, correas, solapa y bolsillo se sitúan en la cara posterior del torso, visible desde la cámara de tercera persona. Tras enviar las 60 piezas, el renderizador consulta `glGetError()`: `GL OK` significa que no se notificó un error GL en ese fotograma, pero no demuestra por sí solo que los píxeles sean visibles. La matriz normal aplica las mismas rotaciones y la escala inversa para que la iluminación no se deforme en las piezas elípticas.
 
 ## Comprobaciones automatizadas
 
 GitHub Actions ejecuta `:app:testDebugUnitTest`, `:app:assembleDebug` y `:app:assembleRelease`. Las pruebas comprueban presencia de piezas, dimensiones positivas, materiales válidos, colocación frontal de los ojos, rotación de la franja, pivotes de extremidades, transformación al desplazarse y seguimiento de cámara.
 
-Las pruebas unitarias validan geometría declarativa y matemáticas; no pueden certificar que una GPU concreta dibuje correctamente el personaje.
+Las pruebas unitarias validan geometría declarativa, materiales, accesorios traseros, transformaciones y seguimiento de cámara; no pueden certificar que una GPU concreta dibuje correctamente el personaje.
 
 ## Validación física pendiente
 
 En un móvil Android real, comprobar:
 
-1. Que el HUD indique `3D OK` y el personaje se vea completo, no como un rectángulo o una pantalla azul.
-2. Que se distingan cabeza, torso, brazos, piernas, gorro, botas y bandolera desde el inicio.
-3. Que la cámara permanezca detrás del personaje y lo mantenga en pantalla al caminar en las cuatro direcciones.
-4. Que la malla no parpadee, se estire ni desaparezca al girar, saltar o acercarse a objetos.
-5. Que caminar y reposar tengan movimiento fluido, sin saltos de fase.
-6. Que la sombra no tape los pies y que el sombreado se vea bien en distintas GPU y resoluciones.
-7. Que pausar y reanudar no deje la escena en negro ni pierda el estado guardado.
+1. Instalar la APK 0.14.0 y comprobar que el HUD indique `3D OK · 60 piezas · GL OK` después del primer fotograma. Este estado confirma el envío de las piezas sin error GL notificado, no su visibilidad real.
+2. Que el personaje se vea completo, no como un rectángulo o una pantalla azul.
+3. Que se distingan cabeza, torso, brazos, piernas, gorro, botas, mochila y bandolera desde el inicio.
+4. Que la cámara permanezca detrás del personaje y lo mantenga en pantalla al caminar en las cuatro direcciones.
+5. Que la malla no parpadee, se estire ni desaparezca al girar, saltar o acercarse a objetos.
+6. Que caminar y reposar tengan movimiento fluido, sin saltos de fase.
+7. Que la sombra no tape los pies y que el sombreado se vea bien en distintas GPU y resoluciones.
+8. Que pausar y reanudar no deje la escena en negro ni pierda el estado guardado.
 
-Si aparece otra vez el rectángulo azul, anotar si el HUD muestra `3D OK` o `3D NO DISPONIBLE`: esa diferencia acota el problema entre la geometría/cámara y la inicialización de OpenGL.
+Si aparece otra vez el rectángulo azul, anotar el estado completo del HUD: `3D NO DISPONIBLE` apunta a inicialización/shader; `error GL 0x…` apunta a un error OpenGL; `60 piezas · GL OK` indica que las llamadas se enviaron sin error notificado y deja como sospechosos el encuadre, la oclusión, el APK instalado o la salida visual de la GPU. Este último caso requiere captura del móvil.
 
 ## Instalación y firma de prueba
 
