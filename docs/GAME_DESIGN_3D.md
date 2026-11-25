@@ -12,6 +12,7 @@ El objetivo es empezar con pocos recursos y una explotación pequeña, aprender 
 - Estética: rural gallega, con montañas, laderas, bosques de castaños y robles, prados, viñedos, arroyos, caminos de tierra y aldeas de piedra.
 - Plataforma objetivo: Android.
 - Enfoque: exploración libre, agricultura avanzada, ganadería, aldeanos, construcción, supervivencia, vehículos, comercio y cuidado del monte.
+- Economía amable: monedas y premios que se consiguen jugando, sin compras obligatorias ni esperas artificiales.
 - No incluir multijugador en el plan inicial.
 
 ## 3. Pilares de diseño
@@ -31,7 +32,8 @@ El objetivo es empezar con pocos recursos y una explotación pequeña, aprender 
 6. Asignar trabajos a aldeanos y mejorar sus habilidades.
 7. Construir y ampliar viviendas, establos, talleres, almacenes y caminos.
 8. Transportar productos y comerciar con pueblos vecinos.
-9. Reinvertir ganancias y recursos para desbloquear nuevas áreas y mejoras.
+9. Completar encargos, retos y logros para obtener monedas y premios.
+10. Reinvertir ganancias y recursos para desbloquear nuevas áreas y mejoras.
 10. Mantener el monte y las infraestructuras para reducir riesgos ambientales.
 
 ## 5. Mapa y regiones
@@ -128,6 +130,34 @@ Las zonas se conectarán con caminos reconocibles y puntos de referencia. No con
 - El fuego, si se incorpora, debe ser un sistema controlado y optimizado, no una destrucción aleatoria frustrante.
 - Recompensar la prevención y el cuidado del entorno.
 
+
+
+## 6.12 Monedas, premios y recompensas gratuitas
+El juego debe ser generoso y permitir avanzar jugando. No habrá compras obligatorias, energía que bloquee la partida ni esperas artificiales para cobrar recompensas.
+
+**Moneda principal: monedas de oro**
+- Se ganan vendiendo cosechas, productos ganaderos, materiales y objetos fabricados.
+- Se obtienen por encargos del mercado, entregas y trabajos para aldeanos.
+- Sirven para comprar semillas, animales, herramientas, mejoras, vehículos y edificios.
+- Los precios y recompensas deben estar equilibrados para que las tareas normales siempre aporten progreso.
+
+**Premios y recompensas adicionales**
+- Regalo diario gratuito con monedas, semillas, alimento o materiales; no se pierde el progreso por saltarse un día.
+- Tareas diarias cortas y variadas, por ejemplo cosechar, alimentar animales o recoger madera.
+- Retos semanales con premios mayores y objetivos que se puedan completar jugando con calma.
+- Logros permanentes por hitos: primera cosecha, primer ternero, primera casa construida, primera cueva explorada o monte limpiado.
+- Cofres de exploración escondidos en bosques, cuevas y miradores, con recompensas definidas y sin apuestas.
+- Ferias y festivales de temporada con concursos agrícolas, ganaderos y de construcción.
+- Recompensas por completar encargos, ayudar a vecinos y mantener caminos, fuentes y cortafuegos.
+- Bonificaciones por rachas moderadas, sin castigar ni reiniciar premios importantes si el jugador descansa.
+
+**Reglas de equilibrio y transparencia**
+- Mostrar siempre qué tarea da qué recompensa antes de aceptarla.
+- Evitar anuncios obligatorios, cajas de botín aleatorias de pago y monedas premium necesarias para progresar.
+- No poner temporizadores que obliguen a pagar para acelerar edificios, cultivos o animales.
+- Mantener una economía que premie jugar de distintas maneras, no repetir una única tarea durante horas.
+- Los premios especiales deben poder conseguirse mediante eventos o logros dentro del juego.
+
 ## 7. Dirección artística y sonido
 - 3D estilizado-realista: materiales naturales, proporciones creíbles, iluminación cuidada y rendimiento adecuado para Android.
 - Terreno con pendientes, vegetación variada, caminos irregulares y agua.
@@ -205,6 +235,13 @@ Las zonas se conectarán con caminos reconocibles y puntos de referencia. No con
 - Optimización de gráficos, memoria, batería y controles.
 - Pruebas de guardado, errores, equilibrio y compatibilidad Android.
 **Salida:** versión amplia y estable, lista para una beta de pruebas.
+
+### Integración de recompensas
+- Añadir la primera versión de monedas al comercio y los encargos cuando exista inventario y economía básica.
+- Incorporar logros y premios por hitos al completar los primeros sistemas.
+- Añadir regalo diario y retos cuando el guardado local sea fiable.
+- Incorporar cofres de exploración, ferias y premios de temporada al ampliar el mapa.
+- Probar el equilibrio de monedas y precios antes de publicar cada beta.
 
 ## 9. Primera demo: alcance obligatorio
 La primera demo no intentará incluir todas las fases. Debe ofrecer:
