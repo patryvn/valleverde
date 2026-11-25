@@ -34,11 +34,11 @@ public final class PlayerModelSpec {
     }
 
     private static final Part[] PARTS = {
-        part("left-boot",Shape.BOX,Motion.NONE,-.13f,.14f,.09f,.23f,.16f,.35f,.12f,.085f,.055f,false),
-        part("right-boot",Shape.BOX,Motion.NONE,.13f,.14f,.09f,.23f,.16f,.35f,.12f,.085f,.055f,false),
-        part("left-leg",Shape.LIMB,Motion.LEFT_LEG,-.13f,.61f,0f,.17f,.50f,.18f,.14f,.17f,.15f,false),
-        part("right-leg",Shape.LIMB,Motion.RIGHT_LEG,.13f,.61f,0f,.17f,.50f,.18f,.14f,.17f,.15f,false),
-        part("torso",Shape.BOX,Motion.NONE,0f,.99f,0f,.52f,.64f,.32f,.15f,.36f,.23f,true),
+        part("left-boot",Shape.BOX,Motion.NONE,-.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
+        part("right-boot",Shape.BOX,Motion.NONE,.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
+        part("left-leg",Shape.LIMB,Motion.LEFT_LEG,-.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
+        part("right-leg",Shape.LIMB,Motion.RIGHT_LEG,.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
+        part("torso",Shape.BOX,Motion.NONE,0f,.99f,0f,.52f,.64f,.32f,.18f,.34f,.17f,true),
         part("jacket-hem",Shape.BOX,Motion.NONE,0f,.72f,.012f,.53f,.12f,.33f,.11f,.27f,.17f,true),
         part("collar",Shape.BOX,Motion.NONE,0f,1.31f,.015f,.19f,.14f,.20f,.72f,.69f,.55f,true),
         part("zipper",Shape.BOX,Motion.NONE,0f,1.00f,.166f,.025f,.45f,.014f,.76f,.70f,.52f,true),
@@ -51,17 +51,40 @@ public final class PlayerModelSpec {
         part("left-hand",Shape.SPHERE,Motion.NONE,-.32f,.82f,.025f,.09f,.11f,.09f,.75f,.54f,.38f,true),
         part("right-hand",Shape.SPHERE,Motion.NONE,.32f,.82f,.025f,.09f,.11f,.09f,.75f,.54f,.38f,true),
         part("neck",Shape.BOX,Motion.NONE,0f,1.35f,.015f,.17f,.18f,.17f,.72f,.51f,.36f,true),
-        part("head",Shape.SPHERE,Motion.NONE,0f,1.57f,.005f,.24f,.24f,.22f,.79f,.59f,.43f,true),
+        part("head",Shape.SPHERE,Motion.NONE,0f,1.57f,.005f,.25f,.25f,.23f,.79f,.48f,.29f,true),
         part("left-ear",Shape.SPHERE,Motion.NONE,-.30f,1.57f,.005f,.065f,.095f,.075f,.72f,.51f,.36f,true),
         part("right-ear",Shape.SPHERE,Motion.NONE,.30f,1.57f,.005f,.065f,.095f,.075f,.72f,.51f,.36f,true),
         part("nose",Shape.SPHERE,Motion.NONE,0f,1.53f,.225f,.045f,.055f,.045f,.68f,.46f,.32f,true),
         part("left-eye",Shape.SPHERE,Motion.NONE,-.080f,1.60f,.208f,.035f,.027f,.018f,.07f,.055f,.04f,true),
         part("right-eye",Shape.SPHERE,Motion.NONE,.080f,1.60f,.208f,.035f,.027f,.018f,.07f,.055f,.04f,true),
-        part("hair",Shape.SPHERE,Motion.NONE,0f,1.72f,-.045f,.31f,.17f,.29f,.12f,.075f,.045f,true),
-        part("cap",Shape.SPHERE,Motion.NONE,0f,1.82f,.005f,.34f,.085f,.31f,.22f,.17f,.09f,true),
-        part("backpack",Shape.BOX,Motion.NONE,0f,1.02f,-.205f,.34f,.42f,.15f,.30f,.19f,.11f,true),
-        part("left-backpack-strap",Shape.BOX,Motion.NONE,-.19f,1.16f,-.115f,.055f,.38f,.055f,.11f,.23f,.15f,true),
-        part("right-backpack-strap",Shape.BOX,Motion.NONE,.19f,1.16f,-.115f,.055f,.38f,.055f,.11f,.23f,.15f,true)
+        part("hair",Shape.SPHERE,Motion.NONE,0f,1.72f,-.045f,.31f,.17f,.29f,.095f,.052f,.028f,true),
+        part("cap",Shape.SPHERE,Motion.NONE,0f,1.82f,.005f,.34f,.10f,.31f,.105f,.095f,.085f,true),
+        part("backpack",Shape.BOX,Motion.NONE,-.32f,.69f,.16f,.34f,.42f,.16f,.58f,.39f,.19f,true),
+        part("left-backpack-strap",Shape.BOX,Motion.NONE,-.19f,1.16f,-.115f,.055f,.38f,.055f,.24f,.15f,.075f,true),
+        part("right-backpack-strap",Shape.BOX,Motion.NONE,.19f,1.16f,-.115f,.055f,.38f,.055f,.24f,.15f,.075f,true),
+        // Turquoise shirt and orange diagonal graphic visible through the open jacket.
+        part("shirt-front",Shape.BOX,Motion.NONE,0f,1.00f,.174f,.27f,.50f,.035f,.04f,.58f,.52f,true),
+        part("shirt-orange-upper",Shape.BOX,Motion.NONE,.075f,1.10f,.198f,.12f,.09f,.018f,.94f,.29f,.08f,true),
+        part("shirt-orange-middle",Shape.BOX,Motion.NONE,-.005f,.99f,.199f,.12f,.09f,.018f,.94f,.29f,.08f,true),
+        part("shirt-orange-lower",Shape.BOX,Motion.NONE,-.085f,.88f,.198f,.12f,.09f,.018f,.94f,.29f,.08f,true),
+        // Open olive jacket fronts and folded collar.
+        part("jacket-left-front",Shape.BOX,Motion.NONE,-.205f,1.00f,.19f,.13f,.56f,.055f,.25f,.32f,.12f,true),
+        part("jacket-right-front",Shape.BOX,Motion.NONE,.205f,1.00f,.19f,.13f,.56f,.055f,.25f,.32f,.12f,true),
+        part("jacket-left-collar",Shape.BOX,Motion.NONE,-.16f,1.30f,.19f,.15f,.14f,.07f,.31f,.37f,.15f,true),
+        part("jacket-right-collar",Shape.BOX,Motion.NONE,.16f,1.30f,.19f,.15f,.14f,.07f,.31f,.37f,.15f,true),
+        // Green eyes, dark pupils and simple brows.
+        part("left-eye-white",Shape.SPHERE,Motion.NONE,-.08f,1.60f,.207f,.052f,.038f,.022f,.94f,.88f,.70f,true),
+        part("right-eye-white",Shape.SPHERE,Motion.NONE,.08f,1.60f,.207f,.052f,.038f,.022f,.94f,.88f,.70f,true),
+        part("left-eye-green",Shape.SPHERE,Motion.NONE,-.08f,1.60f,.229f,.024f,.029f,.012f,.08f,.48f,.20f,true),
+        part("right-eye-green",Shape.SPHERE,Motion.NONE,.08f,1.60f,.229f,.024f,.029f,.012f,.08f,.48f,.20f,true),
+        part("left-eyebrow",Shape.BOX,Motion.NONE,-.08f,1.66f,.211f,.085f,.018f,.018f,.12f,.065f,.035f,true),
+        part("right-eyebrow",Shape.BOX,Motion.NONE,.08f,1.66f,.211f,.085f,.018f,.018f,.12f,.065f,.035f,true),
+        // Cross-body satchel strap, represented by short angled-looking segments.
+        part("satchel-strap-upper",Shape.BOX,Motion.NONE,.13f,1.20f,.205f,.095f,.20f,.035f,.30f,.19f,.10f,true),
+        part("satchel-strap-middle",Shape.BOX,Motion.NONE,.015f,1.06f,.215f,.095f,.20f,.035f,.30f,.19f,.10f,true),
+        part("satchel-strap-lower",Shape.BOX,Motion.NONE,-.12f,.91f,.215f,.095f,.20f,.035f,.30f,.19f,.10f,true),
+        part("satchel-flap",Shape.BOX,Motion.NONE,-.32f,.78f,.255f,.30f,.19f,.045f,.69f,.49f,.25f,true),
+        part("satchel-buckle",Shape.BOX,Motion.NONE,-.32f,.75f,.283f,.055f,.07f,.018f,.72f,.55f,.18f,true)
     };
 
     private PlayerModelSpec() { }
