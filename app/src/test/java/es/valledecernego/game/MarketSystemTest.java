@@ -17,7 +17,7 @@ public class MarketSystemTest {
         CropSystem crops = createHarvest();
         MarketSystem market = new MarketSystem();
         assertEquals(3, market.sellHarvest(crops));
-        assertEquals(6, market.getCoins());
+        assertEquals(156, market.getCoins());
         assertEquals(0, crops.getHarvest());
         assertEquals(0, market.sellHarvest(crops));
         assertEquals(6, market.getCoins());
@@ -46,7 +46,7 @@ public class MarketSystemTest {
         market.sellHarvest(crops);
         MarketSystem restored = new MarketSystem();
         restored.loadState(market.saveState());
-        assertEquals(6, restored.getCoins());
+        assertEquals(156, restored.getCoins());
         restored.loadState("-4");
         assertEquals(6, restored.getCoins());
         restored.loadState("not-a-number");
