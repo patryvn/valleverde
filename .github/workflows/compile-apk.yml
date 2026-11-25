@@ -85,8 +85,37 @@ jobs:
             mkdir -p emulator-output
             adb wait-for-device
             until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && [ "$(adb shell getprop init.svc.bootanim | tr -d '\r')" = "stopped" ]; do sleep 2; done
+            # sys.boot_completed alone is not enough on a very slow TCG emulator:
+            # system_server may still be restarting and PackageManager may be absent.
+            package_ready=0
+            for attempt in $(seq 1 90); do
+              if adb shell cmd package list packages 2>/dev/null | grep -q '^package:'; then
+                package_ready=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$package_ready" -ne 1 ]; then
+              adb shell getprop > emulator-output/getprop-before-install.txt || true
+              adb logcat -b all -d -v time > emulator-output/logcat-before-install.txt || true
+              echo "PackageManager did not become ready after Android boot."
+              exit 1
+            fi
             adb logcat -c
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            install_ok=0
+            for attempt in $(seq 1 5); do
+              if adb install -r app/build/outputs/apk/debug/app-debug.apk; then
+                install_ok=1
+                break
+              fi
+              sleep 10
+            done
+            if [ "$install_ok" -ne 1 ]; then
+              adb shell getprop > emulator-output/getprop-install-failure.txt || true
+              adb logcat -b all -d -v time > emulator-output/logcat-install-failure.txt || true
+              echo "APK installation failed after five attempts."
+              exit 1
+            fi
             adb shell input keyevent 224 || true
             adb shell input keyevent 82 || true
             adb shell am force-stop es.valledecernego.game
