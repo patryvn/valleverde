@@ -23,6 +23,8 @@ jobs:
 
       - name: Preparar Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Instalar SDK Android
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
@@ -43,12 +45,13 @@ jobs:
           fi
           mkdir -p source
           unzip -q "$ZIP_FILE" -d source
-          PROJECT_DIR="$(dirname "$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)")"
-          if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "source" ]; then
+          SETTINGS_FILE="$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)"
+          if [ -z "$SETTINGS_FILE" ]; then
             echo "No se encontró settings.gradle ni settings.gradle.kts dentro del ZIP"
-            find source -maxdepth 4 -type f | head -100
+            find source -maxdepth 5 -type f | head -100
             exit 1
           fi
+          PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Proyecto localizado en: $PROJECT_DIR"
 
