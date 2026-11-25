@@ -581,58 +581,47 @@ public class MainActivity extends Activity {
             drawPlayer();
         }
 
-        // Personaje rural 3D: silueta humana, ropa por capas, cabeza esferica y mochila.
+        // Modelo rural definido por piezas para poder verificar sus proporciones con pruebas unitarias.
         void drawPlayer(){
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
-            float leftLeg=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
-            float rightLeg=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,false);
-            float leftArm=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
-            float rightArm=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
 
-            // Sombra de contacto suave bajo los pies (sin textura externa).
+            // Sombra de contacto elíptica, separada del modelo para que no salte con los pies.
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
             drawMesh(sphereBuffer,sphereVertexCount,px,.012f,pz,.52f,.014f,.34f,
                 .045f,.055f,.045f,.28f,playerFacing,0f);
             GLES20.glDisable(GLES20.GL_BLEND);
 
-            // Botas, pantalones y rodillas.
-            drawPlayerPart(-.13f,.14f,.09f,.23f,.16f,.35f,.12f,.085f,.055f);
-            drawPlayerPart(.13f,.14f,.09f,.23f,.16f,.35f,.12f,.085f,.055f);
-            drawPlayerLimb(-.13f,.61f,0f,.17f,.50f,.18f,.14f,.17f,.15f,leftLeg);
-            drawPlayerLimb(.13f,.61f,0f,.17f,.50f,.18f,.14f,.17f,.15f,rightLeg);
+            for(int i=0;i<PlayerModelSpec.size();i++){
+                PlayerModelSpec.Part part=PlayerModelSpec.partAt(i);
+                float bodyOffset=part.followsBody?bob:0f;
+                float angle=0f;
+                if(part.motion==PlayerModelSpec.Motion.LEFT_LEG){
+                    angle=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
+                }else if(part.motion==PlayerModelSpec.Motion.RIGHT_LEG){
+                    angle=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,false);
+                }else if(part.motion==PlayerModelSpec.Motion.LEFT_ARM){
+                    angle=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
+                }else if(part.motion==PlayerModelSpec.Motion.RIGHT_ARM){
+                    angle=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
+                }
 
-            // Chaqueta de campo, bajo, cuello, cremallera y bolsillos.
-            drawPlayerPart(0f,.99f+bob,0f,.52f,.64f,.32f,.15f,.36f,.23f);
-            drawPlayerPart(0f,.72f+bob,.012f,.53f,.12f,.33f,.11f,.27f,.17f);
-            drawPlayerPart(0f,1.31f+bob,.015f,.19f,.14f,.20f,.72f,.69f,.55f);
-            drawPlayerPart(0f,1.00f+bob,.166f,.025f,.45f,.014f,.76f,.70f,.52f);
-            drawPlayerPart(-.15f,.98f+bob,.17f,.12f,.13f,.025f,.20f,.42f,.27f);
-            drawPlayerPart(.15f,.98f+bob,.17f,.12f,.13f,.025f,.20f,.42f,.27f);
-
-            // Hombros redondeados y mangas articuladas.
-            drawPlayerSphere(-.29f,1.20f+bob,0f,.16f,.16f,.16f,.15f,.36f,.23f,1f);
-            drawPlayerSphere(.29f,1.20f+bob,0f,.16f,.16f,.16f,.15f,.36f,.23f,1f);
-            drawPlayerLimb(-.31f,1.20f+bob,0f,.15f,.44f,.17f,.17f,.39f,.25f,leftArm);
-            drawPlayerLimb(.31f,1.20f+bob,0f,.15f,.44f,.17f,.17f,.39f,.25f,rightArm);
-            drawPlayerSphere(-.32f,.82f+bob,.025f,.09f,.11f,.09f,.75f,.54f,.38f,1f);
-            drawPlayerSphere(.32f,.82f+bob,.025f,.09f,.11f,.09f,.75f,.54f,.38f,1f);
-
-            // Cuello y cabeza ovalada: proporciones humanas y rasgos faciales.
-            drawPlayerPart(0f,1.35f+bob,.015f,.17f,.18f,.17f,.72f,.51f,.36f);
-            drawPlayerSphere(0f,1.57f+bob,.005f,.30f,.35f,.28f,.79f,.59f,.43f,1f);
-            drawPlayerSphere(-.30f,1.57f+bob,.005f,.065f,.095f,.075f,.72f,.51f,.36f,1f);
-            drawPlayerSphere(.30f,1.57f+bob,.005f,.065f,.095f,.075f,.72f,.51f,.36f,1f);
-            drawPlayerSphere(0f,1.53f+bob,.245f,.045f,.055f,.045f,.68f,.46f,.32f,1f);
-            drawPlayerSphere(-.095f,1.60f+bob,.238f,.035f,.027f,.018f,.07f,.055f,.04f,1f);
-            drawPlayerSphere(.095f,1.60f+bob,.238f,.035f,.027f,.018f,.07f,.055f,.04f,1f);
-
-            // Pelo oscuro, gorra de trabajo y mochila con correas.
-            drawPlayerSphere(0f,1.72f+bob,-.045f,.31f,.17f,.29f,.12f,.075f,.045f,1f);
-            drawPlayerSphere(0f,1.82f+bob,.005f,.34f,.085f,.31f,.22f,.17f,.09f,1f);
-            drawPlayerPart(0f,1.02f+bob,-.205f,.34f,.42f,.15f,.30f,.19f,.11f);
-            drawPlayerPart(-.19f,1.16f+bob,-.115f,.055f,.38f,.055f,.11f,.23f,.15f);
-            drawPlayerPart(.19f,1.16f+bob,-.115f,.055f,.38f,.055f,.11f,.23f,.15f);
+                if(part.shape==PlayerModelSpec.Shape.LIMB){
+                    float halfLength=part.sy*.5f;
+                    float centerY=part.y+bodyOffset
+                        +VillagerAnimationSystem.limbCenterYOffset(halfLength,angle);
+                    float centerZ=part.z
+                        +VillagerAnimationSystem.limbCenterZOffset(halfLength,angle);
+                    drawPlayerPartRotated(part.x,centerY,centerZ,part.sx,part.sy,part.sz,
+                        part.r,part.g,part.b,angle);
+                }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
+                    drawPlayerSphere(part.x,part.y+bodyOffset,part.z,part.sx,part.sy,part.sz,
+                        part.r,part.g,part.b,part.alpha);
+                }else{
+                    drawPlayerPart(part.x,part.y+bodyOffset,part.z,part.sx,part.sy,part.sz,
+                        part.r,part.g,part.b);
+                }
+            }
         }
 
         void drawPlayerSphere(float localX,float y,float localZ,float sx,float sy,float sz,
@@ -744,10 +733,13 @@ public class MainActivity extends Activity {
             Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
 
-            Matrix.setIdentityM(normalTransform,0);
-            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
-            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
-            Matrix.multiplyMM(normalMatrixM,0,view,0,normalTransform,0);
+            // Las normales necesitan la inversa transpuesta del modelo-vista, incluida la escala.
+            // Esto evita iluminación deformada en cabeza, mochila y sombra elíptica.
+            if(Matrix.invertM(normalTransform,0,modelViewMatrix,0)){
+                Matrix.transposeM(normalMatrixM,0,normalTransform,0);
+            }else{
+                Matrix.setIdentityM(normalMatrixM,0);
+            }
 
             GLES20.glUseProgram(program);
             GLES20.glUniformMatrix4fv(mvp,1,false,mvpM,0);
