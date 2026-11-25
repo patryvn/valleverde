@@ -5,7 +5,7 @@ import static org.junit.Assert.*;
 
 public class PlayerModelSpecTest {
     @Test public void modelContainsACompleteRecognizableHumanSilhouette() {
-        assertTrue("model should contain detailed low-poly parts",PlayerModelSpec.size()>=25);
+        assertTrue("model should contain a detailed low-poly silhouette and rear accessories",PlayerModelSpec.size()>=60);
         assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("head").shape);
         assertEquals(PlayerModelSpec.Shape.BOX,PlayerModelSpec.find("torso").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("left-arm").shape);
@@ -36,6 +36,21 @@ public class PlayerModelSpecTest {
             > PlayerModelSpec.find("head").z);
         assertTrue(PlayerModelSpec.find("left-pupil").z
             > PlayerModelSpec.find("left-eye-green").z);
+    }
+
+    @Test public void backpackAndStrapsFaceTheThirdPersonRearCamera() {
+        PlayerModelSpec.Part backpack=PlayerModelSpec.find("backpack");
+        PlayerModelSpec.Part leftStrap=PlayerModelSpec.find("left-backpack-strap");
+        PlayerModelSpec.Part rightStrap=PlayerModelSpec.find("right-backpack-strap");
+        PlayerModelSpec.Part flap=PlayerModelSpec.find("backpack-flap");
+        assertNotNull(backpack);
+        assertNotNull(leftStrap);
+        assertNotNull(rightStrap);
+        assertNotNull(flap);
+        assertTrue("backpack must protrude from the rear of the torso",backpack.z < -.16f);
+        assertTrue("straps must sit on the camera-facing rear surface",leftStrap.z < backpack.z);
+        assertTrue(rightStrap.z < backpack.z);
+        assertTrue(flap.z < backpack.z);
     }
 
     @Test public void allRenderedPartsHaveFinitePositiveDimensionsAndValidMaterials() {
