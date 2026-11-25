@@ -2,7 +2,7 @@
 
 ## Estado de la rama
 
-El personaje se construye con `PlayerModelSpec` y `PlayerModelTransform`: piezas 3D procedurales de cabeza, torso, brazos, piernas, ropa, gorra y mochila. La escena usa OpenGL ES 2.0, iluminación direccional por shader y una sombra translúcida bajo el personaje. El modelo no usa todavía texturas fotográficas; sus materiales son colores sólidos.
+El personaje se construye con `PlayerModelSpec` y `PlayerModelTransform`: piezas 3D procedurales de cabeza, torso, brazos, piernas, ropa, gorra y mochila. La escena usa OpenGL ES 2.0, iluminación direccional por shader y una sombra translúcida bajo el personaje. La versión 0.16.0 añade variación procedural de tejido, algodón, cuero, piel y metal en el shader. No son mapas bitmap ni texturas fotográficas: cada pieza conserva su color base y recibe un patrón sutil calculado en el shader.
 
 Las pruebas unitarias existentes comprueban:
 - silueta y piezas principales del personaje;
@@ -45,7 +45,9 @@ La ejecución 45673544160 consiguió arrancar el emulador con TCG, instalar la A
 
 La ejecución 45679722682 perdió la variable `ANDROID_I_WANT_MY_TCG`; el emulador se lanzó con `-accel off` y no llegó a aparecer como dispositivo ADB. Tampoco es una prueba visual válida.
 
-El flujo actualizado vuelve a habilitar TCG, espera a que la actividad de juego esté en primer plano, despierta la pantalla y especifica el display ID en el gesto. Guarda captura inicial, captura tras movimiento, jerarquía de ventana y logcat completo. Una ejecución verde confirma que la actividad y el HUD responden; aun así, la imagen debe revisarse visualmente antes de declarar resuelto el rectángulo azul. La emulación TCG en este runner es muy lenta y no sustituye una prueba física.
+La ejecución 45701063138 falló antes de compilar: Maven Central devolvió HTTP 429 al descargar JUnit 4.13.2. Se ha añadido un espejo de Maven Central para resolver esa dependencia sin depender exclusivamente del endpoint que limitó las solicitudes.
+
+El flujo actual deja de forzar TCG y utiliza la aceleración KVM que ofrece el runner, manteniendo SwiftShader para el renderizado gráfico. Espera a que PackageManager y la actividad estén disponibles, despierta la pantalla y especifica el display ID en el gesto. Guarda captura inicial, captura tras movimiento, jerarquía de ventana y logcat completo. Una ejecución verde confirma que la actividad y el HUD responden; aun así, la imagen debe inspeccionarse visualmente antes de declarar resuelto el rectángulo azul. La emulación sigue sin sustituir una prueba física.
 
 
 ### Incidencia más reciente de CI (run 45689670313)
@@ -53,3 +55,11 @@ El flujo actualizado vuelve a habilitar TCG, espera a que la actividad de juego 
 La compilación de la APK y las pruebas unitarias pasaron, pero el emulador Android 35 con TCG terminó el arranque aparente sin que PackageManager estuviera disponible. `adb install` falló con `Can't find service: package` y el servicio de actividad respondió con `Broken pipe`. No se instaló la aplicación y no se generó ninguna captura; por tanto, este run no aporta evidencia sobre el personaje. El log confirma que el runner desactiva la aceleración KVM y arranca con `-accel off`, por lo que el tiempo de arranque y la estabilidad del sistema Android virtual son limitaciones del entorno, no fallos atribuidos al renderizador.
 
 El workflow ahora espera explícitamente a que `cmd package list packages` devuelva paquetes antes de instalar, reintenta la instalación y, si vuelve a fallar, guarda `getprop` y `logcat` completos para distinguir un servicio tardío de un `system_server` caído. Hasta que una ejecución produzca capturas reales de la actividad, no se modifica el modelo por conjetura ni se declara corregido el rectángulo azul.
+
+
+## Cambios del modelo 0.16.0
+
+- Se asignan estilos de material distintos a chaqueta/pantalón, camiseta, cuero, piel y piezas metálicas.
+- El shader aplica variaciones de baja amplitud basadas en coordenadas locales; si el shader iluminado no compila, el shader plano de compatibilidad sigue disponible, pero sin estos patrones.
+- `GLSurfaceView` solicita RGBA8888 y profundidad de 16 bits; al inicio de cada fotograma se restablecen la máscara de profundidad, la prueba de profundidad y la mezcla para evitar heredar estados GL.
+- Las pruebas unitarias verifican la asignación de estilos. No validan el resultado de píxeles: eso requiere una captura real del emulador o, preferiblemente, del Poco X6 Pro.
