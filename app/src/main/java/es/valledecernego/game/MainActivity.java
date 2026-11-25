@@ -17,7 +17,7 @@ import javax.microedition.khronos.opengles.GL10;
 public class MainActivity extends Activity {
     GameRenderer renderer;
     TextView status;
-    int wood=0, stone=0, seeds=4, harvest=0;
+    int wood=0, stone=0, harvest=0;
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
         getWindow().getDecorView().setSystemUiVisibility(5894|1024|512|4096);
@@ -50,11 +50,11 @@ public class MainActivity extends Activity {
             int k=renderer.nearbyKind();
             if(k==1){wood+=2;renderer.removeNearby();toast("Has recogido madera +2");}
             else if(k==2){stone+=2;renderer.removeNearby();toast("Has recogido piedra +2");}
-            else if(k==3){if(seeds>0){seeds--;harvest+=3;renderer.harvest();toast("¡Cosecha recogida! +3");}else toast("No quedan semillas");}
+            else if(k==3){harvest+=3;renderer.harvest();toast("¡Cosecha recogida! +3");}
             else if(k==4){toast("La vaca está tranquila. Pronto podrás darle alimento.");}
             else {toast("No hay nada con lo que interactuar");}
         } else toast("Acércate a un árbol, piedra, cultivo o animal");
-        status.setText("VALLE DE CERNEGO   •   Madera "+wood+"   Piedra "+stone+"   Semillas "+seeds+"   Cosecha "+harvest);
+        status.setText("VALLE DE CERNEGO   •   Madera "+wood+"   Piedra "+stone+"   Cosecha "+harvest);
     }
     void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
 
@@ -121,14 +121,18 @@ public class MainActivity extends Activity {
         void setMove(float x,float y){moveX=x;moveY=y;}
         void startLook(float x,float y){lastX=x;lastY=y;}
         float lastX,lastY;
-        void look(float x,float y){yaw+=(x-lastX)*.006f;pitch=Math.max(-.35f,Math.min(.45f,pitch+(y-lastY)*.002f));lastX=x;lastY=y;}
+        void look(float x,float y){yaw+=(x-lastX)*.006f;pitch=Math.max(-.2f,Math.min(.55f,pitch+(y-lastY)*.002f));lastX=x;lastY=y;}
         void jump(){if(!jumping){vy=.13f;jumping=true;}}
         public void onDrawFrame(GL10 gl){
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
             float speed=.075f; px+=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX)*speed; pz+=(float)(Math.cos(yaw)*(-moveY)-Math.sin(yaw)*moveX)*speed;
             if(jumping){py+=vy;vy-=.008f;if(py<=0){py=0;jumping=false;}}
-            float cx=px-(float)Math.sin(yaw)*6, cz=pz+(float)Math.cos(yaw)*6;
-            Matrix.setLookAtM(view,0,cx,2.8f+py,cz,px,1.1f+py,pz,0,1,0);
+            float angle=.28f+pitch;
+            float horizontal=6f*(float)Math.cos(angle);
+            float cx=px-(float)Math.sin(yaw)*horizontal;
+            float cz=pz+(float)Math.cos(yaw)*horizontal;
+            float cy=1.1f+py+6f*(float)Math.sin(angle);
+            Matrix.setLookAtM(view,0,cx,cy,cz,px,1.1f+py,pz,0,1,0);
             draw(0,-.35f,0,45,.5f,45,.25f,.42f,.23f);
             // River ribbon and dirt path
             draw(-10,-.12f,-4,2,.12f,32,.18f,.48f,.62f);
@@ -158,6 +162,16 @@ public class MainActivity extends Activity {
         float nearby(){float best=999;for(float[] o:objects)if(o[3]>0){float d=(float)Math.hypot(px-o[0],pz-o[1]);if(d<best)best=d;}return best;}
         int nearbyKind(){float best=999;int kind=0;for(float[] o:objects)if(o[3]>0){float d=(float)Math.hypot(px-o[0],pz-o[1]);if(d<best){best=d;kind=(int)o[2];}}return kind;}
         void removeNearby(){float best=999;int ix=-1;for(int i=0;i<objects.size();i++){float[] o=objects.get(i);if(o[3]>0){float d=(float)Math.hypot(px-o[0],pz-o[1]);if(d<best){best=d;ix=i;}}}if(ix>=0&&best<2.4f)objects.get(ix)[3]=0;}
-        void harvest(){for(float[] o:objects)if((int)o[2]==3&&o[3]>0){o[3]=0;break;}}
+        void harvest(){
+            float best=999; int ix=-1;
+            for(int i=0;i<objects.size();i++){
+                float[] o=objects.get(i);
+                if((int)o[2]==3&&o[3]>0){
+                    float d=(float)Math.hypot(px-o[0],pz-o[1]);
+                    if(d<best){best=d;ix=i;}
+                }
+            }
+            if(ix>=0&&best<2.4f)objects.get(ix)[3]=0;
+        }
     }
 }
