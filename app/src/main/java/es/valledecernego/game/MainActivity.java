@@ -50,6 +50,7 @@ public class MainActivity extends Activity {
         renderer.loadBuildings(preferences.getString("buildings", ""));
         renderer.loadMarket(preferences.getString("market", ""));
         renderer.loadVillagers(preferences.getString("villagers", ""));
+        renderer.loadVillagerWorld(preferences.getString("villager_world", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -88,6 +89,7 @@ public class MainActivity extends Activity {
             .putString("buildings", renderer.saveBuildings())
             .putString("market", renderer.saveMarket())
             .putString("villagers", renderer.saveVillagers())
+            .putString("villager_world", renderer.saveVillagerWorld())
             .apply();
     }
 
@@ -347,6 +349,8 @@ public class MainActivity extends Activity {
         final BuildingSystem buildings=new BuildingSystem();
         final MarketSystem market=new MarketSystem();
         final VillagerSystem villagers=new VillagerSystem();
+        final VillagerWorldSystem villagerWorld=new VillagerWorldSystem();
+        final float[] modelViewMatrix=new float[16];
 
         GameRenderer(){
             for(int i=0;i<9;i++) objects.add(new float[]{-7+i*1.7f,-3-(i%3)*2,1,1});
@@ -413,6 +417,7 @@ public class MainActivity extends Activity {
                 animals.update(delta);
                 buildings.updateStable(delta,animals);
                 villagers.update(delta);
+                villagerWorld.update(delta, villagers.snapshot());
             }
             lastFrameNanos=now;
 
@@ -505,18 +510,56 @@ public class MainActivity extends Activity {
                 draw(4.35f,.62f,-1.78f,.38f,.38f,.38f,.78f,.73f,.62f);
             }
 
+            drawVillagers();
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
             draw(7,1.75f,-7,4,.7f,3.4f,.35f,.18f,.14f);
             draw(px,.9f+py,pz,.55f,1.5f,.45f,.18f,.28f,.72f);
         }
 
+        void drawVillagers(){
+            for(VillagerWorldSystem.Position villager:villagerWorld.snapshot()){
+                float stride=villager.walking()?(float)Math.sin(villager.walkPhase())*.13f:0f;
+                float leftLift=Math.max(0f,stride);
+                float rightLift=Math.max(0f,-stride);
+                int job=villager.job();
+                float shirtR=.43f,shirtG=.36f,shirtB=.27f;
+                if(job==VillagerSystem.FARMER){shirtR=.25f;shirtG=.53f;shirtB=.24f;}
+                else if(job==VillagerSystem.RANCHER){shirtR=.24f;shirtG=.40f;shirtB=.68f;}
+                else if(job==VillagerSystem.WOODCUTTER){shirtR=.62f;shirtG=.34f;shirtB=.17f;}
+                drawVillagerPart(villager,0f,.78f,0f,.36f,.55f,.27f,shirtR,shirtG,shirtB);
+                drawVillagerPart(villager,0f,1.19f,0f,.27f,.28f,.27f,.76f,.59f,.43f);
+                drawVillagerPart(villager,-.11f,.28f+leftLift,0f,.13f,.42f,.14f,.19f,.20f,.22f);
+                drawVillagerPart(villager,.11f,.28f+rightLift,0f,.13f,.42f,.14f,.19f,.20f,.22f);
+                drawVillagerPart(villager,-.24f,.78f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB);
+                drawVillagerPart(villager,.24f,.78f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB);
+                if(job==VillagerSystem.FARMER){
+                    drawVillagerPart(villager,0f,1.39f,0f,.36f,.10f,.36f,.78f,.63f,.24f);
+                } else {
+                    drawVillagerPart(villager,0f,1.35f,0f,.29f,.09f,.29f,.24f,.18f,.12f);
+                }
+            }
+        }
+
+        void drawVillagerPart(VillagerWorldSystem.Position villager,float localX,float y,float localZ,
+                              float sx,float sy,float sz,float r,float g,float b){
+            float c=(float)Math.cos(villager.facing());
+            float s=(float)Math.sin(villager.facing());
+            float x=villager.x()+localX*c+localZ*s;
+            float z=villager.z()-localX*s+localZ*c;
+            drawFacing(x,y,z,sx,sy,sz,r,g,b,villager.facing());
+        }
+
         void draw(float x,float y,float z,float sx,float sy,float sz,float r,float g,float b){
+            drawFacing(x,y,z,sx,sy,sz,r,g,b,0f);
+        }
+
+        void drawFacing(float x,float y,float z,float sx,float sy,float sz,float r,float g,float b,float angle){
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
             Matrix.scaleM(model,0,sx,sy,sz);
-            float[] mv=new float[16];
-            Matrix.multiplyMM(mv,0,view,0,model,0);
-            Matrix.multiplyMM(mvpM,0,proj,0,mv,0);
+            Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
+            Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
             GLES20.glUseProgram(program);
             GLES20.glUniformMatrix4fv(mvp,1,false,mvpM,0);
             GLES20.glUniform4f(color,r,g,b,1);
@@ -565,6 +608,8 @@ public class MainActivity extends Activity {
         boolean buySeedBundle(){return market.buySeedBundle(crops);}
         String saveVillagers(){return villagers.saveState();}
         void loadVillagers(String state){villagers.loadState(state);}
+        String saveVillagerWorld(){return villagerWorld.saveState();}
+        void loadVillagerWorld(String state){villagerWorld.loadState(state);}
         String getVillagerSummary(){return villagers.getSummary();}
         String getVillagerPendingSummary(){return villagers.getPendingSummary();}
         boolean hasPendingVillagerProduction(){return villagers.hasPendingProduction();}
