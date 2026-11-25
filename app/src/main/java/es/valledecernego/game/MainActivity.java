@@ -119,7 +119,24 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    void showQuestJournal(){\n        new AlertDialog.Builder(this)\n            .setTitle("Diario del Valle")\n            .setMessage(renderer.getQuestJournal())\n            .setPositiveButton("Continuar", null)\n            .show();\n    }\n\n    void rewardQuest(int coins,int seeds){\n        if(coins>0) renderer.addCoins(coins);\n        if(seeds>0) renderer.addSeeds(seeds);\n        if(coins>0 || seeds>0){\n            String reward=(coins>0?coins+" monedas":"")+(coins>0 && seeds>0?" y ":"")+(seeds>0?seeds+" semillas":"");\n            toast("¡Misión completada! Recompensa: "+reward);\n        }\n    }\n\n    void action(){
+    void showQuestJournal(){
+        new AlertDialog.Builder(this)
+            .setTitle("Diario del Valle")
+            .setMessage(renderer.getQuestJournal())
+            .setPositiveButton("Continuar", null)
+            .show();
+    }
+
+    void rewardQuest(int coins,int seeds){
+        if(coins>0) renderer.addCoins(coins);
+        if(seeds>0) renderer.addSeeds(seeds);
+        if(coins>0 || seeds>0){
+            String reward=(coins>0?coins+" monedas":"")+(coins>0 && seeds>0?" y ":"")+(seeds>0?seeds+" semillas":"");
+            toast("¡Misión completada! Recompensa: "+reward);
+        }
+    }
+
+    void action(){
         float cropDistance=renderer.cropDistance();
         float objectDistance=renderer.nearby();
         if(cropDistance<2.4f && cropDistance<=objectDistance){
@@ -812,7 +829,17 @@ public class MainActivity extends Activity {
             int stored=buildings.storeHay(animals.getForage());
             return animals.removeForage(stored);
         }
-        String saveMarket(){return market.saveState();}\n        String saveQuests(){return quests.saveState();}\n        void loadQuests(String state){quests.loadState(state);}\n        String getQuestJournal(){return quests.getJournal();}\n        int recordWoodQuest(int amount){return quests.recordWood(amount);}\n        int recordStoneQuest(int amount){return quests.recordStone(amount);}\n        int recordHarvestQuest(){return quests.recordHarvest();}\n        int recordPlantQuest(){lastQuestSeedReward=quests.recordPlant();return 0;}\n        int getLastQuestSeedReward(){int reward=lastQuestSeedReward;lastQuestSeedReward=0;return reward;}\n        void addCoins(int amount){market.addCoins(amount);}\n        void addSeeds(int amount){crops.addSeeds(amount);}
+        String saveMarket(){return market.saveState();}
+        String saveQuests(){return quests.saveState();}
+        void loadQuests(String state){quests.loadState(state);}
+        String getQuestJournal(){return quests.getJournal();}
+        int recordWoodQuest(int amount){return quests.recordWood(amount);}
+        int recordStoneQuest(int amount){return quests.recordStone(amount);}
+        int recordHarvestQuest(){return quests.recordHarvest();}
+        int recordPlantQuest(){lastQuestSeedReward=quests.recordPlant();return 0;}
+        int getLastQuestSeedReward(){int reward=lastQuestSeedReward;lastQuestSeedReward=0;return reward;}
+        void addCoins(int amount){market.addCoins(amount);}
+        void addSeeds(int amount){crops.addSeeds(amount);}
         void loadMarket(String state){market.loadState(state);}
         int getCoins(){return market.getCoins();}
         int getHarvest(){return crops.getHarvest();}
