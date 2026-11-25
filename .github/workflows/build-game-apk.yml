@@ -24,6 +24,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Run farming logic tests
+        run: gradle :app:testDebugUnitTest --no-daemon
       - name: Compile APK
         run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
