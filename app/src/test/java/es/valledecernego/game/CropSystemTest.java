@@ -47,4 +47,12 @@ public class CropSystemTest {
         assertEquals(CropSystem.NO_PLOT, farm.interact(30.0f, 30.0f));
         assertEquals(6, farm.getSeeds());
     }
+    @Test public void deliveredHarvestRespectsInventoryCapacity() {
+        CropSystem farm = new CropSystem();
+        assertEquals(999, farm.addHarvest(1_000));
+        assertEquals(999, farm.getHarvest());
+        assertEquals(0, farm.addHarvest(2));
+        assertEquals(0, farm.addHarvest(-4));
+    }
 }
+

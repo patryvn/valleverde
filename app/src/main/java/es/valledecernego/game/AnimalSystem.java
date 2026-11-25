@@ -16,7 +16,7 @@ public final class AnimalSystem {
 
     private static final float INTERACTION_DISTANCE = 2.4f;
     private static final float HUNGER_PER_SECOND = 0.15f;
-    private static final int MAX_FORAGE = 99;
+    public static final int MAX_FORAGE = 99;
 
     private int forage = 0;
     private float cowHunger = 70.0f;

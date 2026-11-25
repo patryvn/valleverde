@@ -21,6 +21,7 @@ public final class CropSystem {
     public static final int OUT_OF_SEEDS = 5;
 
     public static final long GROWTH_DURATION_MS = 90_000L;
+    public static final int MAX_HARVEST = 999;
     private static final float INTERACTION_DISTANCE = 2.4f;
 
     private final ArrayList<Plot> plots = new ArrayList<>();
@@ -54,7 +55,7 @@ public final class CropSystem {
         }
         if (plot.stage == GROWING) return GROWING_RESULT;
 
-        harvest += 3;
+        harvest = Math.min(MAX_HARVEST, harvest + 3);
         seeds++;
         plot.stage = EMPTY;
         plot.growthMs = 0;
@@ -84,6 +85,14 @@ public final class CropSystem {
         if (amount <= 0) return 0;
         int added = Math.min(amount, MAX_SEEDS - seeds);
         seeds += added;
+        return added;
+    }
+
+    /** Adds delivered produce up to the inventory limit and returns the accepted amount. */
+    public synchronized int addHarvest(int amount) {
+        if (amount <= 0) return 0;
+        int added = Math.min(amount, MAX_HARVEST - harvest);
+        harvest += added;
         return added;
     }
 

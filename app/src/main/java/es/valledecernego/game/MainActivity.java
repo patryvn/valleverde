@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
         renderer.loadMarket(preferences.getString("market", ""));
+        renderer.loadVillagers(preferences.getString("villagers", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -74,7 +75,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary();
+        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getVillagerSummary();
     }
 
     void saveProgress() {
@@ -86,6 +87,7 @@ public class MainActivity extends Activity {
             .putString("animals", renderer.saveAnimals())
             .putString("buildings", renderer.saveBuildings())
             .putString("market", renderer.saveMarket())
+            .putString("villagers", renderer.saveVillagers())
             .apply();
     }
 
@@ -146,9 +148,10 @@ public class MainActivity extends Activity {
                 }
             }
             else if(k==7){showMarket();}
+            else if(k==8){showVillageBoard();}
             else {toast("No hay nada con lo que interactuar");}
         } else {
-            toast("Acércate a un árbol, piedra, parcela o animal");
+            toast("Acércate a un árbol, piedra, parcela, animal o tablón de trabajos");
         }
         saveProgress();
         if(status!=null) status.setText(statusText());
@@ -202,6 +205,63 @@ public class MainActivity extends Activity {
                     }
                     saveProgress();
                     if(status!=null) status.setText(statusText());
+                }
+            }).show();
+    }
+
+    void showVillageBoard(){
+        final VillagerSystem.Worker[] workers=renderer.getVillagers();
+        final boolean canCollect=renderer.hasPendingVillagerProduction();
+        ArrayList<String> options=new ArrayList<>();
+        for(VillagerSystem.Worker worker:workers){
+            long seconds=worker.workMs()/1000L;
+            long target=worker.intervalMs()==Long.MAX_VALUE?0L:worker.intervalMs()/1000L;
+            options.add(worker.name()+" · "+worker.jobName()+" · Nivel "+worker.level()
+                +" · Progreso "+seconds+"/"+target+" s");
+        }
+        if(canCollect) options.add("Recoger producción: "+renderer.getVillagerPendingSummary());
+        options.add("Cerrar");
+        final int collectIndex=canCollect?workers.length:-1;
+        new AlertDialog.Builder(this)
+            .setTitle("Tablón de trabajos de Valdemonte")
+            .setMessage("Asigna oficios a los tres aldeanos. Trabajan mientras la partida está activa y mejoran sus habilidades con la experiencia.\n\nProducción pendiente: "+renderer.getVillagerPendingSummary())
+            .setItems(options.toArray(new String[options.size()]),new DialogInterface.OnClickListener(){
+                @Override public void onClick(DialogInterface dialog,int which){
+                    if(which>=0 && which<workers.length){
+                        showVillagerJobPicker(which);
+                    } else if(canCollect && which==collectIndex){
+                        VillagerSystem.Production goods=renderer.collectVillagerProduction();
+                        wood+=goods.wood();
+                        renderer.addForage(goods.forage());
+                        renderer.addHarvest(goods.harvest());
+                        if(goods.total()>0){
+                            toast("Producción recogida: madera "+goods.wood()+", forraje "+goods.forage()+", cosecha "+goods.harvest()+".");
+                        } else {
+                            toast("No tienes espacio en los inventarios. La producción sigue en el tablón.");
+                        }
+                        saveProgress();
+                        if(status!=null) status.setText(statusText());
+                    }
+                }
+            }).show();
+    }
+
+    void showVillagerJobPicker(final int workerIndex){
+        final String[] jobs={
+            "Sin trabajo",
+            "Agricultor · 2 cosechas cada 90 segundos",
+            "Ganadero · 2 forrajes cada 60 segundos",
+            "Leñador · 2 maderas cada 75 segundos"
+        };
+        new AlertDialog.Builder(this)
+            .setTitle("Asignar oficio")
+            .setItems(jobs,new DialogInterface.OnClickListener(){
+                @Override public void onClick(DialogInterface dialog,int which){
+                    if(renderer.assignVillager(workerIndex,which)){
+                        toast("Trabajo actualizado. La experiencia y el nivel se conservan.");
+                        saveProgress();
+                        if(status!=null) status.setText(statusText());
+                    }
                 }
             }).show();
     }
@@ -286,6 +346,7 @@ public class MainActivity extends Activity {
         ArrayList<float[]> objects=new ArrayList<>();
         final BuildingSystem buildings=new BuildingSystem();
         final MarketSystem market=new MarketSystem();
+        final VillagerSystem villagers=new VillagerSystem();
 
         GameRenderer(){
             for(int i=0;i<9;i++) objects.add(new float[]{-7+i*1.7f,-3-(i%3)*2,1,1});
@@ -298,6 +359,7 @@ public class MainActivity extends Activity {
             objects.add(new float[]{8,2,3,1});
             objects.add(new float[]{-5,-10,6,1});
             objects.add(new float[]{10,-10,7,1});
+            objects.add(new float[]{-10,4,8,1});
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
@@ -350,6 +412,7 @@ public class MainActivity extends Activity {
                 crops.update(delta);
                 animals.update(delta);
                 buildings.updateStable(delta,animals);
+                villagers.update(delta);
             }
             lastFrameNanos=now;
 
@@ -412,6 +475,13 @@ public class MainActivity extends Activity {
                     draw(o[0],1.12f,o[1],2.35f,.24f,1.3f,.68f,.25f,.16f);
                     draw(o[0]-.82f,.3f,o[1],.12f,.6f,.12f,.3f,.2f,.12f);
                     draw(o[0]+.82f,.3f,o[1],.12f,.6f,.12f,.3f,.2f,.12f);
+                }
+                if(t==8){
+                    draw(o[0],.48f,o[1],1.65f,.72f,.68f,.43f,.28f,.16f);
+                    draw(o[0]-.62f,.95f,o[1],.12f,.55f,.12f,.30f,.19f,.10f);
+                    draw(o[0]+.62f,.95f,o[1],.12f,.55f,.12f,.30f,.19f,.10f);
+                    draw(o[0],1.48f,o[1]-.34f,1.75f,.92f,.12f,.52f,.36f,.20f);
+                    draw(o[0],1.5f,o[1]-.42f,1.35f,.10f,.06f,.83f,.70f,.38f);
                 }
             }
 
@@ -493,6 +563,21 @@ public class MainActivity extends Activity {
         int getSeeds(){return crops.getSeeds();}
         int sellHarvest(){return market.sellHarvest(crops);}
         boolean buySeedBundle(){return market.buySeedBundle(crops);}
+        String saveVillagers(){return villagers.saveState();}
+        void loadVillagers(String state){villagers.loadState(state);}
+        String getVillagerSummary(){return villagers.getSummary();}
+        String getVillagerPendingSummary(){return villagers.getPendingSummary();}
+        boolean hasPendingVillagerProduction(){return villagers.hasPendingProduction();}
+        VillagerSystem.Worker[] getVillagers(){return villagers.snapshot();}
+        boolean assignVillager(int index,int job){return villagers.assignJob(index,job);}
+        VillagerSystem.Production collectVillagerProduction(){
+            return villagers.claimProduction(99,
+                AnimalSystem.MAX_FORAGE-animals.getForage(),
+                CropSystem.MAX_HARVEST-crops.getHarvest());
+        }
+        void addForage(int amount){animals.addForage(amount);}
+        int addHarvest(int amount){return crops.addHarvest(amount);}
+
         int buildStable(int availableWood,int availableStone){
             return buildings.buildStable(availableWood,availableStone);
         }
