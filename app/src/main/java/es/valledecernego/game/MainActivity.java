@@ -523,35 +523,51 @@ public class MainActivity extends Activity {
 
         void drawVillagers(){
             for(VillagerWorldSystem.Position villager:villagerWorld.snapshot()){
-                float stride=villager.walking()?(float)Math.sin(villager.walkPhase())*.13f:0f;
-                float leftLift=Math.max(0f,stride);
-                float rightLift=Math.max(0f,-stride);
+                float phase=villager.walkPhase();
+                float bodyBob=VillagerAnimationSystem.bodyBob(phase,villager.walking());
+                float leftLeg=VillagerAnimationSystem.legAngle(phase,villager.walking(),true);
+                float rightLeg=VillagerAnimationSystem.legAngle(phase,villager.walking(),false);
+                float leftArm=VillagerAnimationSystem.armAngle(phase,villager.walking(),true);
+                float rightArm=VillagerAnimationSystem.armAngle(phase,villager.walking(),false);
                 int job=villager.job();
                 float shirtR=.43f,shirtG=.36f,shirtB=.27f;
                 if(job==VillagerSystem.FARMER){shirtR=.25f;shirtG=.53f;shirtB=.24f;}
                 else if(job==VillagerSystem.RANCHER){shirtR=.24f;shirtG=.40f;shirtB=.68f;}
                 else if(job==VillagerSystem.WOODCUTTER){shirtR=.62f;shirtG=.34f;shirtB=.17f;}
-                drawVillagerPart(villager,0f,.78f,0f,.36f,.55f,.27f,shirtR,shirtG,shirtB);
-                drawVillagerPart(villager,0f,1.19f,0f,.27f,.28f,.27f,.76f,.59f,.43f);
-                drawVillagerPart(villager,-.11f,.28f+leftLift,0f,.13f,.42f,.14f,.19f,.20f,.22f);
-                drawVillagerPart(villager,.11f,.28f+rightLift,0f,.13f,.42f,.14f,.19f,.20f,.22f);
-                drawVillagerPart(villager,-.24f,.78f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB);
-                drawVillagerPart(villager,.24f,.78f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB);
+                drawVillagerPart(villager,0f,.78f+bodyBob,0f,.36f,.55f,.27f,shirtR,shirtG,shirtB);
+                drawVillagerPart(villager,0f,1.19f+bodyBob,0f,.27f,.28f,.27f,.76f,.59f,.43f);
+                drawVillagerLimb(villager,-.11f,.48f,0f,.13f,.42f,.14f,.19f,.20f,.22f,leftLeg);
+                drawVillagerLimb(villager,.11f,.48f,0f,.13f,.42f,.14f,.19f,.20f,.22f,rightLeg);
+                drawVillagerLimb(villager,-.24f,.96f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB,leftArm);
+                drawVillagerLimb(villager,.24f,.96f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB,rightArm);
                 if(job==VillagerSystem.FARMER){
-                    drawVillagerPart(villager,0f,1.39f,0f,.36f,.10f,.36f,.78f,.63f,.24f);
+                    drawVillagerPart(villager,0f,1.39f+bodyBob,0f,.36f,.10f,.36f,.78f,.63f,.24f);
                 } else {
-                    drawVillagerPart(villager,0f,1.35f,0f,.29f,.09f,.29f,.24f,.18f,.12f);
+                    drawVillagerPart(villager,0f,1.35f+bodyBob,0f,.29f,.09f,.29f,.24f,.18f,.12f);
                 }
             }
         }
 
+        void drawVillagerLimb(VillagerWorldSystem.Position villager,float pivotX,float pivotY,float pivotZ,
+                              float sx,float sy,float sz,float r,float g,float b,float angle){
+            float halfLength=sy*.5f;
+            float centerY=pivotY+VillagerAnimationSystem.limbCenterYOffset(halfLength,angle);
+            float centerZ=pivotZ+VillagerAnimationSystem.limbCenterZOffset(halfLength,angle);
+            drawVillagerPartRotated(villager,pivotX,centerY,centerZ,sx,sy,sz,r,g,b,angle);
+        }
+
         void drawVillagerPart(VillagerWorldSystem.Position villager,float localX,float y,float localZ,
                               float sx,float sy,float sz,float r,float g,float b){
+            drawVillagerPartRotated(villager,localX,y,localZ,sx,sy,sz,r,g,b,0f);
+        }
+
+        void drawVillagerPartRotated(VillagerWorldSystem.Position villager,float localX,float y,float localZ,
+                                     float sx,float sy,float sz,float r,float g,float b,float localRotationX){
             float c=(float)Math.cos(villager.facing());
             float s=(float)Math.sin(villager.facing());
             float x=villager.x()+localX*c+localZ*s;
             float z=villager.z()-localX*s+localZ*c;
-            drawFacing(x,y,z,sx,sy,sz,r,g,b,villager.facing());
+            drawFacingWithLocalX(x,y,z,sx,sy,sz,r,g,b,villager.facing(),localRotationX);
         }
 
         void draw(float x,float y,float z,float sx,float sy,float sz,float r,float g,float b){
@@ -559,9 +575,15 @@ public class MainActivity extends Activity {
         }
 
         void drawFacing(float x,float y,float z,float sx,float sy,float sz,float r,float g,float b,float angle){
+            drawFacingWithLocalX(x,y,z,sx,sy,sz,r,g,b,angle,0f);
+        }
+
+        void drawFacingWithLocalX(float x,float y,float z,float sx,float sy,float sz,
+                                  float r,float g,float b,float angle,float localRotationX){
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
             Matrix.scaleM(model,0,sx,sy,sz);
             Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);

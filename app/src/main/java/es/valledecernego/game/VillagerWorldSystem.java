@@ -41,23 +41,24 @@ public final class VillagerWorldSystem {
                 state.x = targetX;
                 state.z = targetZ;
                 state.walking = false;
-                continue;
+            } else {
+                state.facing = (float) Math.atan2(dx, dz);
+                if (maxStep >= distance) {
+                    state.x = targetX;
+                    state.z = targetZ;
+                    state.walking = false;
+                } else {
+                    float fraction = (float) (maxStep / distance);
+                    state.x += dx * fraction;
+                    state.z += dz * fraction;
+                    state.walking = true;
+                }
             }
 
-            state.facing = (float) Math.atan2(dx, dz);
-            if (maxStep >= distance) {
-                state.x = targetX;
-                state.z = targetZ;
-                state.walking = false;
-                state.walkPhase = 0.0f;
-            } else {
-                float fraction = (float) (maxStep / distance);
-                state.x += dx * fraction;
-                state.z += dz * fraction;
-                state.walking = true;
-                double phaseDelta = Math.min(deltaMs, 100_000L) * 0.008d;
-                state.walkPhase = (float) ((state.walkPhase + phaseDelta) % TWO_PI);
-            }
+            // A slower phase keeps idle residents subtly animated at their posts.
+            double phaseRate = state.walking ? 0.008d : 0.00018d;
+            double phaseDelta = Math.min(deltaMs, 100_000L) * phaseRate;
+            state.walkPhase = (float) ((state.walkPhase + phaseDelta) % TWO_PI);
         }
     }
 

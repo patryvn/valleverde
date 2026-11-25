@@ -75,6 +75,17 @@ public class VillagerWorldSystemTest {
         assertEquals(beforeInvalidLoad, restored.saveState());
     }
 
+    @Test public void idleResidentsKeepASeparateSlowAnimationPhase() {
+        VillagerSystem jobs = new VillagerSystem();
+        VillagerWorldSystem world = new VillagerWorldSystem();
+
+        world.update(1_000L, jobs.snapshot());
+        VillagerWorldSystem.Position idle = world.snapshot()[0];
+
+        assertFalse(idle.walking());
+        assertEquals(0.18f, idle.walkPhase(), 0.0001f);
+    }
+
     @Test public void nonPositiveDeltaDoesNotMoveWorkers() {
         VillagerSystem jobs = new VillagerSystem();
         VillagerWorldSystem world = new VillagerWorldSystem();
