@@ -46,3 +46,10 @@ La ejecución 45673544160 consiguió arrancar el emulador con TCG, instalar la A
 La ejecución 45679722682 perdió la variable `ANDROID_I_WANT_MY_TCG`; el emulador se lanzó con `-accel off` y no llegó a aparecer como dispositivo ADB. Tampoco es una prueba visual válida.
 
 El flujo actualizado vuelve a habilitar TCG, espera a que la actividad de juego esté en primer plano, despierta la pantalla y especifica el display ID en el gesto. Guarda captura inicial, captura tras movimiento, jerarquía de ventana y logcat completo. Una ejecución verde confirma que la actividad y el HUD responden; aun así, la imagen debe revisarse visualmente antes de declarar resuelto el rectángulo azul. La emulación TCG en este runner es muy lenta y no sustituye una prueba física.
+
+
+### Incidencia más reciente de CI (run 45689670313)
+
+La compilación de la APK y las pruebas unitarias pasaron, pero el emulador Android 35 con TCG terminó el arranque aparente sin que PackageManager estuviera disponible. `adb install` falló con `Can't find service: package` y el servicio de actividad respondió con `Broken pipe`. No se instaló la aplicación y no se generó ninguna captura; por tanto, este run no aporta evidencia sobre el personaje. El log confirma que el runner desactiva la aceleración KVM y arranca con `-accel off`, por lo que el tiempo de arranque y la estabilidad del sistema Android virtual son limitaciones del entorno, no fallos atribuidos al renderizador.
+
+El workflow ahora espera explícitamente a que `cmd package list packages` devuelva paquetes antes de instalar, reintenta la instalación y, si vuelve a fallar, guarda `getprop` y `logcat` completos para distinguir un servicio tardío de un `system_server` caído. Hasta que una ejecución produzca capturas reales de la actividad, no se modifica el modelo por conjetura ni se declara corregido el rectángulo azul.
