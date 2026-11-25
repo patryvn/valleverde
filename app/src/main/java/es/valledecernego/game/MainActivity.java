@@ -405,6 +405,7 @@ public class MainActivity extends Activity {
         FloatBuffer vb;
         int program,pos,normalAttr,color,mvp,normalMatrixUniform;
         volatile boolean rendererReady=false;
+        volatile int playerDrawCalls=0,playerGlError=0;
         FloatBuffer sphereBuffer,capsuleBuffer;
         int sphereVertexCount,capsuleVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
@@ -779,13 +780,19 @@ public class MainActivity extends Activity {
         }
 
         String getRenderStatus(){
-            return rendererReady ? "3D OK · "+PlayerModelSpec.size()+" piezas" : "3D NO DISPONIBLE";
+            if(!rendererReady)return "3D NO DISPONIBLE";
+            if(playerDrawCalls<PlayerModelSpec.size())return "3D OK · preparando personaje";
+            if(playerGlError!=GLES20.GL_NO_ERROR){
+                return "3D OK · error GL 0x"+Integer.toHexString(playerGlError);
+            }
+            return "3D OK · "+PlayerModelSpec.size()+" piezas · GL OK";
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
         void drawPlayer(){
             if(!rendererReady)return;
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            int submittedParts=0;
 
             // Sombra de contacto elíptica bajo los pies.
             GLES20.glEnable(GLES20.GL_BLEND);
@@ -821,7 +828,15 @@ public class MainActivity extends Activity {
                     drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
                         part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll);
                 }
+                submittedParts++;
             }
+            playerDrawCalls=submittedParts;
+            int glError=GLES20.glGetError();
+            if(glError!=GLES20.GL_NO_ERROR && playerGlError!=glError){
+                android.util.Log.w("ValleCernego","OpenGL reportó 0x"+Integer.toHexString(glError)
+                    +" al enviar las piezas del personaje.");
+            }
+            playerGlError=glError;
         }
 
         // Árbol de frondosa atlántica: tronco, ramas, copa en varios volúmenes y matices estacionales.
