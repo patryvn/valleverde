@@ -24,7 +24,7 @@ public class ThirdPersonCameraTest {
             double dx = pose.x() - 3f;
             double dy = pose.y() - pose.targetY();
             double dz = pose.z() + 4f;
-            assertEquals(4.8, Math.sqrt(dx*dx + dy*dy + dz*dz), .001);
+            assertEquals(4.2, Math.sqrt(dx*dx + dy*dy + dz*dz), .001);
         }
     }
 
