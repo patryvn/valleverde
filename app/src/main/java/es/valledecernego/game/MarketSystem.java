@@ -6,7 +6,7 @@ public final class MarketSystem {
     public static final int SEED_BUNDLE_QUANTITY = 3;
     public static final int SEED_BUNDLE_PRICE = 6;
     private static final int MAX_COINS = 1_000_000;
-    private int coins = 0;
+    private int coins = 150;
 
     public synchronized int sellHarvest(CropSystem crops) {
         if (crops == null) return 0;
@@ -24,6 +24,11 @@ public final class MarketSystem {
         if (added != SEED_BUNDLE_QUANTITY) return false;
         coins -= SEED_BUNDLE_PRICE;
         return true;
+    }
+
+    /** Adds quest or contract rewards without allowing the wallet to overflow. */
+    public synchronized void addCoins(int amount) {
+        if (amount > 0) coins = (int) Math.min(MAX_COINS, (long) coins + amount);
     }
 
     public synchronized int getCoins() { return coins; }
