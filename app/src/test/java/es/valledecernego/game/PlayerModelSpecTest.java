@@ -18,13 +18,24 @@ public class PlayerModelSpecTest {
 
     @Test public void explorerReferenceHasItsSignatureClothingAndAccessories() {
         assertNotNull(PlayerModelSpec.find("shirt-front"));
-        assertNotNull(PlayerModelSpec.find("shirt-orange-middle"));
+        assertNotNull(PlayerModelSpec.find("shirt-orange-stripe"));
+        assertNotNull(PlayerModelSpec.find("left-pupil"));
+        assertNotNull(PlayerModelSpec.find("cap-band"));
         assertNotNull(PlayerModelSpec.find("jacket-left-front"));
         assertNotNull(PlayerModelSpec.find("cap"));
         assertNotNull(PlayerModelSpec.find("satchel-flap"));
         assertNotNull(PlayerModelSpec.find("left-eye-green"));
         assertEquals(.82f,PlayerModelSpec.find("left-boot").r,0.001f);
         assertTrue(PlayerModelSpec.find("left-leg").r<.12f);
+    }
+
+    @Test public void diagonalClothingAndBagStrapHaveExplicitFrontPlaneRotation() {
+        assertEquals(-.62f,PlayerModelSpec.find("shirt-orange-stripe").roll,0.0001f);
+        assertEquals(-.62f,PlayerModelSpec.find("satchel-strap-middle").roll,0.0001f);
+        assertTrue(PlayerModelSpec.find("left-eye-white").z
+            > PlayerModelSpec.find("head").z);
+        assertTrue(PlayerModelSpec.find("left-pupil").z
+            > PlayerModelSpec.find("left-eye-green").z);
     }
 
     @Test public void allRenderedPartsHaveFinitePositiveDimensionsAndValidMaterials() {
@@ -36,6 +47,7 @@ public class PlayerModelSpecTest {
             assertTrue(part.b>=0f && part.b<=1f);
             assertTrue(part.alpha>=0f && part.alpha<=1f);
             assertTrue(Float.isFinite(part.x) && Float.isFinite(part.y) && Float.isFinite(part.z));
+            assertTrue(Float.isFinite(part.roll));
         }
     }
 
@@ -57,10 +69,10 @@ public class PlayerModelSpecTest {
         assertEquals(1.92f,PlayerModelSpec.nominalHeight(),0.0001f);
         assertTrue(boot.y-boot.sy*.5f>0f);
         assertTrue(PlayerModelSpec.find("head").sy>PlayerModelSpec.find("neck").sy);
-        assertEquals(.24f,PlayerModelSpec.find("head").sy,0.0001f);
-        assertEquals(.22f,PlayerModelSpec.find("head").sz,0.0001f);
+        assertEquals(.25f,PlayerModelSpec.find("head").sy,0.0001f);
+        assertEquals(.23f,PlayerModelSpec.find("head").sz,0.0001f);
         assertTrue("eyes must sit on the front surface",
-            PlayerModelSpec.find("left-eye").z+PlayerModelSpec.find("left-eye").sz
+            PlayerModelSpec.find("left-eye-white").z+PlayerModelSpec.find("left-eye-white").sz
                 > PlayerModelSpec.find("head").z+PlayerModelSpec.find("head").sz);
     }
 }
