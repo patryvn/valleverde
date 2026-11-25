@@ -14,9 +14,22 @@ public class PlayerModelTransformTest {
                 assertTrue(Float.isFinite(pose.y));
                 assertTrue(Float.isFinite(pose.z));
                 assertTrue(Float.isFinite(pose.pitch));
+                assertTrue(Float.isFinite(pose.roll));
                 assertTrue(Math.hypot(pose.x - 12f, pose.z + 8f) < 1.0);
                 assertTrue(pose.y > .3f && pose.y < 2.6f);
             }
+        }
+    }
+
+    @Test public void diagonalShirtStripeKeepsItsRollAtEveryFacing() {
+        PlayerModelSpec.Part stripe=PlayerModelSpec.find("shirt-orange-stripe");
+        for(float yaw:new float[]{0f,.7f,1.57f,3.14f,-1.2f}){
+            PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                2f,0f,-4f,yaw,0f,stripe,0f);
+            assertEquals(stripe.roll,pose.roll,0.0001f);
+            assertEquals(stripe.sx,pose.sx,0.0001f);
+            assertEquals(stripe.sy,pose.sy,0.0001f);
+            assertEquals(stripe.sz,pose.sz,0.0001f);
         }
     }
 
