@@ -765,7 +765,7 @@ public class MainActivity extends Activity {
             GLES20.glDisableVertexAttribArray(normalAttr);
         }
 
-        float nearby(){        float nearby(){
+        float nearby(){
             float best=999;
             for(float[] o:objects)if(o[3]>0){
                 float d=(float)Math.hypot(px-o[0],pz-o[1]);
