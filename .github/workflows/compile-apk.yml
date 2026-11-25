@@ -15,6 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout development branch
         uses: actions/checkout@v4
@@ -47,11 +48,50 @@ jobs:
       - name: Build installable release-test APK
         run: gradle :app:assembleRelease --no-daemon
 
+      - name: Smoke-test the 3D scene on an Android emulator
+        id: emulator-smoke
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            mkdir -p emulator-output
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell am force-stop es.valledecernego.game
+            adb shell am start -n es.valledecernego.game/.MainActivity
+            sleep 10
+            adb logcat -d -s ValleCernego:I AndroidRuntime:E > emulator-output/logcat.txt
+            adb shell screencap -p /sdcard/valle-cernego.png
+            adb pull /sdcard/valle-cernego.png emulator-output/valle-cernego.png
+            adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml emulator-output/window.xml
+            if grep -q "60 piezas enviadas" emulator-output/window.xml; then
+              echo "3D player draw calls: OK" > emulator-output/render-status.txt
+            else
+              echo "3D player draw calls: NOT CONFIRMED" > emulator-output/render-status.txt
+              exit 1
+            fi
+            if grep -q "FATAL EXCEPTION" emulator-output/logcat.txt; then
+              exit 1
+            fi
+
+      - name: Upload emulator screenshot and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ValleDeCernego-emulator-smoke
+          path: emulator-output/
+          if-no-files-found: ignore
+
       - name: Verify APK signatures and package version
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game' versionCode='14' versionName='0.14.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game' versionCode='15' versionName='0.15.0'"
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
