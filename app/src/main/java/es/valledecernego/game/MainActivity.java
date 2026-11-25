@@ -190,7 +190,7 @@ public class MainActivity extends Activity {
                         wood-=HouseSystem.WOOD_COST; stone-=HouseSystem.STONE_COST;
                         toast("¡Tu primera casa está construida! Ya tienes un hogar en Cernego.");
                     } else if(result==HouseSystem.INSUFFICIENT_MATERIALS){
-                        toast("Para construir tu casa reúne 10 de madera y 6 de piedra.");
+                        toast("Para construir tu casa reúne 10 de madera y 4 de piedra.");
                     }
                 }
             }
