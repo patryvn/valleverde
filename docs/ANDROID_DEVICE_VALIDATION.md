@@ -47,15 +47,13 @@ La ejecución 45679722682 perdió la variable `ANDROID_I_WANT_MY_TCG`; el emulad
 
 La ejecución 45701063138 falló antes de compilar: Maven Central devolvió HTTP 429 al descargar JUnit 4.13.2. Se ha añadido un espejo de Maven Central para resolver esa dependencia sin depender exclusivamente del endpoint que limitó las solicitudes.
 
-El flujo actual deja de forzar TCG y utiliza la aceleración KVM que ofrece el runner, manteniendo SwiftShader para el renderizado gráfico. Espera a que PackageManager y la actividad estén disponibles, despierta la pantalla y especifica el display ID en el gesto. Guarda captura inicial, captura tras movimiento, jerarquía de ventana y logcat completo. Una ejecución verde confirma que la actividad y el HUD responden; aun así, la imagen debe inspeccionarse visualmente antes de declarar resuelto el rectángulo azul. La emulación sigue sin sustituir una prueba física.
+El flujo actual fuerza TCG mediante `ANDROID_I_WANT_MY_TCG=yes`, con SwiftShader para el renderizado. Espera a que PackageManager y la actividad estén disponibles, despierta la pantalla y especifica el display ID en el gesto. Guarda captura inicial, captura tras movimiento, jerarquía de ventana y logcat completo. Una ejecución verde confirma que la actividad y el HUD responden; aun así, la imagen debe inspeccionarse visualmente antes de declarar resuelto el rectángulo azul. La emulación sigue sin sustituir una prueba física.
 
-
-### Incidencia más reciente de CI (run 45689670313)
+### Incidencia de CI (run 45689670313)
 
 La compilación de la APK y las pruebas unitarias pasaron, pero el emulador Android 35 con TCG terminó el arranque aparente sin que PackageManager estuviera disponible. `adb install` falló con `Can't find service: package` y el servicio de actividad respondió con `Broken pipe`. No se instaló la aplicación y no se generó ninguna captura; por tanto, este run no aporta evidencia sobre el personaje. El log confirma que el runner desactiva la aceleración KVM y arranca con `-accel off`, por lo que el tiempo de arranque y la estabilidad del sistema Android virtual son limitaciones del entorno, no fallos atribuidos al renderizador.
 
-El workflow ahora espera explícitamente a que `cmd package list packages` devuelva paquetes antes de instalar, reintenta la instalación y, si vuelve a fallar, guarda `getprop` y `logcat` completos para distinguir un servicio tardío de un `system_server` caído. Hasta que una ejecución produzca capturas reales de la actividad, no se modifica el modelo por conjetura ni se declara corregido el rectángulo azul.
-
+El workflow espera explícitamente a que `cmd package list packages` devuelva paquetes antes de instalar, reintenta la instalación y, si vuelve a fallar, guarda `getprop` y `logcat` completos para distinguir un servicio tardío de un `system_server` caído. Hasta que una ejecución produzca capturas reales de la actividad, no se modifica el modelo por conjetura ni se declara corregido el rectángulo azul.
 
 ## Cambios del modelo 0.16.0
 
@@ -64,9 +62,16 @@ El workflow ahora espera explícitamente a que `cmd package list packages` devue
 - `GLSurfaceView` solicita RGBA8888 y profundidad de 16 bits; al inicio de cada fotograma se restablecen la máscara de profundidad, la prueba de profundidad y la mezcla para evitar heredar estados GL.
 - Las pruebas unitarias verifican la asignación de estilos. No validan el resultado de píxeles: eso requiere una captura real del emulador o, preferiblemente, del Poco X6 Pro.
 
-
 ## Ajuste de contacto con el suelo (0.17.0)
 
 El terreno de juego se dibuja ahora con su cara superior en `PlayerModelSpec.GROUND_LEVEL` (0,05 unidades), coincidente con la parte inferior de las suelas. Antes, el terreno terminaba en Y=-0,10 y los pies comenzaban en Y=0,055, dejando un hueco visible de 0,155 unidades. La sombra aplanada se ha recolocado sobre ese plano y se ha ensanchado ligeramente en vertical para que el test de profundidad no la deje suspendida sobre el suelo. Una prueba unitaria comprueba el contacto de ambas botas con el plano. Esto corrige una desalineación geométrica real, pero no demuestra que el rectángulo azul comunicado por la usuaria haya desaparecido; la inspección de píxeles sigue pendiente.
 
-La ejecución de CI debe forzar explícitamente TCG mediante `ANDROID_I_WANT_MY_TCG=yes`: los registros de la ejecución 45711019642 mostraron que el emulador se cerraba inmediatamente con `Software CPU emulation (-accel off) is not supported` porque esa variable no estaba definida. Se amplía el arranque a 15 minutos y se reduce el AVD a 2 núcleos y 2 GB para reducir presión de memoria. Esta prueba es una comprobación de entorno, no una sustitución de la validación en el Poco X6 Pro.
+La ejecución 45711019642 mostró que el emulador se cerraba con `Software CPU emulation (-accel off) is not supported` cuando no se definía `ANDROID_I_WANT_MY_TCG`. El flujo fija ahora esa variable, amplía el arranque a 15 minutos y reduce el AVD a 2 núcleos y 2 GB.
+
+## Corrección del ejecutor de scripts (run 45721050836)
+
+El emulador sí terminó de arrancar y PackageManager respondió, pero el paso de prueba falló antes de instalar la APK. Los registros muestran que el ejecutor del action lanzó cada línea del bloque `script` como un comando separado; la cabecera multilínea `for attempt ...; do` llegó sola a `sh -c` y produjo `Syntax error: end of file unexpected (expecting "done")`. No hubo captura de la aplicación ni evidencia visual del personaje.
+
+Para evitar que el intérprete fragmente estructuras de control, la lógica de espera, instalación, apertura, captura y movimiento se ha trasladado a `scripts/emulator-smoke.sh`. El action ejecuta ahora una única orden: `bash scripts/emulator-smoke.sh`. El script guarda siempre `getprop`, `logcat`, actividades, ventanas y `gfxinfo`; falla si no puede instalar/abrir la actividad, si el HUD no informa de las 60 piezas o si la captura no cambia tras mover el joystick. La comparación de capturas demuestra que hubo un cambio visual, no que la silueta sea correcta: ambas imágenes aún deben inspeccionarse.
+
+La siguiente ejecución debe volver a generar las APK, ejecutar `testDebugUnitTest`, `assembleDebug` y `assembleRelease`, y producir las dos capturas del emulador. La validación física en el Poco X6 Pro con Android 16 sigue pendiente.
