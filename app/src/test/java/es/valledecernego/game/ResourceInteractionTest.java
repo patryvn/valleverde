@@ -27,7 +27,7 @@ public class ResourceInteractionTest {
 
     @Test public void exactRangeBoundaryCanBeCollected() {
         ArrayList<float[]> items = new ArrayList<>();
-        items.add(new float[]{1.8f, 1.6f, 2f, 1f});
+        items.add(new float[]{1.44f, 1.92f, 2f, 1f});
         assertEquals(0, ResourceInteraction.nearestIndex(items, 0f, 0f, 2.4f));
     }
 
