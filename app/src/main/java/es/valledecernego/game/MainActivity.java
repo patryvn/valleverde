@@ -733,13 +733,13 @@ public class MainActivity extends Activity {
             Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
 
-            // Las normales necesitan la inversa transpuesta del modelo-vista, incluida la escala.
-            // Esto evita iluminación deformada en cabeza, mochila y sombra elíptica.
-            if(Matrix.invertM(normalTransform,0,modelViewMatrix,0)){
-                Matrix.transposeM(normalMatrixM,0,normalTransform,0);
-            }else{
-                Matrix.setIdentityM(normalMatrixM,0);
-            }
+            // Inversa transpuesta analítica de la parte lineal: R * escala inversa.
+            // Evita 28 inversiones generales por fotograma y mantiene bien la luz en esferas elípticas.
+            Matrix.setIdentityM(normalTransform,0);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.scaleM(normalTransform,0,1f/sx,1f/sy,1f/sz);
+            Matrix.multiplyMM(normalMatrixM,0,view,0,normalTransform,0);
 
             GLES20.glUseProgram(program);
             GLES20.glUniformMatrix4fv(mvp,1,false,mvpM,0);
