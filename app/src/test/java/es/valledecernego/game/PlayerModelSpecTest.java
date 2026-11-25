@@ -59,6 +59,8 @@ public class PlayerModelSpecTest {
         assertEquals(PlayerModelSpec.MATERIAL_LEATHER,PlayerModelSpec.find("backpack").materialStyle);
         assertEquals(PlayerModelSpec.MATERIAL_SKIN,PlayerModelSpec.find("head").materialStyle);
         assertEquals(PlayerModelSpec.MATERIAL_METAL,PlayerModelSpec.find("satchel-buckle").materialStyle);
+        assertEquals(PlayerModelSpec.MATERIAL_LEATHER,PlayerModelSpec.find("left-boot").materialStyle);
+        assertEquals(PlayerModelSpec.MATERIAL_FABRIC,PlayerModelSpec.find("cap-band").materialStyle);
         for(PlayerModelSpec.Part part:PlayerModelSpec.parts()) {
             assertTrue("material style must be supported by the GLES shader",
                 part.materialStyle>=PlayerModelSpec.MATERIAL_SOLID
