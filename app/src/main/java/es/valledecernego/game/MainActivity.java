@@ -635,7 +635,7 @@ public class MainActivity extends Activity {
             drawPlayerPart(.19f,1.16f+bob,-.115f,.055f,.38f,.055f,.11f,.23f,.15f);
         }
 
-        void drawPlayerPart(float localX,float y,float localZ,float sx,float sy,float sz,        void drawPlayerSphere(float localX,float y,float localZ,float sx,float sy,float sz,
+        void drawPlayerSphere(float localX,float y,float localZ,float sx,float sy,float sz,
                               float r,float g,float b,float alpha){
             float c=(float)Math.cos(playerFacing);
             float s=(float)Math.sin(playerFacing);
