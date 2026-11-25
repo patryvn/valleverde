@@ -668,22 +668,15 @@ public class MainActivity extends Activity {
                 if(o[3]==0)continue;
                 int t=(int)o[2];
                 if(t==1){
-                    draw(o[0],.55f,o[1],.35f,1.5f,.35f,.34f,.22f,.12f);
-                    draw(o[0],1.8f,o[1],1.8f,2,1.8f,seasons.foliageRed(),seasons.foliageGreen(),seasons.foliageBlue());
+                    drawTree(o[0],o[1]);
                 }
                 if(t==2)draw(o[0],.35f,o[1],1.1f,.7f,1,.48f,.48f,.46f);
                 if(t==3){
                     draw(o[0],.34f,o[1],1.15f,.42f,.9f,.18f,.39f,.13f);
                     draw(o[0]-.25f,.52f,o[1]+.18f,.48f,.34f,.48f,.23f,.48f,.16f);
                 }
-                if(t==4){
-                    draw(o[0],.55f,o[1],1.2f,.8f,1.8f,.83f,.82f,.72f);
-                    draw(o[0]+.45f,.9f,o[1]-.2f,.55f,.6f,.55f,.82f,.82f,.72f);
-                }
-                if(t==5){
-                    draw(o[0],.55f,o[1],1.35f,.9f,1.9f,.48f,.34f,.22f);
-                    draw(o[0]+.5f,.9f,o[1]-.2f,.58f,.65f,.58f,.48f,.34f,.22f);
-                }
+                if(t==4) drawCow(o[0],o[1],.83f,.82f,.72f,1f,false);
+                if(t==5) drawCow(o[0],o[1],.48f,.34f,.22f,1.08f,true);
                 if(t==6){
                     if(buildings.isStableBuilt()){
                         draw(o[0],.68f,o[1],2.3f,1.35f,2.3f,.48f,.32f,.18f);
@@ -831,6 +824,50 @@ public class MainActivity extends Activity {
             }
         }
 
+        // Árbol de frondosa atlántica: tronco, ramas, copa en varios volúmenes y matices estacionales.
+        void drawTree(float x,float z){
+            float leafR=seasons.foliageRed(),leafG=seasons.foliageGreen(),leafB=seasons.foliageBlue();
+            drawMesh(capsuleBuffer,capsuleVertexCount,x,.92f,z,.19f,.92f,.19f,.30f,.19f,.10f,1f,0f,0f);
+            drawMesh(capsuleBuffer,capsuleVertexCount,x-.34f,1.20f,z,.10f,.62f,.10f,.31f,.20f,.11f,1f,0f,0f,-.52f);
+            drawMesh(capsuleBuffer,capsuleVertexCount,x+.32f,1.28f,z+.04f,.10f,.68f,.10f,.31f,.20f,.11f,1f,0f,0f,.48f);
+            drawMesh(sphereBuffer,sphereVertexCount,x,2.12f,z,.82f,.92f,.78f,leafR,leafG,leafB,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.48f,1.92f,z+.12f,.57f,.67f,.58f,Math.min(1f,leafR*1.08f),Math.min(1f,leafG*1.08f),Math.min(1f,leafB*1.08f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.47f,2.00f,z-.10f,.60f,.72f,.60f,Math.max(0f,leafR*.88f),Math.max(0f,leafG*.90f),Math.max(0f,leafB*.88f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x,2.60f,z,.48f,.54f,.48f,Math.min(1f,leafR*1.04f),Math.min(1f,leafG*1.05f),Math.min(1f,leafB*1.04f),1f,0f,0f);
+        }
+
+        // Vaca/cabrito construido con volúmenes redondeados, cuatro patas, hocico, orejas, cuernos y manchas.
+        void drawCow(float x,float z,float r,float g,float b,float scale,boolean calf){
+            float bodyY=.68f*scale, headX=.63f*scale, headY=1.02f*scale;
+            drawMesh(sphereBuffer,sphereVertexCount,x,bodyY,z, .72f*scale,.48f*scale,.48f*scale,r,g,b,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.05f*scale,.76f*scale,z-.02f*scale,.62f*scale,.38f*scale,.45f*scale,
+                Math.min(1f,r*1.04f),Math.min(1f,g*1.04f),Math.min(1f,b*1.04f),1f,0f,0f);
+            // Manchas oscuras visibles sobre el lomo.
+            float patch=calf?.16f:.22f;
+            drawMesh(sphereBuffer,sphereVertexCount,x-.22f*scale,bodyY+.16f*scale,z-.31f*scale,patch,.18f*scale,.045f*scale,.20f,.18f,.15f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.24f*scale,bodyY+.12f*scale,z+.30f*scale,patch,.15f*scale,.045f*scale,.22f,.20f,.17f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.43f*scale,.83f*scale,z,.25f*scale,.40f*scale,.27f*scale,r,g,b,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+headX,headY,z-.02f*scale,.29f*scale,.31f*scale,.28f*scale,r,g,b,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.12f)*scale,.88f*scale,z-.03f*scale,.22f*scale,.14f*scale,.22f*scale,.72f,.43f,.39f,1f,0f,0f);
+            // Ojos y orejas laterales.
+            for(int side=-1;side<=1;side+=2){
+                drawMesh(sphereBuffer,sphereVertexCount,x+(headX+.02f)*scale,headY+.08f*scale,z+side*.22f*scale,.055f*scale,.05f*scale,.035f*scale,.10f,.075f,.055f,1f,0f,0f);
+                drawMesh(sphereBuffer,sphereVertexCount,x+(headX-.04f)*scale,headY+.14f*scale,z+side*.30f*scale,.17f*scale,.075f*scale,.11f*scale,.66f,.48f,.42f,1f,0f,0f);
+                if(!calf) drawMesh(capsuleBuffer,capsuleVertexCount,x+(headX-.04f)*scale,headY+.30f*scale,z+side*.12f*scale,.045f*scale,.16f*scale,.045f*scale,.88f,.82f,.62f,1f,0f,0f);
+            }
+            // Patas articuladas; el casco queda separado del suelo.
+            for(int side=-1;side<=1;side+=2){
+                for(int front=-1;front<=1;front+=2){
+                    float legX=x+(front*.43f)*scale,legZ=z+side*.27f*scale;
+                    drawMesh(capsuleBuffer,capsuleVertexCount,legX,.31f*scale,legZ,.095f*scale,.34f*scale,.095f*scale,r*.92f,g*.92f,b*.92f,1f,0f,0f);
+                    drawMesh(sphereBuffer,sphereVertexCount,legX,.075f*scale,legZ+.015f*scale,.105f*scale,.075f*scale,.12f*scale,.18f,.16f,.14f,1f,0f,0f);
+                }
+            }
+            // Cola fina con mechón.
+            drawMesh(capsuleBuffer,capsuleVertexCount,x-.70f*scale,.62f*scale,z,.045f*scale,.28f*scale,.045f*scale,.34f,.24f,.16f,1f,0f,0f,-.55f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.82f*scale,.45f*scale,z,.075f*scale,.10f*scale,.075f,.20f,.16f,.12f,1f,0f,0f);
+        }
+
         void drawVillagers(){
             for(VillagerWorldSystem.Position villager:villagerWorld.snapshot()){
                 float phase=villager.walkPhase();
@@ -844,16 +881,27 @@ public class MainActivity extends Activity {
                 if(job==VillagerSystem.FARMER){shirtR=.25f;shirtG=.53f;shirtB=.24f;}
                 else if(job==VillagerSystem.RANCHER){shirtR=.24f;shirtG=.40f;shirtB=.68f;}
                 else if(job==VillagerSystem.WOODCUTTER){shirtR=.62f;shirtG=.34f;shirtB=.17f;}
+                // Silueta humana más orgánica: torso, cuello, manos, rasgos faciales y ropa de oficio.
                 drawVillagerPart(villager,0f,.78f+bodyBob,0f,.36f,.55f,.27f,shirtR,shirtG,shirtB);
                 drawVillagerPart(villager,0f,1.19f+bodyBob,0f,.27f,.28f,.27f,.76f,.59f,.43f);
+                drawVillagerPart(villager,0f,1.02f+bodyBob,.145f,.19f,.34f,.035f,shirtR*.78f,shirtG*.78f,shirtB*.78f);
+                drawVillagerPart(villager,0f,1.04f+bodyBob,.17f,.025f,.37f,.018f,.78f,.68f,.48f);
                 drawVillagerLimb(villager,-.11f,.48f,0f,.13f,.42f,.14f,.19f,.20f,.22f,leftLeg);
                 drawVillagerLimb(villager,.11f,.48f,0f,.13f,.42f,.14f,.19f,.20f,.22f,rightLeg);
                 drawVillagerLimb(villager,-.24f,.96f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB,leftArm);
                 drawVillagerLimb(villager,.24f,.96f,0f,.12f,.40f,.13f,shirtR,shirtG,shirtB,rightArm);
+                drawVillagerPart(villager,-.24f,.73f+bodyBob,.02f,.09f,.10f,.09f,.72f,.52f,.37f);
+                drawVillagerPart(villager,.24f,.73f+bodyBob,.02f,.09f,.10f,.09f,.72f,.52f,.37f);
+                drawVillagerPart(villager,0f,1.39f+bodyBob,0f,.30f,.32f,.28f,.76f,.59f,.43f);
+                drawVillagerPart(villager,0f,1.53f+bodyBob,-.035f,.31f,.13f,.29f,.18f,.095f,.045f);
+                drawVillagerPart(villager,0f,1.60f+bodyBob,.005f,.34f,.075f,.31f,.24f,.17f,.10f);
+                drawVillagerPart(villager,-.075f,1.40f+bodyBob,.245f,.035f,.035f,.018f,.12f,.085f,.06f);
+                drawVillagerPart(villager,.075f,1.40f+bodyBob,.245f,.035f,.035f,.018f,.12f,.085f,.06f);
                 if(job==VillagerSystem.FARMER){
-                    drawVillagerPart(villager,0f,1.39f+bodyBob,0f,.36f,.10f,.36f,.78f,.63f,.24f);
+                    drawVillagerPart(villager,0f,1.58f+bodyBob,0f,.37f,.10f,.37f,.78f,.63f,.24f);
+                    drawVillagerPart(villager,0f,1.52f+bodyBob,.16f,.29f,.07f,.035f,.56f,.42f,.18f);
                 } else {
-                    drawVillagerPart(villager,0f,1.35f+bodyBob,0f,.29f,.09f,.29f,.24f,.18f,.12f);
+                    drawVillagerPart(villager,0f,1.57f+bodyBob,0f,.34f,.10f,.34f,.24f,.18f,.12f);
                 }
             }
         }
