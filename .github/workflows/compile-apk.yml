@@ -1,9 +1,9 @@
-name: Build Valle Verde APK
+name: Build Valle de Cernego APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, game/first-3d-playable]
+    branches: [game/first-3d-playable]
 
 permissions:
   contents: read
@@ -34,47 +34,25 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extraer y localizar proyecto Android
+      - name: Verificar estructura del proyecto
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)"
-          if [ -z "$ZIP_FILE" ]; then
-            echo "No se encuentra el ZIP del proyecto Android"
-            exit 1
-          fi
-          mkdir -p source
-          unzip -q "$ZIP_FILE" -d source
-          SETTINGS_FILE="$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)"
-          if [ -z "$SETTINGS_FILE" ]; then
-            echo "No se encontró settings.gradle ni settings.gradle.kts dentro del ZIP"
-            find source -maxdepth 5 -type f | head -100
-            exit 1
-          fi
-          PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Proyecto localizado en: $PROJECT_DIR"
+          test -f settings.gradle
+          test -f build.gradle
+          test -f app/build.gradle
+          test -f app/src/main/AndroidManifest.xml
+          echo "Proyecto Android del repositorio localizado correctamente."
 
-      - name: Alinear destino JVM de Kotlin con Java
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/jvm-target.gradle" <<'EOF'
-          allprojects {
-              tasks.configureEach { task ->
-                  if (task.name.endsWith('Kotlin') && task.hasProperty('kotlinOptions')) {
-                      task.kotlinOptions.jvmTarget = '1.8'
-                  }
-              }
-          }
-          EOF
+      - name: Ejecutar pruebas unitarias
+        run: gradle testDebugUnitTest --no-daemon
 
       - name: Compilar APK debug
-        run: gradle -I "$RUNNER_TEMP/jvm-target.gradle" -p "$PROJECT_DIR" assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon
 
       - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
-          name: ValleVerde-APK
-          path: |
-            source/**/build/outputs/apk/debug/*.apk
+          name: ValleDeCernego-debug
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
