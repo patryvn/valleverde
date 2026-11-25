@@ -295,14 +295,14 @@ public class MainActivity extends Activity {
             p.setColor(0x335c5043);c.drawCircle(joyX,joyY,JOY_BASE_RADIUS-12,p);
             p.setColor(0xffd7dfd0);c.drawCircle(joyX+jx*JOY_RANGE,joyY+jy*JOY_RANGE,JOY_KNOB_RADIUS,p);
             p.setColor(0x99ffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3);c.drawCircle(joyX+jx*JOY_RANGE,joyY+jy*JOY_RANGE,JOY_KNOB_RADIUS,p);p.setStyle(Paint.Style.FILL);
-            button(c,w-95,h-100,48,"HACER",0xff6d8c55);
-            button(c,w-205,h-75,34,"SALTAR",0xff6b7e9b);
+            button(c,w-100,h-110,62,"HACER",0xff6d8c55);
+            button(c,w-230,h-90,52,"SALTAR",0xff6b7e9b);
             p.setColor(Color.WHITE);p.setTextSize(16);c.drawText("Joystick para moverte • Arrastra para mirar",w/2-170,h-25,p);
         }
 
         void button(Canvas c,float x,float y,float r,String s,int color){
             p.setColor(color);c.drawCircle(x,y,r,p);
-            p.setColor(Color.WHITE);p.setTextAlign(Paint.Align.CENTER);p.setTextSize(s.length()>5?11:13);
+            p.setColor(Color.WHITE);p.setTextAlign(Paint.Align.CENTER);p.setTextSize(s.length()>5?16:18);
             c.drawText(s,x,y+4,p);p.setTextAlign(Paint.Align.LEFT);
         }
 
@@ -317,10 +317,10 @@ public class MainActivity extends Activity {
                 if(insideCircle(x,y,JOY_CENTER_X,h-JOY_BOTTOM,JOY_TOUCH_RADIUS)){
                     joy=true;touchMode=1;baseX=JOY_CENTER_X;baseY=h-JOY_BOTTOM;updateJoy(x,y);return true;
                 }
-                if(insideCircle(x,y,w-95,h-100,52)){
+                if(insideCircle(x,y,w-100,h-110,70)){
                     touchMode=3;if(action!=null)action.run();return true;
                 }
-                if(insideCircle(x,y,w-205,h-75,38)){
+                if(insideCircle(x,y,w-230,h-90,60)){
                     touchMode=4;if(jump!=null)jump.run();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);return true;
