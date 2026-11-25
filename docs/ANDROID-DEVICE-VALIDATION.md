@@ -1,27 +1,29 @@
 # Validación del personaje y cámara en Android
 
-## Cambios incluidos en 0.10.0
+## Cambios incluidos en 0.11.0
 
-- El personaje principal se compone de botas, pantalones, chaqueta, mangas articuladas, manos, cuello, cabeza ovalada, pelo, gorra y mochila.
-- Cabeza y sombra de contacto usan una malla esférica procedural; el resto del cuerpo usa cubos con normales por cara.
-- El shader aplica iluminación difusa direccional y luz ambiente a los materiales de color.
-- La cámara se sitúa detrás de la dirección de movimiento y calcula su posición a partir de la posición, orientación y altura del jugador.
-- La fase de animación continúa avanzando en reposo; brazos y piernas se balancean en sentidos opuestos al caminar.
-- La velocidad de desplazamiento se calcula con delta de tiempo para reducir diferencias entre tasas de refresco.
+- El personaje se renderiza desde una especificación de 28 piezas compartida entre el renderizador y las pruebas unitarias: botas, piernas, chaqueta, brazos, manos, cuello, cabeza, orejas, rasgos faciales, pelo, gorra y mochila con correas.
+- Las piezas usan primitivas 3D (cubos y esferas) y materiales de color coherentes. No se han añadido mapas de textura fotográfica; el sombreado se calcula en el shader.
+- El renderizador calcula la matriz normal mediante la inversa transpuesta del modelo-vista, incluida la escala no uniforme de cabeza, mochila y sombra. Esto mejora la iluminación de las superficies curvas y aplanadas.
+- Brazos y piernas mantienen canales de animación opuestos al caminar; el torso y la cabeza tienen un balanceo pequeño en movimiento y reposo.
+- La cámara de tercera persona sigue la posición y altura del jugador y orbita con la orientación de mirada.
 
 ## Comprobaciones automatizadas
 
-GitHub Actions ejecuta `testDebugUnitTest`, `assembleDebug` y `assembleRelease`. Las pruebas unitarias cubren el seguimiento y la órbita de la cámara, la conservación del desplazamiento al saltar y la animación de extremidades. La compilación no demuestra por sí sola que el modelo se vea correctamente en todas las GPU.
+GitHub Actions ejecuta :app:testDebugUnitTest, :app:assembleDebug y :app:assembleRelease. Las pruebas comprueban la presencia de las piezas humanas, dimensiones positivas, materiales dentro del rango válido, simetría de extremidades, canales de animación y seguimiento de cámara.
+
+Estas pruebas validan los datos del modelo y la lógica de cámara/animación, pero no sustituyen una comprobación visual de OpenGL ES en el teléfono.
 
 ## Validación física pendiente
 
 En un móvil Android real, comprobar:
 
-1. Que se vea la silueta completa (cabeza, torso, dos brazos, dos piernas y mochila) al iniciar.
+1. Que se vea la silueta completa (cabeza, torso, dos brazos, dos piernas, gorra y mochila) al iniciar.
 2. Que la cámara permanezca detrás del personaje y lo mantenga en pantalla al caminar en las cuatro direcciones.
 3. Que la malla no parpadee, se estire ni desaparezca al girar, saltar o acercarse a objetos.
 4. Que la sombra no tape los pies y que los colores sigan siendo legibles con distintas condiciones de luz.
 5. Que el movimiento sea fluido y que el juego sobreviva a pausar y reanudar.
+6. Que la GPU del dispositivo compile el shader y renderice correctamente las normales y transparencias.
 
 ## Instalación y firma de prueba
 
