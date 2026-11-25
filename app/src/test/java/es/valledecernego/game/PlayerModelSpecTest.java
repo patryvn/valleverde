@@ -94,6 +94,14 @@ public class PlayerModelSpecTest {
         assertEquals(PlayerModelSpec.Motion.RIGHT_ARM,rightArm.motion);
     }
 
+    @Test public void bootSolesMeetTheRenderedGroundPlane() {
+        for(String id:new String[]{"left-boot","right-boot"}) {
+            PlayerModelSpec.Part boot=PlayerModelSpec.find(id);
+            assertNotNull(boot);
+            assertEquals(PlayerModelSpec.GROUND_LEVEL,boot.y-boot.sy*.5f,0.006f);
+        }
+    }
+
     @Test public void modelHasHumanScaleAndFeetAboveGroundPlane() {
         PlayerModelSpec.Part boot=PlayerModelSpec.find("left-boot");
         assertEquals(1.92f,PlayerModelSpec.nominalHeight(),0.0001f);
