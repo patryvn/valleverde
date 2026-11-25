@@ -60,22 +60,29 @@ public final class AnimalSystem {
         cowHealth = updateHealth(cowHealth, cowHunger, seconds);
         bullHealth = updateHealth(bullHealth, bullHunger, seconds);
 
+        long gestationDeltaMs = pregnant ? deltaMs : 0L;
         if (!pregnant && !calfBorn) {
             boolean ready = cowHealth >= 60.0f && bullHealth >= 60.0f
                 && cowHunger <= 55.0f && bullHunger <= 55.0f;
             if (ready) {
-                breedingMs = Math.min(BREEDING_READY_MS, breedingMs + deltaMs);
-                if (breedingMs >= BREEDING_READY_MS) {
+                long untilPregnancy = BREEDING_READY_MS - breedingMs;
+                if (deltaMs >= untilPregnancy) {
+                    breedingMs = BREEDING_READY_MS;
                     pregnant = true;
                     gestationMs = 0L;
+                    gestationDeltaMs = deltaMs - untilPregnancy;
+                } else {
+                    breedingMs += deltaMs;
+                    gestationDeltaMs = 0L;
                 }
             } else {
                 breedingMs = 0L;
+                gestationDeltaMs = 0L;
             }
         }
 
-        if (pregnant) {
-            gestationMs = Math.min(GESTATION_DURATION_MS, gestationMs + deltaMs);
+        if (pregnant && gestationDeltaMs > 0L) {
+            gestationMs = Math.min(GESTATION_DURATION_MS, gestationMs + gestationDeltaMs);
             if (gestationMs >= GESTATION_DURATION_MS) {
                 pregnant = false;
                 calfBorn = true;
@@ -111,7 +118,8 @@ public final class AnimalSystem {
         if (pregnant) stage = "Vaca gestante";
         else if (calfBorn && isCalfGrowing()) stage = "Ternero creciendo";
         else if (calfBorn) stage = "Ternero adulto";
-        else stage = "Pareja reproductora";
+        else if (cowHunger <= 55.0f && bullHunger <= 55.0f) stage = "Preparando reproducción";
+        else stage = "Alimenta a vaca y toro";
         return "Forraje " + forage + "  •  Adultos 2  •  " + stage;
     }
 
