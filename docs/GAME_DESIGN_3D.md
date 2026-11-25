@@ -158,12 +158,70 @@ El juego debe ser generoso y permitir avanzar jugando. No habrá compras obligat
 - Mantener una economía que premie jugar de distintas maneras, no repetir una única tarea durante horas.
 - Los premios especiales deben poder conseguirse mediante eventos o logros dentro del juego.
 
+
+### 6.13 Sistemas adicionales aprobados
+Estas mejoras amplían la vida cotidiana del valle. Se desarrollarán después de que la primera demo y los sistemas principales sean estables.
+
+**Casa propia y personalización**
+- El jugador tendrá una casa que podrá ampliar y decorar con muebles, almacenaje, cocina, chimenea y elementos de jardín.
+- La decoración será principalmente visual y funcional; no debe convertirse en una obligación para progresar.
+
+**Invernaderos, huertos y frutales**
+- Invernaderos para cultivar fuera de la temporada normal, con costes de construcción y mantenimiento razonables.
+- Huertos variados y árboles frutales con ciclos de floración, crecimiento y cosecha.
+- Los cultivos protegidos no deben eliminar por completo la importancia de las estaciones.
+
+**Ampliación de especies**
+- Añadir ovejas, cabras, cerdos, gallinas, perros y gatos después de validar el sistema inicial de vacas.
+- Cada especie tendrá necesidades, productos y comportamientos diferenciados.
+- No añadir animales solo como decoración si no tienen interacciones útiles.
+
+**Transformación de alimentos y materias primas**
+- Elaborar queso, pan, miel, embutidos y conservas mediante talleres y recetas.
+- Los productos procesados tendrán más valor, pero requerirán tiempo de juego, ingredientes y espacio de almacenamiento.
+- Mostrar claramente ingredientes y cantidades antes de iniciar una elaboración.
+
+**Aldeanos con rutinas y relaciones**
+- Rutinas diarias sencillas: trabajar, descansar, comer y desplazarse por el pueblo.
+- Amistad y confianza que mejoran mediante encargos, ayuda y convivencia.
+- Las relaciones desbloquean conversaciones, encargos o pequeñas ventajas, sin bloquear funciones esenciales.
+
+**Pesca y recolección silvestre**
+- Pescar en ríos y pozas mediante una mecánica sencilla y táctil.
+- Recolectar setas, castañas, moras y plantas silvestres en las épocas y zonas adecuadas.
+- Incluir avisos visuales y de aprendizaje para distinguir recursos; evitar que la recolección dependa de ensayo y error frustrante.
+
+**Fiestas y acontecimientos**
+- Magostos, ferias ganaderas, mercados y celebraciones estacionales en la plaza.
+- Concursos agrícolas, ganaderos y de construcción con premios obtenibles jugando.
+- Los acontecimientos tendrán fechas del calendario del juego y avisos dentro del tablón de anuncios.
+
+**Mundo y entorno más vivos**
+- Añadir niebla, barro, nieve, huellas, variaciones del caudal de arroyos y cambios visibles de vegetación.
+- Los efectos ambientales deben depender de la estación, el clima y la zona.
+- Priorizar efectos ligeros y optimizados para Android.
+
+### 6.14 Controles táctiles Android
+- Joystick virtual en la parte inferior izquierda para caminar y correr.
+- Zona táctil derecha para girar la cámara y mirar alrededor.
+- Botones contextuales grandes para saltar, agacharse, interactuar y usar la herramienta equipada.
+- La acción principal cambiará según el objeto cercano: alimentar una vaca, recoger un recurso, abrir una puerta, cosechar o usar una estación de trabajo.
+- Accesos visibles a mochila/inventario, mapa y misiones.
+- Interfaz adaptable a distintas proporciones de pantalla, con tamaño y sensibilidad configurables.
+- Evitar llenar la pantalla de botones permanentes; mostrar solo las acciones relevantes.
+- La conducción de vehículos no formará parte del esquema de controles del personaje confirmado para esta versión.
+
 ## 7. Dirección artística y sonido
 - 3D estilizado-realista: materiales naturales, proporciones creíbles, iluminación cuidada y rendimiento adecuado para Android.
 - Terreno con pendientes, vegetación variada, caminos irregulares y agua.
 - Arquitectura de piedra y madera, tejados rurales y construcciones funcionales.
 - Animaciones claras para personaje, herramientas, maquinaria y animales.
+- Música ambiental instrumental, sin canciones cantadas, con melodías tranquilas y discretas que cambian según la hora, la zona y la situación.
+- Capas musicales diferenciadas para amanecer/día, noche, bosques, aldeas, lluvia y tormentas; evitar cambios bruscos o música constante demasiado invasiva.
 - Sonido ambiental por bioma y estación: viento, agua, pájaros, ganado, maquinaria y actividad del pueblo.
+- Audio espacial sencillo: el volumen de arroyos, animales y otras fuentes cambia según la distancia y la posición del jugador.
+- Controles independientes para volumen de música y efectos, con opción de silenciar cada categoría.
+- Usar música y efectos originales, de dominio público o con licencia compatible con la distribución de la APK.
 - Priorizar lectura visual, buena iluminación y fluidez sobre realismo gráfico extremo.
 
 ## 8. Hoja de ruta por fases
@@ -218,11 +276,11 @@ El juego debe ser generoso y permitir avanzar jugando. No habrá compras obligat
 - Añadir reservas y fabricación ampliada.
 **Salida:** mundo con ciclos y decisiones estacionales.
 
-### Fase 8 — Vehículos y transporte
-- Implementar tractor, remolque y transporte de cargas.
-- Ajustar física, controles y caminos.
-- Añadir maquinaria agrícola gradualmente.
-**Salida:** desplazamiento y trabajo mecanizado fiables.
+### Fase 8 — Transporte y mecanización
+- Incorporar maquinaria agrícola y sistemas de transporte de mercancías compatibles con el diseño de controles aprobado.
+- No implementar conducción directa de vehículos en los controles del personaje de esta versión.
+- Ajustar caminos, cargas y logística.
+**Salida:** trabajo mecanizado y transporte funcionales sin añadir controles de conducción al personaje.
 
 ### Fase 9 — Comercio y expansión del mapa
 - Mercado local, encargos, precios y rutas entre pueblos.
@@ -235,6 +293,14 @@ El juego debe ser generoso y permitir avanzar jugando. No habrá compras obligat
 - Optimización de gráficos, memoria, batería y controles.
 - Pruebas de guardado, errores, equilibrio y compatibilidad Android.
 **Salida:** versión amplia y estable, lista para una beta de pruebas.
+
+### Integración de mejoras adicionales
+- Incorporar primero la casa personalizable y la pesca/recolección cuando la exploración y el inventario estén estables.
+- Añadir invernaderos, frutales y elaboración de alimentos después del ciclo agrícola básico.
+- Ampliar especies animales solo después de validar vacas y terneros.
+- Añadir rutinas y relaciones de aldeanos después de que la asignación de trabajos funcione.
+- Programar fiestas y acontecimientos cuando el calendario y el mercado estén implementados.
+- Incorporar efectos ambientales avanzados de forma gradual, midiendo el rendimiento en Android.
 
 ### Integración de recompensas
 - Añadir la primera versión de monedas al comercio y los encargos cuando exista inventario y economía básica.
