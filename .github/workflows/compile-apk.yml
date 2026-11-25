@@ -55,14 +55,15 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Proyecto localizado en: $PROJECT_DIR"
 
-      - name: Alinear compatibilidad JVM
+      - name: Alinear destino JVM de Kotlin con Java
         shell: bash
         run: |
           cat > "$RUNNER_TEMP/jvm-target.gradle" <<'EOF'
           allprojects {
-              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
-                  sourceCompatibility = '17'
-                  targetCompatibility = '17'
+              tasks.configureEach { task ->
+                  if (task.name.endsWith('Kotlin') && task.hasProperty('kotlinOptions')) {
+                      task.kotlinOptions.jvmTarget = '1.8'
+                  }
               }
           }
           EOF
