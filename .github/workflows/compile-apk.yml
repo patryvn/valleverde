@@ -69,7 +69,6 @@ jobs:
 
       - name: Smoke-test the 3D scene on an Android emulator
         id: emulator-smoke
-        env:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -84,7 +83,7 @@ jobs:
             mkdir -p emulator-output
             adb wait-for-device
             until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && [ "$(adb shell getprop init.svc.bootanim | tr -d '\r')" = "stopped" ]; do sleep 2; done
-            # sys.boot_completed alone is not enough on a very slow TCG emulator:
+            # sys.boot_completed alone is not enough on a slow emulator:
             # system_server may still be restarting and PackageManager may be absent.
             package_ready=0
             for attempt in $(seq 1 90); do
