@@ -63,7 +63,7 @@ public final class PlayerModelSpec {
         part("nose",Shape.SPHERE,Motion.NONE,0f,1.53f,.225f,.045f,.055f,.045f,.68f,.46f,.32f,true),
                 part("hair",Shape.SPHERE,Motion.NONE,0f,1.72f,-.045f,.31f,.17f,.29f,.095f,.052f,.028f,true),
         part("cap",Shape.SPHERE,Motion.NONE,0f,1.82f,.005f,.34f,.10f,.31f,.105f,.095f,.085f,true),
-        part("backpack",Shape.BOX,Motion.NONE,-.32f,.69f,.16f,.34f,.42f,.16f,.58f,.39f,.19f,true),
+        part("backpack",Shape.BOX,Motion.NONE,-.32f,.69f,-.22f,.34f,.42f,.16f,.58f,.39f,.19f,true),
         part("left-backpack-strap",Shape.BOX,Motion.NONE,-.19f,1.16f,-.115f,.055f,.38f,.055f,.24f,.15f,.075f,true),
         part("right-backpack-strap",Shape.BOX,Motion.NONE,.19f,1.16f,-.115f,.055f,.38f,.055f,.24f,.15f,.075f,true),
         // Turquoise shirt and orange diagonal graphic visible through the open jacket.
