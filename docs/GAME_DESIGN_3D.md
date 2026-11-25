@@ -1,9 +1,10 @@
-# Valle Verde — Diseño del juego 3D
+# Valle de Cernego — Diseño del juego 3D
 
 ## Visión
-Valle Verde será un simulador rural de exploración y gestión en mundo abierto 3D. El jugador controla a un personaje en tercera persona y recorre libremente un valle ficticio de inspiración gallega. La prioridad es que el mundo se sienta como un lugar habitable y coherente, no como una pantalla de gestión con edificios colocados.
+Valle de Cernego será un simulador rural de exploración y gestión en mundo abierto 3D. El jugador controla a un personaje en tercera persona y recorre libremente un valle ficticio de inspiración gallega. La prioridad es que el mundo se sienta como un lugar habitable y coherente, no como una pantalla de gestión con edificios colocados.
 
 ## Decisiones confirmadas
+- Nombre del juego: Valle de Cernego.
 - Cámara en tercera persona, con personaje visible y control directo.
 - Mapa ficticio, sin copiar la geografía exacta de Cernego.
 - Identidad visual rural gallega: montañas verdes, laderas, bosques de castaños y robles, prados, viñedos, arroyos, caminos de tierra y pequeñas aldeas de piedra.
