@@ -716,11 +716,40 @@ public class MainActivity extends Activity {
                 }
                 if(t==9){
                     if(house.isBuilt()){
-                        draw(o[0],.92f,o[1],3.1f,1.85f,2.7f,.78f,.68f,.52f);
-                        draw(o[0],2.05f,o[1],3.5f,.28f,3.05f,.43f,.20f,.14f);
-                        draw(o[0],.62f,o[1]-1.38f,.72f,1.2f,.12f,.30f,.16f,.10f);
-                        draw(o[0]-.82f,1.15f,o[1]-1.39f,.48f,.48f,.10f,.40f,.67f,.78f);
-                        draw(o[0]+.82f,1.15f,o[1]-1.39f,.48f,.48f,.10f,.40f,.67f,.78f);
+                        // Galician granite farmhouse: stone walls, slate gable roof, chimney and timber details.
+                        draw(o[0],.94f,o[1],3.05f,1.82f,2.65f,.53f,.51f,.46f);
+                        // Stone corner quoins and visible lintels give the facade masonry relief.
+                        for(int side=-1;side<=1;side+=2){
+                            draw(o[0]+side*1.43f,.98f,o[1]-1.34f,.18f,1.78f,.18f,.67f,.64f,.56f);
+                            draw(o[0]+side*1.43f,.98f,o[1]+1.20f,.18f,1.78f,.18f,.67f,.64f,.56f);
+                        }
+                        draw(o[0],1.84f,o[1]-1.36f,3.0f,.16f,.18f,.69f,.66f,.58f);
+                        // Two pitched slate roof planes meet at a raised ridge.
+                        drawMesh(vb,36,o[0]-.78f,2.02f,o[1],1.78f,.18f,3.12f,.22f,.25f,.28f,1f,0f,0f,-.48f);
+                        drawMesh(vb,36,o[0]+.78f,2.02f,o[1],1.78f,.18f,3.12f,.22f,.25f,.28f,1f,0f,0f,.48f);
+                        draw(o[0],2.43f,o[1],.18f,.16f,3.2f,.30f,.32f,.34f);
+                        // Chimney rises above the rear roof slope.
+                        draw(o[0]+.82f,2.42f,o[1]+.72f,.34f,.78f,.38f,.49f,.46f,.41f);
+                        draw(o[0]+.82f,2.84f,o[1]+.72f,.48f,.12f,.48f,.28f,.27f,.25f);
+                        // Recessed timber door with frame, handle and threshold.
+                        draw(o[0],.66f,o[1]-1.355f,.72f,1.28f,.10f,.28f,.16f,.09f);
+                        draw(o[0],.67f,o[1]-1.42f,.52f,1.12f,.045f,.39f,.22f,.11f);
+                        draw(o[0]+.16f,.68f,o[1]-1.45f,.045f,.08f,.025f,.82f,.65f,.28f);
+                        draw(o[0],.12f,o[1]-1.43f,.94f,.12f,.22f,.63f,.61f,.54f);
+                        // Blue-grey divided windows with wooden surrounds and central mullions.
+                        for(int side=-1;side<=1;side+=2){
+                            float wx=o[0]+side*.94f;
+                            draw(wx,1.22f,o[1]-1.37f,.64f,.62f,.10f,.30f,.48f,.53f);
+                            draw(wx,1.22f,o[1]-1.43f,.48f,.46f,.035f,.48f,.69f,.72f);
+                            draw(wx,1.22f,o[1]-1.46f,.045f,.48f,.025f,.27f,.20f,.14f);
+                            draw(wx,1.22f,o[1]-1.46f,.48f,.045f,.025f,.27f,.20f,.14f);
+                        }
+                        // Timber gable trim and small front flower boxes.
+                        draw(o[0],1.98f,o[1]-1.38f,1.85f,.09f,.09f,.34f,.22f,.13f);
+                        for(int side=-1;side<=1;side+=2){
+                            draw(o[0]+side*.94f,.83f,o[1]-1.53f,.58f,.12f,.12f,.35f,.20f,.12f);
+                            draw(o[0]+side*.94f,.94f,o[1]-1.53f,.48f,.12f,.10f,.24f,.43f,.18f);
+                        }
                     } else {
                         draw(o[0],.10f,o[1],3.4f,.16f,3.0f,.58f,.43f,.27f);
                         draw(o[0]-1.45f,.34f,o[1],.14f,.58f,.14f,.38f,.25f,.14f);
