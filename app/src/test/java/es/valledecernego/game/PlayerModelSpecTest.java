@@ -53,6 +53,19 @@ public class PlayerModelSpecTest {
         assertTrue(flap.z < backpack.z);
     }
 
+    @Test public void clothingUsesDistinctProceduralMaterialStyles() {
+        assertEquals(PlayerModelSpec.MATERIAL_FABRIC,PlayerModelSpec.find("torso").materialStyle);
+        assertEquals(PlayerModelSpec.MATERIAL_COTTON,PlayerModelSpec.find("shirt-front").materialStyle);
+        assertEquals(PlayerModelSpec.MATERIAL_LEATHER,PlayerModelSpec.find("backpack").materialStyle);
+        assertEquals(PlayerModelSpec.MATERIAL_SKIN,PlayerModelSpec.find("head").materialStyle);
+        assertEquals(PlayerModelSpec.MATERIAL_METAL,PlayerModelSpec.find("satchel-buckle").materialStyle);
+        for(PlayerModelSpec.Part part:PlayerModelSpec.parts()) {
+            assertTrue("material style must be supported by the GLES shader",
+                part.materialStyle>=PlayerModelSpec.MATERIAL_SOLID
+                    && part.materialStyle<=PlayerModelSpec.MATERIAL_METAL);
+        }
+    }
+
     @Test public void allRenderedPartsHaveFinitePositiveDimensionsAndValidMaterials() {
         for(PlayerModelSpec.Part part:PlayerModelSpec.parts()) {
             assertNotNull(part.id);
