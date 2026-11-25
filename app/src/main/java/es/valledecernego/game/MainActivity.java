@@ -44,6 +44,8 @@ public class MainActivity extends Activity {
         FrameLayout root=new FrameLayout(this);
         surface=new GLSurfaceView(this);
         surface.setEGLContextClientVersion(2);
+        surface.setEGLConfigChooser(8,8,8,8,16,0);
+        surface.setPreserveEGLContextOnPause(true);
         renderer=new GameRenderer();
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
@@ -403,7 +405,7 @@ public class MainActivity extends Activity {
 
     static class GameRenderer implements GLSurfaceView.Renderer {
         FloatBuffer vb;
-        int program,pos,normalAttr,color,mvp,normalMatrixUniform;
+        int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform;
         volatile boolean rendererReady=false;
         volatile int playerDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
@@ -454,8 +456,8 @@ public class MainActivity extends Activity {
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
             GLES20.glDisable(GLES20.GL_CULL_FACE);
-            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); gl_Position=uMVP*vec4(aPos,1.0);} ";
-            String fs="precision mediump float; uniform vec4 uColor; varying float vLight; void main(){gl_FragColor=vec4(uColor.rgb*vLight,uColor.a);}";
+            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; varying vec3 vLocal; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); vLocal=aPos; gl_Position=uMVP*vec4(aPos,1.0);} ";
+            String fs="precision mediump float; uniform vec4 uColor; uniform float uMaterialStyle; varying float vLight; varying vec3 vLocal; void main(){vec3 base=uColor.rgb; if(uMaterialStyle>0.5 && uMaterialStyle<1.5){base*=0.97+0.03*sin(vLocal.x*42.0)*sin(vLocal.y*42.0);} else if(uMaterialStyle>1.5 && uMaterialStyle<2.5){base*=0.98+0.02*sin((vLocal.x+vLocal.y)*56.0);} else if(uMaterialStyle>2.5 && uMaterialStyle<3.5){base*=0.95+0.05*sin(vLocal.y*18.0+vLocal.x*6.0);} else if(uMaterialStyle>3.5 && uMaterialStyle<4.5){base*=0.99+0.01*sin(vLocal.y*12.0);} else if(uMaterialStyle>4.5){base=mix(base,vec3(0.78,0.67,0.42),0.18)*(0.92+0.08*abs(sin(vLocal.x*20.0)));} gl_FragColor=vec4(base*vLight,uColor.a);}";
             program=buildProgram(vs,fs);
             if(program==0){
                 android.util.Log.w("ValleCernego","Shader iluminado no disponible; se activa el shader plano de compatibilidad.");
@@ -473,6 +475,7 @@ public class MainActivity extends Activity {
             color=GLES20.glGetUniformLocation(program,"uColor");
             mvp=GLES20.glGetUniformLocation(program,"uMVP");
             normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
+            materialStyleUniform=GLES20.glGetUniformLocation(program,"uMaterialStyle");
             rendererReady=pos>=0 && color>=0 && mvp>=0
                 && (normalAttr<0 || normalMatrixUniform>=0);
             if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
@@ -649,6 +652,10 @@ public class MainActivity extends Activity {
             }
             lastFrameNanos=now;
 
+            // Restore depth/blend state before clearing and drawing the next frame.
+            GLES20.glDepthMask(true);
+            GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+            GLES20.glDisable(GLES20.GL_BLEND);
             GLES20.glClearColor(seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),1f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
             float moveLength=(float)Math.hypot(moveX,moveY);
@@ -835,14 +842,14 @@ public class MainActivity extends Activity {
                     // El mesh cápsula mide 2 unidades de alto; sy/2 conserva las dimensiones del modelo.
                     submitted=drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch,pose.roll);
+                        pose.yaw,pose.pitch,pose.roll,part.materialStyle);
                 }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
                     submitted=drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch,pose.roll);
+                        pose.yaw,pose.pitch,pose.roll,part.materialStyle);
                 }else{
                     submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
-                        part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll);
+                        part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
                 }
                 if(submitted)submittedParts++;
             }
@@ -1003,6 +1010,13 @@ public class MainActivity extends Activity {
         boolean drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
                          float sx,float sy,float sz,float r,float g,float b,float alpha,
                          float angle,float localRotationX,float localRotationZ){
+            return drawMesh(mesh,vertexCount,x,y,z,sx,sy,sz,r,g,b,alpha,
+                angle,localRotationX,localRotationZ,PlayerModelSpec.MATERIAL_SOLID);
+        }
+
+        boolean drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
+                         float sx,float sy,float sz,float r,float g,float b,float alpha,
+                         float angle,float localRotationX,float localRotationZ,float materialStyle){
             if(!rendererReady || mesh==null || vertexCount<=0)return false;
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
@@ -1028,6 +1042,7 @@ public class MainActivity extends Activity {
                 GLES20.glUniformMatrix4fv(normalMatrixUniform,1,false,normalMatrixM,0);
             }
             GLES20.glUniform4f(color,r,g,b,alpha);
+            if(materialStyleUniform>=0)GLES20.glUniform1f(materialStyleUniform,materialStyle);
             GLES20.glEnableVertexAttribArray(pos);
             mesh.position(0);
             GLES20.glVertexAttribPointer(pos,3,GLES20.GL_FLOAT,false,6*4,mesh);
