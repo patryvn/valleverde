@@ -1,6 +1,8 @@
 package es.valledecernego.game;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -46,6 +48,7 @@ public class MainActivity extends Activity {
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
+        renderer.loadMarket(preferences.getString("market", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -71,7 +74,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary();
+        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary();
     }
 
     void saveProgress() {
@@ -82,6 +85,7 @@ public class MainActivity extends Activity {
             .putString("farm", renderer.saveFarm())
             .putString("animals", renderer.saveAnimals())
             .putString("buildings", renderer.saveBuildings())
+            .putString("market", renderer.saveMarket())
             .apply();
     }
 
@@ -137,12 +141,38 @@ public class MainActivity extends Activity {
                     toast("La cuadra ya está construida.");
                 }
             }
+            else if(k==7){showMarket();}
             else {toast("No hay nada con lo que interactuar");}
         } else {
             toast("Acércate a un árbol, piedra, parcela o animal");
         }
         saveProgress();
         if(status!=null) status.setText(statusText());
+    }
+
+    void showMarket(){
+        final int harvest=renderer.getHarvest();
+        final boolean canSell=harvest>0;
+        ArrayList<String> options=new ArrayList<>();
+        if(canSell) options.add("Vender toda la cosecha ("+harvest+" unidades)");
+        options.add("Comprar 3 semillas (6 monedas)");
+        new AlertDialog.Builder(this)
+            .setTitle("Mercado de Valdemonte")
+            .setMessage("Monedas: "+renderer.getCoins()+"\nCosecha disponible: "+harvest+"\nSemillas: "+renderer.getSeeds())
+            .setItems(options.toArray(new String[options.size()]),new DialogInterface.OnClickListener(){
+                @Override public void onClick(DialogInterface dialog,int which){
+                    if(canSell && which==0){
+                        int sold=renderer.sellHarvest();
+                        if(sold>0) toast("Vendiste "+sold+" productos: +"+(sold*MarketSystem.HARVEST_PRICE)+" monedas.");
+                        else toast("No tienes cosecha para vender.");
+                    } else {
+                        if(renderer.buySeedBundle()) toast("Has comprado 3 semillas por 6 monedas.");
+                        else toast("Necesitas 6 monedas y espacio para 3 semillas.");
+                    }
+                    saveProgress();
+                    if(status!=null) status.setText(statusText());
+                }
+            }).show();
     }
 
     void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
@@ -224,6 +254,7 @@ public class MainActivity extends Activity {
         final AnimalSystem animals=new AnimalSystem();
         ArrayList<float[]> objects=new ArrayList<>();
         final BuildingSystem buildings=new BuildingSystem();
+        final MarketSystem market=new MarketSystem();
 
         GameRenderer(){
             for(int i=0;i<9;i++) objects.add(new float[]{-7+i*1.7f,-3-(i%3)*2,1,1});
@@ -235,6 +266,7 @@ public class MainActivity extends Activity {
             objects.add(new float[]{0,-9,3,1});
             objects.add(new float[]{8,2,3,1});
             objects.add(new float[]{-5,-10,6,1});
+            objects.add(new float[]{10,-10,7,1});
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
@@ -339,6 +371,12 @@ public class MainActivity extends Activity {
                         draw(o[0]+1.05f,.62f,o[1]+1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
                     }
                 }
+                if(t==7){
+                    draw(o[0],.52f,o[1],2.2f,.75f,1.15f,.43f,.27f,.14f);
+                    draw(o[0],1.12f,o[1],2.35f,.24f,1.3f,.68f,.25f,.16f);
+                    draw(o[0]-.82f,.3f,o[1],.12f,.6f,.12f,.3f,.2f,.12f);
+                    draw(o[0]+.82f,.3f,o[1],.12f,.6f,.12f,.3f,.2f,.12f);
+                }
             }
 
             for(CropSystem.Plot plot:crops.snapshot()){
@@ -404,6 +442,13 @@ public class MainActivity extends Activity {
         String getBuildingSummary(){return buildings.getSummary();}
         String saveBuildings(){return buildings.saveState();}
         void loadBuildings(String state){buildings.loadState(state);}
+        String saveMarket(){return market.saveState();}
+        void loadMarket(String state){market.loadState(state);}
+        int getCoins(){return market.getCoins();}
+        int getHarvest(){return crops.getHarvest();}
+        int getSeeds(){return crops.getSeeds();}
+        int sellHarvest(){return market.sellHarvest(crops);}
+        boolean buySeedBundle(){return market.buySeedBundle(crops);}
         int buildStable(int availableWood,int availableStone){
             return buildings.buildStable(availableWood,availableStone);
         }

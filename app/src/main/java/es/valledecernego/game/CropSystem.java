@@ -24,6 +24,7 @@ public final class CropSystem {
     private static final float INTERACTION_DISTANCE = 2.4f;
 
     private final ArrayList<Plot> plots = new ArrayList<>();
+    private static final int MAX_SEEDS = 99;
     private int seeds = 6;
     private int harvest = 0;
 
@@ -77,6 +78,21 @@ public final class CropSystem {
 
     public synchronized int getSeeds() { return seeds; }
     public synchronized int getHarvest() { return harvest; }
+
+    /** Adds seeds up to the inventory cap and returns the amount actually added. */
+    public synchronized int addSeeds(int amount) {
+        if (amount <= 0) return 0;
+        int added = Math.min(amount, MAX_SEEDS - seeds);
+        seeds += added;
+        return added;
+    }
+
+    /** Removes and returns all stored produce for a market transaction. */
+    public synchronized int takeAllHarvest() {
+        int sold = harvest;
+        harvest = 0;
+        return sold;
+    }
 
     public synchronized int getReadyCount() {
         int count = 0;
