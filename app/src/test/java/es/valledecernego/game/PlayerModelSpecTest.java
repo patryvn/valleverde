@@ -46,5 +46,10 @@ public class PlayerModelSpecTest {
         assertEquals(1.92f,PlayerModelSpec.nominalHeight(),0.0001f);
         assertTrue(boot.y-boot.sy*.5f>0f);
         assertTrue(PlayerModelSpec.find("head").sy>PlayerModelSpec.find("neck").sy);
+        assertEquals(.24f,PlayerModelSpec.find("head").sy,0.0001f);
+        assertEquals(.22f,PlayerModelSpec.find("head").sz,0.0001f);
+        assertTrue("eyes must sit on the front surface",
+            PlayerModelSpec.find("left-eye").z+PlayerModelSpec.find("left-eye").sz
+                > PlayerModelSpec.find("head").z+PlayerModelSpec.find("head").sz);
     }
 }
