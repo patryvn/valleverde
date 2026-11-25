@@ -397,8 +397,9 @@ public class MainActivity extends Activity {
     static class GameRenderer implements GLSurfaceView.Renderer {
         FloatBuffer vb;
         int program,pos,normalAttr,color,mvp,normalMatrixUniform;
-        FloatBuffer sphereBuffer;
-        int sphereVertexCount;
+        boolean rendererReady=false;
+        FloatBuffer sphereBuffer,capsuleBuffer;
+        int sphereVertexCount,capsuleVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
         float[] normalTransform=new float[16],normalMatrixM=new float[16];
         volatile float moveX,moveY,px=0,pz=5,yaw=0,pitch=0;
@@ -438,16 +439,30 @@ public class MainActivity extends Activity {
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.52+0.48*max(dot(n,lightDir),0.0); gl_Position=uMVP*vec4(aPos,1.0);} ";
+            GLES20.glDepthFunc(GLES20.GL_LEQUAL);
+            GLES20.glDisable(GLES20.GL_CULL_FACE);
+            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); gl_Position=uMVP*vec4(aPos,1.0);} ";
             String fs="precision mediump float; uniform vec4 uColor; varying float vLight; void main(){gl_FragColor=vec4(uColor.rgb*vLight,uColor.a);}";
-            int v=shader(GLES20.GL_VERTEX_SHADER,vs),f=shader(GLES20.GL_FRAGMENT_SHADER,fs);
-            program=GLES20.glCreateProgram();
-            GLES20.glAttachShader(program,v);GLES20.glAttachShader(program,f);GLES20.glLinkProgram(program);
+            program=buildProgram(vs,fs);
+            if(program==0){
+                android.util.Log.w("ValleCernego","Shader iluminado no disponible; se activa el shader plano de compatibilidad.");
+                String fallbackVs="attribute vec3 aPos; uniform mat4 uMVP; void main(){gl_Position=uMVP*vec4(aPos,1.0);}";
+                String fallbackFs="precision mediump float; uniform vec4 uColor; void main(){gl_FragColor=uColor;}";
+                program=buildProgram(fallbackVs,fallbackFs);
+            }
+            if(program==0){
+                rendererReady=false;
+                android.util.Log.e("ValleCernego","No se pudo enlazar ningún shader OpenGL ES.");
+                return;
+            }
             pos=GLES20.glGetAttribLocation(program,"aPos");
             normalAttr=GLES20.glGetAttribLocation(program,"aNormal");
             color=GLES20.glGetUniformLocation(program,"uColor");
             mvp=GLES20.glGetUniformLocation(program,"uMVP");
             normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
+            rendererReady=pos>=0 && color>=0 && mvp>=0;
+            if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
+
             float[] cube={
                 -.5f,-.5f,-.5f, .5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,.5f,-.5f,
                 -.5f,-.5f,.5f, .5f,.5f,.5f, .5f,-.5f,.5f, -.5f,-.5f,.5f, -.5f,.5f,.5f, .5f,.5f,.5f,
@@ -467,8 +482,10 @@ public class MainActivity extends Activity {
                 vb.put(faceNormals[face][0]).put(faceNormals[face][1]).put(faceNormals[face][2]);
             }
             vb.position(0);
-            sphereBuffer=createSphereBuffer(10,16);
+            sphereBuffer=createSphereBuffer(12,20);
             sphereVertexCount=sphereBuffer.limit()/6;
+            capsuleBuffer=createCapsuleBuffer(6,16);
+            capsuleVertexCount=capsuleBuffer.limit()/6;
         }
 
         FloatBuffer createSphereBuffer(int stacks,int slices){
@@ -510,8 +527,83 @@ public class MainActivity extends Activity {
 
         int shader(int type,String src){
             int s=GLES20.glCreateShader(type);
-            GLES20.glShaderSource(s,src);GLES20.glCompileShader(s);
+            if(s==0)return 0;
+            GLES20.glShaderSource(s,src);
+            GLES20.glCompileShader(s);
+            int[] status=new int[1];
+            GLES20.glGetShaderiv(s,GLES20.GL_COMPILE_STATUS,status,0);
+            if(status[0]==0){
+                android.util.Log.e("ValleCernego","Error compilando shader: "+GLES20.glGetShaderInfoLog(s));
+                GLES20.glDeleteShader(s);
+                return 0;
+            }
             return s;
+        }
+
+        int buildProgram(String vertexSource,String fragmentSource){
+            int vertex=shader(GLES20.GL_VERTEX_SHADER,vertexSource);
+            int fragment=shader(GLES20.GL_FRAGMENT_SHADER,fragmentSource);
+            if(vertex==0 || fragment==0){
+                if(vertex!=0)GLES20.glDeleteShader(vertex);
+                if(fragment!=0)GLES20.glDeleteShader(fragment);
+                return 0;
+            }
+            int candidate=GLES20.glCreateProgram();
+            GLES20.glAttachShader(candidate,vertex);
+            GLES20.glAttachShader(candidate,fragment);
+            GLES20.glLinkProgram(candidate);
+            int[] linked=new int[1];
+            GLES20.glGetProgramiv(candidate,GLES20.GL_LINK_STATUS,linked,0);
+            GLES20.glDeleteShader(vertex);
+            GLES20.glDeleteShader(fragment);
+            if(linked[0]==0){
+                android.util.Log.e("ValleCernego","Error enlazando shader: "+GLES20.glGetProgramInfoLog(candidate));
+                GLES20.glDeleteProgram(candidate);
+                return 0;
+            }
+            return candidate;
+        }
+
+        FloatBuffer createCapsuleBuffer(int hemisphereStacks,int slices){
+            ArrayList<float[]> rings=new ArrayList<>();
+            for(int i=0;i<=hemisphereStacks;i++){
+                float angle=(float)(-Math.PI*.5+(Math.PI*.5*i/hemisphereStacks));
+                rings.add(new float[]{-.5f+.5f*(float)Math.sin(angle),.5f*(float)Math.cos(angle),(float)Math.sin(angle)});
+            }
+            for(int i=1;i<5;i++)rings.add(new float[]{-.5f+i*.2f,.5f,0f});
+            for(int i=0;i<=hemisphereStacks;i++){
+                float angle=(float)(Math.PI*.5*i/hemisphereStacks);
+                rings.add(new float[]{.5f+.5f*(float)Math.sin(angle),.5f*(float)Math.cos(angle),(float)Math.sin(angle)});
+            }
+            ArrayList<Float> data=new ArrayList<>();
+            for(int ring=0;ring<rings.size()-1;ring++){
+                float[] lower=rings.get(ring),upper=rings.get(ring+1);
+                for(int slice=0;slice<slices;slice++){
+                    float a=(float)(Math.PI*2.0*slice/slices);
+                    float b=(float)(Math.PI*2.0*(slice+1)/slices);
+                    addCapsuleVertex(data,lower,a);
+                    addCapsuleVertex(data,upper,a);
+                    addCapsuleVertex(data,upper,b);
+                    addCapsuleVertex(data,lower,a);
+                    addCapsuleVertex(data,upper,b);
+                    addCapsuleVertex(data,lower,b);
+                }
+            }
+            FloatBuffer buffer=ByteBuffer.allocateDirect(data.size()*4)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            for(Float value:data)buffer.put(value);
+            buffer.position(0);
+            return buffer;
+        }
+
+        void addCapsuleVertex(ArrayList<Float> data,float[] ring,float longitude){
+            float radial=(float)Math.sqrt(Math.max(0f,1f-ring[2]*ring[2]));
+            float nx=radial*(float)Math.cos(longitude);
+            float nz=radial*(float)Math.sin(longitude);
+            float x=ring[1]*(float)Math.cos(longitude);
+            float z=ring[1]*(float)Math.sin(longitude);
+            data.add(x);data.add(ring[0]);data.add(z);
+            data.add(nx);data.add(ring[2]);data.add(nz);
         }
 
         public void onSurfaceChanged(GL10 gl,int w,int h){
@@ -656,11 +748,12 @@ public class MainActivity extends Activity {
             drawPlayer();
         }
 
-        // Modelo rural definido por piezas para poder verificar sus proporciones con pruebas unitarias.
+        // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
         void drawPlayer(){
+            if(!rendererReady)return;
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
 
-            // Sombra de contacto elíptica, separada del modelo para que no salte con los pies.
+            // Sombra de contacto elíptica bajo los pies.
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
             drawMesh(sphereBuffer,sphereVertexCount,px,.012f,pz,.52f,.014f,.34f,
@@ -669,7 +762,6 @@ public class MainActivity extends Activity {
 
             for(int i=0;i<PlayerModelSpec.size();i++){
                 PlayerModelSpec.Part part=PlayerModelSpec.partAt(i);
-                float bodyOffset=part.followsBody?bob:0f;
                 float angle=0f;
                 if(part.motion==PlayerModelSpec.Motion.LEFT_LEG){
                     angle=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
@@ -680,58 +772,22 @@ public class MainActivity extends Activity {
                 }else if(part.motion==PlayerModelSpec.Motion.RIGHT_ARM){
                     angle=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
                 }
-
+                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                    px,py,pz,playerFacing,bob,part,angle);
                 if(part.shape==PlayerModelSpec.Shape.LIMB){
-                    float halfLength=part.sy*.5f;
-                    float centerY=part.y+bodyOffset
-                        +VillagerAnimationSystem.limbCenterYOffset(halfLength,angle);
-                    float centerZ=part.z
-                        +VillagerAnimationSystem.limbCenterZOffset(halfLength,angle);
-                    drawPlayerPartRotated(part.x,centerY,centerZ,part.sx,part.sy,part.sz,
-                        part.r,part.g,part.b,angle);
+                    // El mesh cápsula mide 2 unidades de alto; sy/2 conserva las dimensiones del modelo.
+                    drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
+                        pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
+                        pose.yaw,pose.pitch);
                 }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
-                    drawPlayerSphere(part.x,part.y+bodyOffset,part.z,part.sx,part.sy,part.sz,
-                        part.r,part.g,part.b,part.alpha);
+                    drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
+                        pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
+                        pose.yaw,pose.pitch);
                 }else{
-                    drawPlayerPart(part.x,part.y+bodyOffset,part.z,part.sx,part.sy,part.sz,
-                        part.r,part.g,part.b);
+                    drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
+                        part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch);
                 }
             }
-        }
-
-        void drawPlayerSphere(float localX,float y,float localZ,float sx,float sy,float sz,
-                              float r,float g,float b,float alpha){
-            float c=(float)Math.cos(playerFacing);
-            float s=(float)Math.sin(playerFacing);
-            float x=px+localX*c+localZ*s;
-            float z=pz-localX*s+localZ*c;
-            drawMesh(sphereBuffer,sphereVertexCount,x,y+py,z,sx,sy,sz,r,g,b,alpha,playerFacing,0f);
-        }
-
-        void drawPlayerPart(float localX,float y,float localZ,float sx,float sy,float sz,
-                            float r,float g,float b){
-            float c=(float)Math.cos(playerFacing);
-            float s=(float)Math.sin(playerFacing);
-            float x=px+localX*c+localZ*s;
-            float z=pz-localX*s+localZ*c;
-            drawFacingWithLocalX(x,y+py,z,sx,sy,sz,r,g,b,playerFacing,0f);
-        }
-
-        void drawPlayerLimb(float pivotX,float pivotY,float pivotZ,float sx,float sy,float sz,
-                            float r,float g,float b,float angle){
-            float halfLength=sy*.5f;
-            float centerY=pivotY+VillagerAnimationSystem.limbCenterYOffset(halfLength,angle);
-            float centerZ=pivotZ+VillagerAnimationSystem.limbCenterZOffset(halfLength,angle);
-            drawPlayerPartRotated(pivotX,centerY,centerZ,sx,sy,sz,r,g,b,angle);
-        }
-
-        void drawPlayerPartRotated(float localX,float y,float localZ,float sx,float sy,float sz,
-                                   float r,float g,float b,float rotationX){
-            float c=(float)Math.cos(playerFacing);
-            float s=(float)Math.sin(playerFacing);
-            float x=px+localX*c+localZ*s;
-            float z=pz-localX*s+localZ*c;
-            drawFacingWithLocalX(x,y+py,z,sx,sy,sz,r,g,b,playerFacing,rotationX);
         }
 
         void drawVillagers(){
@@ -799,7 +855,7 @@ public class MainActivity extends Activity {
         void drawMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
                       float sx,float sy,float sz,float r,float g,float b,float alpha,
                       float angle,float localRotationX){
-            if(mesh==null || vertexCount<=0)return;
+            if(!rendererReady || mesh==null || vertexCount<=0)return;
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
@@ -821,15 +877,17 @@ public class MainActivity extends Activity {
             GLES20.glUniformMatrix4fv(normalMatrixUniform,1,false,normalMatrixM,0);
             GLES20.glUniform4f(color,r,g,b,alpha);
             GLES20.glEnableVertexAttribArray(pos);
-            GLES20.glEnableVertexAttribArray(normalAttr);
             mesh.position(0);
             GLES20.glVertexAttribPointer(pos,3,GLES20.GL_FLOAT,false,6*4,mesh);
-            mesh.position(3);
-            GLES20.glVertexAttribPointer(normalAttr,3,GLES20.GL_FLOAT,false,6*4,mesh);
+            if(normalAttr>=0){
+                GLES20.glEnableVertexAttribArray(normalAttr);
+                mesh.position(3);
+                GLES20.glVertexAttribPointer(normalAttr,3,GLES20.GL_FLOAT,false,6*4,mesh);
+            }
             mesh.position(0);
             GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertexCount);
             GLES20.glDisableVertexAttribArray(pos);
-            GLES20.glDisableVertexAttribArray(normalAttr);
+            if(normalAttr>=0)GLES20.glDisableVertexAttribArray(normalAttr);
         }
 
         float nearby(){
