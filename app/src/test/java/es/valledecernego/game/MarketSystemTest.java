@@ -35,6 +35,7 @@ public class MarketSystemTest {
     @Test public void purchaseFailsWithoutEnoughCoinsAndDoesNotChangeSeeds() {
         CropSystem crops = new CropSystem();
         MarketSystem market = new MarketSystem();
+        market.loadState("0");
         assertFalse(market.buySeedBundle(crops));
         assertEquals(6, crops.getSeeds());
         assertEquals(0, market.getCoins());
