@@ -67,7 +67,7 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-- name: Smoke-test the 3D scene on an Android emulator
+      - name: Smoke-test the 3D scene on an Android emulator
         id: emulator-smoke
         env:
           ANDROID_I_WANT_MY_TCG: 'yes'
@@ -91,12 +91,13 @@ jobs:
             adb logcat -d -s ValleCernego:I AndroidRuntime:E > emulator-output/logcat.txt
             adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
             test -s emulator-output/valle-cernego-initial.png
-            read screen_w screen_h <<EOF
-            $(adb shell wm size | sed -n 's/.*: \\([0-9]*\\)x\\([0-9]*\\)/\\1 \\2/p')
-            EOF
-            read joy_x joy_y move_x <<EOF
-            $(python3 -c 'w=int("'"'"'$screen_w'"'"'"); h=int("'"'"'$screen_h'"'"'"); u=min(h,w*.55); x=round(u*.20); y=round(h-u*.22); print(x,y,round(x+u*.125*.8))')
-            EOF
+            screen_size=$(adb shell wm size | sed -n 's/.*: //p')
+            screen_w=${screen_size%x*}
+            screen_h=${screen_size#*x}
+            unit=$((screen_h < screen_w*55/100 ? screen_h : screen_w*55/100))
+            joy_x=$((unit*20/100))
+            joy_y=$((screen_h-unit*22/100))
+            move_x=$((joy_x+unit*10/100))
             adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 1200
             sleep 2
             adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
