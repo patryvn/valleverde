@@ -1,7 +1,6 @@
 package es.valledecernego.game;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Small deterministic farming loop used by the first Android world.
@@ -108,7 +107,7 @@ public final class CropSystem {
 
     public synchronized void loadState(String saved) {
         if (saved == null || saved.trim().isEmpty()) return;
-        String[] parts = saved.split("\\\\|");
+        String[] parts = saved.split("\\|");
         if (parts.length != plots.size() + 2) return;
         try {
             int loadedSeeds = Math.max(0, Integer.parseInt(parts[0]));
