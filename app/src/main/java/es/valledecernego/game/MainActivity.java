@@ -276,9 +276,9 @@ public class MainActivity extends Activity {
         Paint p=new Paint(3);
         // Controles dimensionados respecto a la altura real de la pantalla en landscape.
         // Evita que el HUD resulte diminuto en móviles de alta densidad o pantallas grandes.
-        static final float JOY_CENTER_X_FACTOR=.18f, JOY_BOTTOM_FACTOR=.19f;
-        static final float JOY_BASE_RADIUS_FACTOR=.16f, JOY_KNOB_RADIUS_FACTOR=.055f;
-        static final float JOY_TOUCH_RADIUS_FACTOR=.19f, JOY_RANGE_FACTOR=.095f;
+        static final float JOY_CENTER_X_FACTOR=.20f, JOY_BOTTOM_FACTOR=.22f;
+        static final float JOY_BASE_RADIUS_FACTOR=.205f, JOY_KNOB_RADIUS_FACTOR=.072f;
+        static final float JOY_TOUCH_RADIUS_FACTOR=.235f, JOY_RANGE_FACTOR=.125f;
         float jx=0,jy=0,baseX=0,baseY=0;
         boolean joy=false;
         int touchMode=0; // 1 joystick, 2 camera, 3 action button, 4 jump button
@@ -299,8 +299,8 @@ public class MainActivity extends Activity {
             p.setColor(0x445c5043);c.drawCircle(joyX,joyY,joyBase*.82f,p);
             p.setColor(0xffe4eadf);c.drawCircle(joyX+jx*joyRange,joyY+jy*joyRange,joyKnob,p);
             p.setColor(0xddffffff);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Math.max(3,unit*.004f));c.drawCircle(joyX+jx*joyRange,joyY+jy*joyRange,joyKnob,p);p.setStyle(Paint.Style.FILL);
-            float actionX=w-unit*.13f, actionY=h-unit*.16f, actionR=unit*.09f;
-            float jumpX=w-unit*.31f, jumpY=h-unit*.13f, jumpR=unit*.078f;
+            float actionX=w-unit*.145f, actionY=h-unit*.18f, actionR=unit*.112f;
+            float jumpX=w-unit*.355f, jumpY=h-unit*.15f, jumpR=unit*.098f;
             button(c,actionX,actionY,actionR,"HACER",0xff6d8c55);
             button(c,jumpX,jumpY,jumpR,"SALTAR",0xff6b7e9b);
             p.setColor(Color.WHITE);p.setTextSize(16);c.drawText("Joystick para moverte • Arrastra para mirar",w/2-170,h-25,p);
@@ -325,10 +325,10 @@ public class MainActivity extends Activity {
                 if(insideCircle(x,y,joyX,joyY,unit*JOY_TOUCH_RADIUS_FACTOR)){
                     joy=true;touchMode=1;baseX=joyX;baseY=joyY;updateJoy(x,y);return true;
                 }
-                if(insideCircle(x,y,w-unit*.13f,h-unit*.16f,unit*.105f)){
+                if(insideCircle(x,y,w-unit*.145f,h-unit*.18f,unit*.13f)){
                     touchMode=3;if(action!=null)action.run();return true;
                 }
-                if(insideCircle(x,y,w-unit*.31f,h-unit*.13f,unit*.092f)){
+                if(insideCircle(x,y,w-unit*.355f,h-unit*.15f,unit*.115f)){
                     touchMode=4;if(jump!=null)jump.run();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);return true;
