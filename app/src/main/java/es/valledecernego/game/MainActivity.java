@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
         renderer.loadMarket(preferences.getString("market", ""));
         renderer.loadVillagers(preferences.getString("villagers", ""));
         renderer.loadVillagerWorld(preferences.getString("villager_world", ""));
+        renderer.loadSeason(preferences.getString("season", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -76,7 +77,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getVillagerSummary();
+        return "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getVillagerSummary();
     }
 
     void saveProgress() {
@@ -90,6 +91,7 @@ public class MainActivity extends Activity {
             .putString("market", renderer.saveMarket())
             .putString("villagers", renderer.saveVillagers())
             .putString("villager_world", renderer.saveVillagerWorld())
+            .putString("season", renderer.saveSeason())
             .apply();
     }
 
@@ -350,6 +352,7 @@ public class MainActivity extends Activity {
         final MarketSystem market=new MarketSystem();
         final VillagerSystem villagers=new VillagerSystem();
         final VillagerWorldSystem villagerWorld=new VillagerWorldSystem();
+        final SeasonSystem seasons=new SeasonSystem();
         final float[] modelViewMatrix=new float[16];
 
         GameRenderer(){
@@ -418,9 +421,11 @@ public class MainActivity extends Activity {
                 buildings.updateStable(delta,animals);
                 villagers.update(delta);
                 villagerWorld.update(delta, villagers.snapshot());
+                seasons.update(delta);
             }
             lastFrameNanos=now;
 
+            GLES20.glClearColor(seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),1f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
             float speed=.075f;
             px+=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX)*speed;
@@ -443,7 +448,7 @@ public class MainActivity extends Activity {
                 int t=(int)o[2];
                 if(t==1){
                     draw(o[0],.55f,o[1],.35f,1.5f,.35f,.34f,.22f,.12f);
-                    draw(o[0],1.8f,o[1],1.8f,2,1.8f,.12f,.36f,.16f);
+                    draw(o[0],1.8f,o[1],1.8f,2,1.8f,seasons.foliageRed(),seasons.foliageGreen(),seasons.foliageBlue());
                 }
                 if(t==2)draw(o[0],.35f,o[1],1.1f,.7f,1,.48f,.48f,.46f);
                 if(t==3){
@@ -610,6 +615,9 @@ public class MainActivity extends Activity {
         void loadVillagers(String state){villagers.loadState(state);}
         String saveVillagerWorld(){return villagerWorld.saveState();}
         void loadVillagerWorld(String state){villagerWorld.loadState(state);}
+        String saveSeason(){return seasons.saveState();}
+        void loadSeason(String state){seasons.loadState(state);}
+        String getSeasonSummary(){return seasons.getSummary();}
         String getVillagerSummary(){return villagers.getSummary();}
         String getVillagerPendingSummary(){return villagers.getPendingSummary();}
         boolean hasPendingVillagerProduction(){return villagers.hasPendingProduction();}
