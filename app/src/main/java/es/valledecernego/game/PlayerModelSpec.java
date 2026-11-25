@@ -64,8 +64,10 @@ public final class PlayerModelSpec {
                 part("hair",Shape.SPHERE,Motion.NONE,0f,1.72f,-.045f,.31f,.17f,.29f,.095f,.052f,.028f,true),
         part("cap",Shape.SPHERE,Motion.NONE,0f,1.82f,.005f,.34f,.10f,.31f,.105f,.095f,.085f,true),
         part("backpack",Shape.BOX,Motion.NONE,-.32f,.69f,-.22f,.34f,.42f,.16f,.58f,.39f,.19f,true),
-        part("left-backpack-strap",Shape.BOX,Motion.NONE,-.19f,1.16f,-.115f,.055f,.38f,.055f,.24f,.15f,.075f,true),
-        part("right-backpack-strap",Shape.BOX,Motion.NONE,.19f,1.16f,-.115f,.055f,.38f,.055f,.24f,.15f,.075f,true),
+        part("left-backpack-strap",Shape.BOX,Motion.NONE,-.19f,1.16f,-.305f,.055f,.38f,.055f,.24f,.15f,.075f,true),
+        part("right-backpack-strap",Shape.BOX,Motion.NONE,.19f,1.16f,-.305f,.055f,.38f,.055f,.24f,.15f,.075f,true),
+        part("backpack-flap",Shape.BOX,Motion.NONE,-.32f,.79f,-.31f,.27f,.15f,.025f,.68f,.48f,.25f,true),
+        part("backpack-side-pocket",Shape.BOX,Motion.NONE,-.51f,.64f,-.285f,.085f,.18f,.07f,.48f,.31f,.15f,true),
         // Turquoise shirt and orange diagonal graphic visible through the open jacket.
         part("shirt-front",Shape.BOX,Motion.NONE,0f,1.00f,.174f,.27f,.50f,.035f,.04f,.58f,.52f,true),
         partWithRoll("shirt-orange-stripe",Shape.BOX,Motion.NONE,0f,1.00f,.205f,.12f,.43f,.025f,.94f,.29f,.08f,-.62f,true),
