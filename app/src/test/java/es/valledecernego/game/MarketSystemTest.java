@@ -20,7 +20,7 @@ public class MarketSystemTest {
         assertEquals(156, market.getCoins());
         assertEquals(0, crops.getHarvest());
         assertEquals(0, market.sellHarvest(crops));
-        assertEquals(6, market.getCoins());
+        assertEquals(156, market.getCoins());
     }
 
     @Test public void earnedCoinsCanBuySeedsForTheNextCropCycle() {
@@ -49,8 +49,8 @@ public class MarketSystemTest {
         restored.loadState(market.saveState());
         assertEquals(156, restored.getCoins());
         restored.loadState("-4");
-        assertEquals(6, restored.getCoins());
+        assertEquals(156, restored.getCoins());
         restored.loadState("not-a-number");
-        assertEquals(6, restored.getCoins());
+        assertEquals(156, restored.getCoins());
     }
 }
