@@ -64,10 +64,28 @@ public final class CropSystem {
     }
 
     public synchronized void update(long deltaMs) {
+        update(deltaMs, SeasonSystem.SPRING, SeasonSystem.CLOUDY);
+    }
+
+    /** Rain waters planted plots; seasonal temperature changes crop growth speed. */
+    public synchronized void update(long deltaMs, int season, int weather) {
         if (deltaMs <= 0) return;
+        float growthRate = season == SeasonSystem.WINTER ? 0.45f
+            : season == SeasonSystem.SUMMER ? 1.15f
+            : season == SeasonSystem.AUTUMN ? 0.90f : 1.0f;
+        if (weather == SeasonSystem.RAIN) {
+            growthRate *= 1.5f;
+            for (Plot plot : plots) {
+                if (plot.stage == PLANTED) {
+                    plot.watered = true;
+                    plot.stage = GROWING;
+                }
+            }
+        }
+        long effectiveDelta = Math.max(1L, Math.round(deltaMs * growthRate));
         for (Plot plot : plots) {
             if (plot.stage != GROWING || !plot.watered) continue;
-            plot.growthMs = Math.min(GROWTH_DURATION_MS, plot.growthMs + deltaMs);
+            plot.growthMs = Math.min(GROWTH_DURATION_MS, plot.growthMs + effectiveDelta);
             if (plot.growthMs >= GROWTH_DURATION_MS) plot.stage = READY;
         }
     }

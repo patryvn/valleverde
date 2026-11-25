@@ -72,27 +72,35 @@ public final class AnimalSystem {
     }
 
     public synchronized void update(long deltaMs) {
+        update(deltaMs, SeasonSystem.SPRING, SeasonSystem.CLOUDY);
+    }
+
+    /** Cold and wet weather increase the herd's feed demand. */
+    public synchronized void update(long deltaMs, int season, int weather) {
         if (deltaMs <= 0L) return;
-        float seconds = deltaMs / 1000.0f;
+        float demand = season == SeasonSystem.WINTER ? 1.35f : 1.0f;
+        if (weather == SeasonSystem.RAIN || weather == SeasonSystem.FOG) demand *= 1.10f;
+        float effectiveDeltaMs = deltaMs * demand;
+        float seconds = effectiveDeltaMs / 1000.0f;
         cowHunger = Math.min(100.0f, cowHunger + seconds * HUNGER_PER_SECOND);
         bullHunger = Math.min(100.0f, bullHunger + seconds * HUNGER_PER_SECOND);
 
         cowHealth = updateHealth(cowHealth, cowHunger, seconds);
         bullHealth = updateHealth(bullHealth, bullHunger, seconds);
 
-        long gestationDeltaMs = pregnant ? deltaMs : 0L;
+        long gestationDeltaMs = pregnant ? Math.round(effectiveDeltaMs) : 0L;
         if (!pregnant && !calfBorn) {
             boolean ready = cowHealth >= 60.0f && bullHealth >= 60.0f
                 && cowHunger <= 55.0f && bullHunger <= 55.0f;
             if (ready) {
                 long untilPregnancy = BREEDING_READY_MS - breedingMs;
-                if (deltaMs >= untilPregnancy) {
+                if (effectiveDeltaMs >= untilPregnancy) {
                     breedingMs = BREEDING_READY_MS;
                     pregnant = true;
                     gestationMs = 0L;
-                    gestationDeltaMs = deltaMs - untilPregnancy;
+                    gestationDeltaMs = Math.round(effectiveDeltaMs - untilPregnancy);
                 } else {
-                    breedingMs += deltaMs;
+                    breedingMs += Math.round(effectiveDeltaMs);
                     gestationDeltaMs = 0L;
                 }
             } else {
@@ -111,7 +119,7 @@ public final class AnimalSystem {
                 breedingMs = 0L;
             }
         } else if (calfBorn) {
-            calfAgeMs = Math.min(CALF_GROWTH_DURATION_MS, calfAgeMs + deltaMs);
+            calfAgeMs = Math.min(CALF_GROWTH_DURATION_MS, calfAgeMs + Math.round(effectiveDeltaMs));
         }
     }
 

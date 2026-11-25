@@ -416,12 +416,12 @@ public class MainActivity extends Activity {
             long now=System.nanoTime();
             if(lastFrameNanos!=0){
                 long delta=Math.max(0,Math.min(1000,(now-lastFrameNanos)/1000000));
-                crops.update(delta);
-                animals.update(delta);
+                seasons.update(delta);
+                crops.update(delta, seasons.getSeason(), seasons.getWeather());
+                animals.update(delta, seasons.getSeason(), seasons.getWeather());
                 buildings.updateStable(delta,animals);
                 villagers.update(delta);
                 villagerWorld.update(delta, villagers.snapshot());
-                seasons.update(delta);
             }
             lastFrameNanos=now;
 

@@ -34,6 +34,16 @@ public class AnimalSystemTest {
         assertFalse(herd.isCalfGrowing());
     }
 
+    @Test public void winterRainIncreasesHerdFeedDemand() {
+        AnimalSystem mild = new AnimalSystem();
+        AnimalSystem harsh = new AnimalSystem();
+        mild.update(10_000L, SeasonSystem.SPRING, SeasonSystem.SUNNY);
+        harsh.update(10_000L, SeasonSystem.WINTER, SeasonSystem.RAIN);
+        assertTrue(harsh.getCowHunger() > mild.getCowHunger());
+        assertEquals(71.5f, mild.getCowHunger(), 0.01f);
+        assertEquals(72.2275f, harsh.getCowHunger(), 0.02f);
+    }
+
     @Test public void saveAndRestoreKeepsPregnancyProgress() {
         AnimalSystem herd = new AnimalSystem();
         herd.addForage(2);

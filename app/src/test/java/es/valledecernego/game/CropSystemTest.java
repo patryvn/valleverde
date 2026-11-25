@@ -42,6 +42,26 @@ public class CropSystemTest {
         assertEquals(CropSystem.READY, restored.plotForTest(1).stage());
     }
 
+    @Test public void rainAutomaticallyWatersAndAcceleratesPlantedCrops() {
+        CropSystem farm = new CropSystem();
+        assertEquals(CropSystem.PLANTED_RESULT, farm.interact(-4.0f, 1.0f));
+        farm.update(30_000L, SeasonSystem.SPRING, SeasonSystem.RAIN);
+        assertEquals(CropSystem.GROWING, farm.plotForTest(0).stage());
+        assertTrue(farm.plotForTest(0).watered());
+        assertEquals(45_000L, farm.plotForTest(0).growthMs());
+    }
+
+    @Test public void winterSlowsCropGrowthComparedWithSpring() {
+        CropSystem spring = new CropSystem();
+        CropSystem winter = new CropSystem();
+        spring.interact(-4.0f, 1.0f); spring.interact(-4.0f, 1.0f);
+        winter.interact(-4.0f, 1.0f); winter.interact(-4.0f, 1.0f);
+        spring.update(20_000L, SeasonSystem.SPRING, SeasonSystem.CLOUDY);
+        winter.update(20_000L, SeasonSystem.WINTER, SeasonSystem.CLOUDY);
+        assertEquals(20_000L, spring.plotForTest(0).growthMs());
+        assertEquals(9_000L, winter.plotForTest(0).growthMs());
+    }
+
     @Test public void interactionOutsideFarmDoesNothing() {
         CropSystem farm = new CropSystem();
         assertEquals(CropSystem.NO_PLOT, farm.interact(30.0f, 30.0f));
