@@ -16,6 +16,17 @@ public class PlayerModelSpecTest {
         assertNotNull(PlayerModelSpec.find("cap"));
     }
 
+    @Test public void explorerReferenceHasItsSignatureClothingAndAccessories() {
+        assertNotNull(PlayerModelSpec.find("shirt-front"));
+        assertNotNull(PlayerModelSpec.find("shirt-orange-middle"));
+        assertNotNull(PlayerModelSpec.find("jacket-left-front"));
+        assertNotNull(PlayerModelSpec.find("cap"));
+        assertNotNull(PlayerModelSpec.find("satchel-flap"));
+        assertNotNull(PlayerModelSpec.find("left-eye-green"));
+        assertEquals(.82f,PlayerModelSpec.find("left-boot").r,0.001f);
+        assertTrue(PlayerModelSpec.find("left-leg").r<.12f);
+    }
+
     @Test public void allRenderedPartsHaveFinitePositiveDimensionsAndValidMaterials() {
         for(PlayerModelSpec.Part part:PlayerModelSpec.parts()) {
             assertNotNull(part.id);
