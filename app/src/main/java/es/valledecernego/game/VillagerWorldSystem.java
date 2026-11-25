@@ -79,18 +79,18 @@ public final class VillagerWorldSystem {
 
     private static float idleTargetX(int index, int phase) {
         float[][] stops = {
-            {-1.2f, 0.8f, 1.4f},
-            {-2.6f, 1.6f, 0.4f},
-            {-0.6f, -1.8f, 2.2f}
+            {-0.9f, 0.8f, 1.4f},
+            {0.0f, 1.6f, 0.4f},
+            {0.9f, -1.8f, 2.2f}
         };
         return stops[index][phase];
     }
 
     private static float idleTargetZ(int index, int phase) {
         float[][] stops = {
-            {-2.8f, -3.1f, -1.1f},
-            {-2.6f, -3.4f, -1.0f},
-            {-2.9f, -3.2f, -1.2f}
+            {-1.8f, -3.1f, -1.1f},
+            {-1.8f, -3.4f, -1.0f},
+            {-1.8f, -3.2f, -1.2f}
         };
         return stops[index][phase];
     }
