@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
         renderer=new GameRenderer();
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
+        renderer.loadBuildings(preferences.getString("buildings", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -70,7 +71,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary();
+        return "VALLE DE CERNEGO  •  Madera " + wood + "  Piedra " + stone + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary();
     }
 
     void saveProgress() {
@@ -80,6 +81,7 @@ public class MainActivity extends Activity {
             .putInt("stone", stone)
             .putString("farm", renderer.saveFarm())
             .putString("animals", renderer.saveAnimals())
+            .putString("buildings", renderer.saveBuildings())
             .apply();
     }
 
@@ -122,6 +124,18 @@ public class MainActivity extends Activity {
                 else if(feedResult==AnimalSystem.NO_FORAGE) toast("No tienes forraje. Recoge hierba de los matorrales.");
                 else if(feedResult==AnimalSystem.NOT_HUNGRY) toast("Este animal está bien alimentado.");
                 else toast("Acércate a una vaca o al toro.");
+            }
+            else if(k==6){
+                int buildResult=renderer.buildStable(wood,stone);
+                if(buildResult==BuildingSystem.BUILT){
+                    wood-=BuildingSystem.STABLE_WOOD_COST;
+                    stone-=BuildingSystem.STABLE_STONE_COST;
+                    toast("¡Cuadra construida! Ya tienes un refugio para el ganado.");
+                } else if(buildResult==BuildingSystem.INSUFFICIENT_MATERIALS){
+                    toast("Necesitas 6 de madera y 4 de piedra para construir la cuadra.");
+                } else {
+                    toast("La cuadra ya está construida.");
+                }
             }
             else {toast("No hay nada con lo que interactuar");}
         } else {
@@ -209,6 +223,7 @@ public class MainActivity extends Activity {
         final CropSystem crops=new CropSystem();
         final AnimalSystem animals=new AnimalSystem();
         ArrayList<float[]> objects=new ArrayList<>();
+        final BuildingSystem buildings=new BuildingSystem();
 
         GameRenderer(){
             for(int i=0;i<9;i++) objects.add(new float[]{-7+i*1.7f,-3-(i%3)*2,1,1});
@@ -219,6 +234,7 @@ public class MainActivity extends Activity {
             objects.add(new float[]{-7,-1,3,1});
             objects.add(new float[]{0,-9,3,1});
             objects.add(new float[]{8,2,3,1});
+            objects.add(new float[]{-5,-10,6,1});
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
@@ -310,6 +326,19 @@ public class MainActivity extends Activity {
                     draw(o[0],.55f,o[1],1.35f,.9f,1.9f,.48f,.34f,.22f);
                     draw(o[0]+.5f,.9f,o[1]-.2f,.58f,.65f,.58f,.48f,.34f,.22f);
                 }
+                if(t==6){
+                    if(buildings.isStableBuilt()){
+                        draw(o[0],.68f,o[1],2.3f,1.35f,2.3f,.48f,.32f,.18f);
+                        draw(o[0],1.48f,o[1],2.6f,.32f,2.6f,.30f,.16f,.11f);
+                        draw(o[0],.48f,o[1]-1.16f,.72f,.92f,.10f,.22f,.13f,.08f);
+                    } else {
+                        draw(o[0],.12f,o[1],2.5f,.18f,2.5f,.46f,.34f,.20f);
+                        draw(o[0]-1.05f,.62f,o[1]-1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
+                        draw(o[0]+1.05f,.62f,o[1]-1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
+                        draw(o[0]-1.05f,.62f,o[1]+1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
+                        draw(o[0]+1.05f,.62f,o[1]+1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
+                    }
+                }
             }
 
             for(CropSystem.Plot plot:crops.snapshot()){
@@ -372,6 +401,12 @@ public class MainActivity extends Activity {
         String getAnimalSummary(){return animals.getSummary();}
         String saveAnimals(){return animals.saveState();}
         void loadAnimals(String state){animals.loadState(state);}
+        String getBuildingSummary(){return buildings.getSummary();}
+        String saveBuildings(){return buildings.saveState();}
+        void loadBuildings(String state){buildings.loadState(state);}
+        int buildStable(int availableWood,int availableStone){
+            return buildings.buildStable(availableWood,availableStone);
+        }
         int feedNearestAnimal(){return animals.feedNearest(px,pz);}
         void collectForage(){animals.addForage(2);removeNearby();}
 
