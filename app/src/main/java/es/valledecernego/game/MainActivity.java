@@ -673,7 +673,7 @@ public class MainActivity extends Activity {
             ThirdPersonCamera.Pose camera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
             Matrix.setLookAtM(view,0,camera.x(),camera.y(),camera.z(),px,camera.targetY(),pz,0,1,0);
 
-            draw(0,-.35f,0,45,.5f,45,.25f,.42f,.23f);
+            draw(0,PlayerModelSpec.GROUND_LEVEL-.25f,0,45,.5f,45,.25f,.42f,.23f);
             draw(-10,-.12f,-4,2,.12f,32,.18f,.48f,.62f);
             draw(0,-.08f,6,2,.12f,28,.55f,.42f,.25f);
             for(int i=0;i<8;i++)draw(-23+i*7,-1,-24,8,5,5,.25f,.43f,.28f);
@@ -818,7 +818,7 @@ public class MainActivity extends Activity {
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
             GLES20.glDepthMask(false);
-            drawMesh(sphereBuffer,sphereVertexCount,px,.012f,pz,.52f,.014f,.34f,
+            drawMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
                 .045f,.055f,.045f,.28f,playerFacing,0f);
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
