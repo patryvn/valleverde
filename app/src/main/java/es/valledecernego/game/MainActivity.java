@@ -166,7 +166,7 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
             .setTitle("Cuadra de Valdemonte")
             .setMessage("Heno almacenado: "+storedHay+"/"+capacity
-                +"\nForraje disponible: +looseForage
+                +"\nForraje disponible: "+looseForage
                 +"\nLa cuadra consume una unidad cada 60 segundos de juego cuando el ganado necesita alimento.")
             .setItems(options.toArray(new String[options.size()]),new DialogInterface.OnClickListener(){
                 @Override public void onClick(DialogInterface dialog,int which){
