@@ -794,10 +794,10 @@ public class MainActivity extends Activity {
                 }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
                     drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
                         pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch);
+                        pose.yaw,pose.pitch,pose.roll);
                 }else{
                     drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
-                        part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch);
+                        part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll);
                 }
             }
         }
@@ -884,7 +884,7 @@ public class MainActivity extends Activity {
             Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
 
             // Inversa transpuesta analítica de la parte lineal: R * escala inversa.
-            // Evita 28 inversiones generales por fotograma y mantiene bien la luz en esferas elípticas.
+            // Mantiene la iluminación coherente en las 58 piezas, incluidas las rotadas y escaladas.
             Matrix.setIdentityM(normalTransform,0);
             Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
             Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
