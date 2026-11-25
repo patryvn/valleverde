@@ -39,9 +39,9 @@ public final class PlayerModelSpec {
     private static int materialStyleFor(String id) {
         if (id.contains("zipper") || id.contains("buckle")) return MATERIAL_METAL;
         if (id.contains("shirt")) return MATERIAL_COTTON;
-        if (id.contains("backpack") || id.contains("satchel") || id.contains("strap")) return MATERIAL_LEATHER;
+        if (id.contains("backpack") || id.contains("satchel") || id.contains("strap") || id.contains("boot")) return MATERIAL_LEATHER;
         if (id.equals("head") || id.equals("neck") || id.contains("ear") || id.equals("nose") || id.contains("hand")) return MATERIAL_SKIN;
-        if (id.contains("boot") || id.contains("leg") || id.contains("jacket") || id.contains("pocket") || id.contains("shoulder") || id.contains("arm") || id.contains("sleeve") || id.equals("torso") || id.equals("collar") || id.equals("cap")) return MATERIAL_FABRIC;
+        if (id.contains("boot") || id.contains("leg") || id.contains("jacket") || id.contains("pocket") || id.contains("shoulder") || id.contains("arm") || id.contains("sleeve") || id.equals("torso") || id.equals("collar") || id.contains("cap")) return MATERIAL_FABRIC;
         return MATERIAL_SOLID;
     }
 
