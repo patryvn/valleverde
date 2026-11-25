@@ -34,7 +34,7 @@ func _build_world() -> void:
 	add_child(ground)
 
 	_add_box("Camino", Vector3(0, 0.025, 3), Vector3(5, 0.05, 34), Color(0.48, 0.39, 0.27))
-	_add_house()
+	_add_box("Solar de la casa", Vector3(0, 0.04, -5), Vector3(6.5, 0.08, 5.5), Color(0.48, 0.42, 0.32))
 	for i in range(12):
 		var x := -13.0 + float(i % 6) * 5.2
 		var z := -12.0 - float(i / 6) * 9.0
