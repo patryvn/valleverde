@@ -64,6 +64,9 @@ def verify(path):
     width, height, channels, rows = load_png(path)
     x0, x1 = int(width * .40), int(width * .60)
     y0, y1 = int(height * .30), int(height * .76)
+    skin_top, skin_bottom = int(height * .36), int(height * .55)
+    jacket_top, jacket_bottom = int(height * .42), int(height * .66)
+    boots_top, boots_bottom = int(height * .63), int(height * .76)
     counts = {"skin": 0, "jacket": 0, "boots": 0, "dark": 0}
     skin_y = []
     boots_y = []
@@ -74,14 +77,14 @@ def verify(path):
         for x in range(x0, x1):
             i = x * channels
             r, g, b = row[i], row[i+1], row[i+2]
-            if 115 <= r <= 245 and 45 <= g <= 175 and 20 <= b <= 135 and r > g * 1.15 and g > b * 1.10:
+            if skin_top <= y < skin_bottom and 115 <= r <= 245 and 45 <= g <= 175 and 20 <= b <= 135 and r > g * 1.15 and g > b * 1.10:
                 counts["skin"] += 1
                 skin_y.append(y)
                 xs.append(x); ys.append(y)
-            if b > r * 1.20 and b > g * 1.12 and r < 150 and g < 175 and b < 210:
+            if jacket_top <= y < jacket_bottom and b > r * 1.20 and b > g * 1.12 and r < 150 and g < 175 and b < 210:
                 counts["jacket"] += 1
                 xs.append(x); ys.append(y)
-            if 90 <= r <= 235 and 25 <= g <= 155 and b < 105 and r > g * 1.18:
+            if boots_top <= y < boots_bottom and 90 <= r <= 235 and 25 <= g <= 155 and b < 105 and r > g * 1.18:
                 counts["boots"] += 1
                 boots_y.append(y)
                 xs.append(x); ys.append(y)
