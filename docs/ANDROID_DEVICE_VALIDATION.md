@@ -202,3 +202,18 @@ La versión 0.24.3 introduce un selector EGL que mantiene RGBA8888/GLES2, prefie
 El smoke test espera 30 segundos adicionales tras la preparación de PackageManager y distingue una ANR visible de SystemUI (reintentable durante un máximo de 40 segundos, comprobando que el proceso del juego siga vivo) de una confirmación inmersiva o una ANR de la propia aplicación, que siguen siendo fallos inmediatos. Se añaden pruebas para ANR de SystemUI reintentable, ANR del juego no reintentable, ventana inmersiva y bloqueadores simultáneos.
 
 La captura de CI no sustituye la validación física. En el Poco X6 Pro con Android 16 hay que comprobar: versión 0.24.3 visible en el HUD; personaje con cabeza, chaqueta, brazos, piernas y mochila desde atrás y de perfil; caminar, girar y saltar sin que las piezas se oculten; sombra bajo los pies; y que la cámara mantenga el seguimiento. Si el móvil sigue mostrando un rectángulo azul, el dato decisivo será la combinación de versión mostrada en el HUD, estado 3D y renderer/depthBits de Logcat.
+
+
+## Corrección geométrica del personaje 0.26.0 (26-11-2026)
+
+La inspección del generador de cápsulas encontró una desalineación concreta: la geometría antigua tenía su eje largo en X, pero los brazos, las piernas, las patas del ganado y sus transformaciones se escalaban sobre Y. El resultado podía ser un cuerpo azul rectangular con extremidades demasiado cortas o tumbadas. La malla se ha extraído a `CapsuleMeshSpec` y ahora tiene eje longitudinal Y, extremos en -1/+1 y sección circular X/Z. Las pruebas comprueban límites, relación de aspecto, normales unitarias y radio del tramo cilíndrico.
+
+Además, `drawPlayer()` dibuja primero una base humanoide opaca de 11 piezas con el shader GLES mínimo cuando está disponible, y después superpone las 60 piezas detalladas. Ya no reduce esa base al 18 % de opacidad por el mero hecho de que el controlador haya aceptado 60 llamadas de dibujo: `GL_NO_ERROR` no demuestra que los píxeles fueran visibles.
+
+La versión de prueba pasa a 0.26.0 (versionCode 30). GitHub Actions verifica esa versión y ejecuta las nuevas pruebas Java junto con `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, firma, captura inicial y captura después de mover el joystick. La compilación y las capturas de esta versión aún deben completarse; no se declara corregido el resultado en el teléfono físico.
+
+### Validación física pendiente para 0.26.0
+
+Instalar la APK release-test 0.26.0 y comprobar a simple vista, desde atrás y de perfil, que se distinguen cabeza/gorra, cuello, torso, dos brazos, dos piernas y botas. Observar reposo, caminar en cuatro direcciones, giro de cámara y salto; las articulaciones deben pivotar sin que las extremidades queden horizontales, se separen del cuerpo o desaparezcan. Confirmar que el seguimiento de cámara es estable y que no hay parpadeo de profundidad ni errores OpenGL.
+
+El emulador CI usa SwiftShader por software y solo valida esa ruta. La GPU/controlador EGL del Poco X6 Pro con Android 16 no está conectado al flujo de GitHub Actions. La validación en ese teléfono continúa pendiente y requiere capturas/logcat del propio dispositivo.
