@@ -58,10 +58,10 @@ screen_h="${screen_size#*x}"
 adb logcat -c
 install_ok=0
 for attempt in $(seq 1 5); do
-  if adb install -r app/build/outputs/apk/debug/app-debug.apk; then install_ok=1; break; fi
+  if adb install -r app/build/outputs/apk/release/app-release.apk; then install_ok=1; break; fi
   sleep 10
 done
-if [[ "$install_ok" != "1" ]]; then echo "APK installation failed after five attempts."; exit 1; fi
+if [[ "$install_ok" != "1" ]]; then echo "Release-test APK installation failed after five attempts."; exit 1; fi
 
 adb shell input keyevent 224 || true
 adb shell input keyevent 82 || true
