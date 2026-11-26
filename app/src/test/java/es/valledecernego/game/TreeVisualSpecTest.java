@@ -51,6 +51,6 @@ public class TreeVisualSpecTest {
     @Test public void invalidCoordinatesUseFiniteFallbackValues() {
         assertEquals(0.5f, TreeVisualSpec.seed(Float.NaN, 0f), 0f);
         assertTrue(Float.isFinite(TreeVisualSpec.scale(Float.POSITIVE_INFINITY, 1f)));
-        assertTrue(TreeVisualSpec.species(Float.NaN, 1f) == TreeVisualSpec.CONIFER);
+        assertEquals(TreeVisualSpec.BROADLEAF, TreeVisualSpec.species(Float.NaN, 1f));
     }
 }
