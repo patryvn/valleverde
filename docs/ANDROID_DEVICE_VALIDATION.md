@@ -125,3 +125,20 @@ En 0.21.0 la chaqueta pasa a azul petróleo oscuro, manteniendo la camiseta turq
 El smoke test ahora exige telemetría de las 60 piezas detalladas o de las 11 piezas de compatibilidad (la pasada secundaria puede ser 0 si se promueve a renderizador principal), comprueba los píxeles de piel/chaqueta/botas en la captura inicial y en la captura tras movimiento, y repite el gesto real del joystick hasta alcanzar 0,75 m de desplazamiento. La cámara debe acompañar el mismo vector con un error máximo de 0,15 m. La verificación por píxeles es una salvaguarda automatizada para el AVD; no sustituye la inspección visual ni la prueba en el Poco X6 Pro con Android 16.
 
 La versión visible en el HUD es 0.21.0 para evitar confundir APK antiguas con la compilación nueva. La versión release-test continúa firmada con la clave de depuración de CI y no es una firma de publicación de Google Play.
+
+
+## Resultado real de la versión 0.21.0 (run 45757918051)
+
+La ejecución 45757918051 terminó con fallo únicamente en el smoke test de interacción; las pruebas unitarias, las compilaciones debug/release, la verificación de firma/versión y la publicación de artefactos sí terminaron correctamente. La captura inicial real (960×540) muestra un personaje humanoide 3D reconocible desde atrás: gorra/cabello, cabeza y orejas, torso con chaqueta y mochila, brazos, piernas oscuras y botas marrones. El verificador de píxeles informó skin=1434, jacket=5217, boots=1192, dark-limbs=1424 y separación cabeza-pies de 126,3 px. En esa captura no aparece un rectángulo azul; esto demuestra el renderizado en el AVD SwiftShader, no en el Poco X6 Pro.
+
+La prueba de movimiento no pasó: doce gestos de joystick dejaron la posición en POS=0.00,5.00 y la cámara en CAM=0.00,0.96, con desplazamiento medido de 0,00 m. No se debe presentar ese run como verificación del control ni del seguimiento de cámara. El log anterior no registraba los eventos táctiles ni las dimensiones reales del View HUD, por lo que no permitía distinguir un problema de coordenadas de un evento que nunca llegaba a la vista.
+
+## Diagnóstico de entrada 0.22.0
+
+- `Hud.onSizeChanged` registra las dimensiones reales del área táctil y el centro/radio del joystick cuando se activa la telemetría de CI.
+- `Hud.onTouchEvent` registra de forma limitada los eventos DOWN/MOVE/UP, el modo seleccionado, el vector normalizado y el vector enviado al renderizador. La telemetría solo se activa mediante el extra `debug_telemetry`; no se añade ruido a las partidas normales.
+- `JoystickControl` centraliza la normalización, el recorte a [-1,1], el tratamiento de rangos inválidos y la zona muerta. Las pruebas unitarias cubren centro, desplazamiento, saturación, valores no finitos y umbral de movimiento.
+- `scripts/emulator-smoke.sh` calcula las coordenadas a partir del tamaño real de `Hud`, no de `wm size`, y envía un gesto con fuente `touchscreen`. La prueba exige evidencias de DOWN y MOVE en el manejador, desplazamiento del jugador de al menos 0,75 m y traslación equivalente de la cámara con error máximo de 0,15 m.
+- Si el gesto no llega al manejador, el log distingue explícitamente la ausencia de DOWN/MOVE. Si llega pero el jugador no cambia de posición, la telemetría del renderizador permite aislar la actualización del movimiento. Ninguna de estas pruebas sustituye la validación táctil en el móvil físico.
+
+La versión 0.22.0 no se considera validada hasta que la ejecución de CI complete las capturas inicial y en movimiento, las pruebas unitarias y ambas compilaciones. En el Poco X6 Pro con Android 16 sigue siendo necesario comprobar instalación, visibilidad del personaje, animación, giro, salto, respuesta del joystick, seguimiento de cámara y estabilidad térmica/GL.

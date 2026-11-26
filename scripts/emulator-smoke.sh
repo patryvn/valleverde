@@ -124,18 +124,45 @@ adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-initial.png
 
-unit=$((screen_h < screen_w * 55 / 100 ? screen_h : screen_w * 55 / 100))
-joy_x=$((unit * 20 / 100))
-joy_y=$((screen_h - unit * 22 / 100))
-move_x=$((joy_x + unit * 12 / 100))
+layout_line=""
+for attempt in $(seq 1 30); do
+  layout_line="$(grep -E 'HUD_LAYOUT width=[0-9]+ height=[0-9]+' emulator-output/renderer-live.log | tail -n 1 || true)"
+  if [[ -n "$layout_line" ]]; then break; fi
+  sleep 1
+done
+if [[ -z "$layout_line" ]]; then
+  echo "HUD did not report its measured touch surface; cannot derive reliable joystick coordinates."
+  tail -n 100 emulator-output/renderer-live.log || true
+  exit 1
+fi
+
+# Use the actual Hud View dimensions, not wm size: Android can inset or resize
+# the app surface independently of the physical display.
+read -r joy_x joy_y move_x < <(python3 - "$layout_line" <<'PY'
+import re, sys
+match = re.search(r"HUD_LAYOUT width=(\d+) height=(\d+) joy=([0-9.]+),([0-9.]+).*range=([0-9.]+)", sys.argv[1])
+if not match:
+    raise SystemExit("Malformed HUD layout telemetry: " + sys.argv[1])
+width,height,jx,jy,rng = match.groups()
+jx,jy,rng = float(jx),float(jy),float(rng)
+print(round(jx),round(jy),round(jx+rng*.95))
+PY
+)
+echo "Measured HUD joystick at $joy_x,$joy_y; drag target $move_x,$joy_y."
+
 movement_ok=0
 moving_line=""
 moving_telemetry=""
-for attempt in $(seq 1 12); do
-  # A slow TCG emulator may process only one render frame per synthetic swipe.
-  # Repeat the same real HUD gesture until the accumulated displacement is measurable.
-  adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 1200 0
+for attempt in $(seq 1 8); do
+  # Explicit touchscreen source avoids depending on the shell input default.
+  adb shell input touchscreen swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 2200
   sleep 1
+  touch_down_line="$(grep -E 'HUD_TOUCH DOWN .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
+  touch_move_line="$(grep -E 'HUD_TOUCH MOVE .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
+  if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
+    echo "Touchscreen swipe did not reach the joystick handler (down=\${touch_down_line:+yes}, move=\${touch_move_line:+yes})."
+    continue
+  fi
   moving_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -z "$moving_line" ]]; then continue; fi
   moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
@@ -163,11 +190,10 @@ PY
   fi
 done
 if [[ "$movement_ok" != "1" ]]; then
-  echo "Player movement or camera follow verification failed after 12 joystick gestures."
-  tail -n 100 emulator-output/renderer-live.log || true
+  echo "Player movement or camera follow verification failed after eight measured touchscreen gestures."
+  grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
   exit 1
 fi
-
 adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
 test -s emulator-output/valle-cernego-moving.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-moving.png

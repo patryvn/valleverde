@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO 0.21.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO 0.22.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
@@ -330,7 +330,23 @@ public class MainActivity extends Activity {
         boolean joy=false;
         int touchMode=0; // 1 joystick, 2 camera, 3 action button, 4 jump button
         Runnable action,jump;
-        Hud(Context c){super(c);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        long lastTouchDiagnosticNanos=0L;
+        Hud(Context c){
+            super(c);
+            setLayerType(View.LAYER_TYPE_SOFTWARE,null);
+            setClickable(true);
+            setFocusable(true);
+        }
+        @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
+            super.onSizeChanged(w,h,oldw,oldh);
+            if(debugTelemetry){
+                float unit=Math.min(h,w*.55f);
+                android.util.Log.i("ValleCernego",String.format(Locale.US,
+                    "HUD_LAYOUT width=%d height=%d joy=%.1f,%.1f touch=%.1f range=%.1f",
+                    w,h,unit*JOY_CENTER_X_FACTOR,h-unit*JOY_BOTTOM_FACTOR,
+                    unit*JOY_TOUCH_RADIUS_FACTOR,unit*JOY_RANGE_FACTOR));
+            }
+        }
         void setOnAction(Runnable r){action=r;}
         void setOnJump(Runnable r){jump=r;}
 
@@ -373,36 +389,50 @@ public class MainActivity extends Activity {
 
         public boolean onTouchEvent(android.view.MotionEvent e){
             float x=e.getX(),y=e.getY(),w=getWidth(),h=getHeight();
-            if(e.getAction()==MotionEvent.ACTION_DOWN){
+            int event=e.getActionMasked();
+            if(event==MotionEvent.ACTION_DOWN){
                 float unit=Math.min(h,w*.55f);
                 float joyX=unit*JOY_CENTER_X_FACTOR, joyY=h-unit*JOY_BOTTOM_FACTOR;
                 if(insideCircle(x,y,joyX,joyY,unit*JOY_TOUCH_RADIUS_FACTOR)){
-                    joy=true;touchMode=1;baseX=joyX;baseY=joyY;updateJoy(x,y);return true;
+                    joy=true;touchMode=1;baseX=joyX;baseY=joyY;
+                    updateJoy(x,y);logTouch("DOWN",x,y);return true;
                 }
                 if(insideCircle(x,y,w-unit*.145f,h-unit*.18f,unit*.13f)){
-                    touchMode=3;if(action!=null)action.run();return true;
+                    touchMode=3;if(action!=null)action.run();logTouch("ACTION",x,y);return true;
                 }
                 if(insideCircle(x,y,w-unit*.355f,h-unit*.15f,unit*.115f)){
-                    touchMode=4;if(jump!=null)jump.run();return true;
+                    touchMode=4;if(jump!=null)jump.run();logTouch("JUMP",x,y);return true;
                 }
-                touchMode=2;renderer.startLook(x,y);return true;
+                touchMode=2;renderer.startLook(x,y);logTouch("LOOK_DOWN",x,y);return true;
             }
-            if(e.getAction()==MotionEvent.ACTION_MOVE){
-                if(touchMode==1){updateJoy(x,y);}
-                else if(touchMode==2){renderer.look(x,y);}
+            if(event==MotionEvent.ACTION_MOVE){
+                if(touchMode==1){updateJoy(x,y);logTouch("MOVE",x,y);}
+                else if(touchMode==2){renderer.look(x,y);logTouch("LOOK_MOVE",x,y);}
                 return true;
             }
-            if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){
-                if(touchMode==1){joy=false;jx=jy=0;renderer.setMove(0,0);}
+            if(event==MotionEvent.ACTION_UP||event==MotionEvent.ACTION_CANCEL){
+                int previousMode=touchMode;
+                if(previousMode==1){joy=false;jx=jy=0;renderer.setMove(0,0);}
+                if(previousMode!=0)logTouch("UP",x,y);
                 touchMode=0;invalidate();return true;
             }
             return true;
         }
 
+        void logTouch(String event,float x,float y){
+            if(!debugTelemetry)return;
+            long now=System.nanoTime();
+            if("MOVE".equals(event)&&now-lastTouchDiagnosticNanos<200_000_000L)return;
+            lastTouchDiagnosticNanos=now;
+            android.util.Log.i("ValleCernego",String.format(Locale.US,
+                "HUD_TOUCH %s x=%.1f y=%.1f view=%.0fx%.0f mode=%d joy=%.2f,%.2f move=%.2f,%.2f",
+                event,x,y,getWidth(),getHeight(),touchMode,jx,jy,renderer.moveX,renderer.moveY));
+        }
+
         void updateJoy(float x,float y){
             float range=Math.min(getHeight(),getWidth()*.55f)*JOY_RANGE_FACTOR;
-            jx=Math.max(-1,Math.min(1,(x-baseX)/range));
-            jy=Math.max(-1,Math.min(1,(y-baseY)/range));
+            JoystickControl.Vector vector=JoystickControl.fromTouch(x,y,baseX,baseY,range);
+            jx=vector.x;jy=vector.y;
             renderer.setMove(jx,jy);invalidate();
         }
     }
@@ -688,8 +718,7 @@ public class MainActivity extends Activity {
             GLES20.glDisable(GLES20.GL_BLEND);
             GLES20.glClearColor(seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),1f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
-            float moveLength=(float)Math.hypot(moveX,moveY);
-            playerMoving=moveLength>.08f;
+            playerMoving=JoystickControl.isMoving(moveX,moveY);
             float moveWorldX=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX);
             float moveWorldZ=(float)(Math.cos(yaw)*(-moveY)-Math.sin(yaw)*moveX);
             if(playerMoving){
