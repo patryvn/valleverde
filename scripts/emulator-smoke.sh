@@ -148,14 +148,14 @@ def parse(value):
     x,z,cx,cz,parts,fallback,gl_error = match.groups()
     if int(parts) not in (11,60) or int(fallback) not in (0,11) or (int(parts)==11 and int(fallback)!=11) or int(gl_error,16) != 0:
         raise SystemExit("Player or compatibility silhouette batch did not complete cleanly: " + value)
-    return tuple(map(float,(x,z,cx,cz))) + (int(parts),)
+    return tuple(map(float,(x,z,cx,cz))) + (int(parts),int(fallback))
 a,b = parse(sys.argv[1]),parse(sys.argv[2])
 dx,dz = b[0]-a[0],b[1]-a[1]
 camera_dx,camera_dz = b[2]-a[2],b[3]-a[3]
 distance = math.hypot(dx,dz)
 if distance < 0.75: raise SystemExit(f"Joystick moved the player only {distance:.2f} m")
 if math.hypot(camera_dx-dx,camera_dz-dz) > 0.15: raise SystemExit("Third-person camera did not follow player translation")
-print(f"Verified {b[4]} main player parts, 11 compatibility parts, GL_NO_ERROR, {distance:.2f} m movement and matching camera translation.")
+print(f"Verified {b[4]} main player parts, {b[5]} compatibility parts, GL_NO_ERROR, {distance:.2f} m movement and matching camera translation.")
 PY
   then
     movement_ok=1
