@@ -41,6 +41,10 @@ if [[ "$package_ready" != "1" ]]; then echo "PackageManager did not become ready
 # SwiftShader is CPU-bound in CI; keep the landscape surface small.
 adb shell wm size 960x540 >/dev/null 2>&1 || true
 adb shell wm density 160 >/dev/null 2>&1 || true
+screen_size="$(adb shell wm size | sed -n 's/.*size: //p' | tail -n 1 | tr -d '\r')"
+if [[ ! "$screen_size" =~ ^[0-9]+x[0-9]+$ ]]; then echo "Could not determine emulator screen size: $screen_size"; exit 1; fi
+screen_w="${screen_size%x*}"
+screen_h="${screen_size#*x}"
 adb logcat -c
 install_ok=0
 for attempt in $(seq 1 5); do
@@ -65,6 +69,23 @@ for attempt in $(seq 1 30); do
 done
 if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed state."; exit 1; fi
 
+# Android 15 can place an immersive-mode confirmation window above the game on
+# the first launch. It keeps the Activity resumed but intercepts every touch,
+# which made the joystick test report zero movement. Dismiss its "Got it" button
+# before capturing pixels or injecting gameplay input.
+for attempt in $(seq 1 10); do
+  window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
+  if ! printf '%s\n' "$window_dump" | grep -q 'ImmersiveModeConfirmation'; then break; fi
+  adb shell input tap "$((screen_w * 70 / 100))" "$((screen_h * 35 / 100))"
+  sleep 1
+done
+window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
+if printf '%s\n' "$window_dump" | grep -q 'ImmersiveModeConfirmation'; then
+  echo "Android immersive-mode confirmation still covers the game after dismissal attempts."
+  printf '%s\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
+  exit 1
+fi
+
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
 initial_line=""
 for attempt in $(seq 1 60); do
@@ -81,16 +102,12 @@ initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /P
 adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
 
-screen_size="$(adb shell wm size | sed -n 's/.*size: //p' | tail -n 1 | tr -d '\r')"
-if [[ ! "$screen_size" =~ ^[0-9]+x[0-9]+$ ]]; then echo "Could not determine emulator screen size: $screen_size"; exit 1; fi
-screen_w="${screen_size%x*}"
-screen_h="${screen_size#*x}"
 unit=$((screen_h < screen_w * 55 / 100 ? screen_h : screen_w * 55 / 100))
 joy_x=$((unit * 20 / 100))
 joy_y=$((screen_h - unit * 22 / 100))
 move_x=$((joy_x + unit * 10 / 100))
-adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 900 0
-sleep 4
+adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 1200 0
+sleep 5
 
 moving_line="$(grep -E 'PLAYER_STATE .*PARTS=60 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
 if [[ -z "$moving_line" ]]; then
