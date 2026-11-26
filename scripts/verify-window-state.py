@@ -40,6 +40,21 @@ def is_retryable_systemui_anr(dump: str) -> bool:
     return bool(blockers) and all(SYSTEMUI_ANR in title for title in blockers)
 
 
+
+def capture_decision(dump: str, screenshot_valid: bool) -> str:
+    """Accept clean captures, retry transient SystemUI ANRs or pixel races, reject other overlays."""
+    blockers = visible_blocking_windows(dump)
+    if blockers:
+        return "retry" if is_retryable_systemui_anr(dump) else "fatal"
+    return "accept" if screenshot_valid else "retry"
+
+    if len(sys.argv) == 4 and sys.argv[1] == "--capture-decision":
+        dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
+        screenshot_valid = sys.argv[3] == "1"
+        decision = capture_decision(dump, screenshot_valid)
+        print("Capture decision: " + decision)
+        return {"accept": 0, "retry": 1, "fatal": 2}[decision]
+
 def main() -> int:
     if len(sys.argv) == 3 and sys.argv[1] == "--retryable-systemui-anr":
         dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
@@ -52,7 +67,8 @@ def main() -> int:
     if len(sys.argv) != 2:
         print(
             "Usage: verify-window-state.py WINDOWS_DUMP | "
-            "verify-window-state.py --retryable-systemui-anr WINDOWS_DUMP",
+            "verify-window-state.py --retryable-systemui-anr WINDOWS_DUMP | "
+            "verify-window-state.py --capture-decision WINDOWS_DUMP PIXELS_VALID(0|1)",
             file=sys.stderr,
         )
         return 2

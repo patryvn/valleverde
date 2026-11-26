@@ -50,6 +50,32 @@ class WindowStateTests(unittest.TestCase):
 """
         self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
 
+
+    def test_capture_decision_retries_systemui_overlay_race(self):
+        dump = """  Window #3 Window{abc u0 Application Not Responding: com.android.systemui}:
+    Surface: shown=true
+"""
+        self.assertEqual("retry", MODULE.capture_decision(dump, False))
+        self.assertEqual("retry", MODULE.capture_decision(dump, True))
+
+    def test_capture_decision_retries_failed_pixels_after_overlay_disappears(self):
+        dump = """  Window #4 Window{def u0 MainActivity}:
+    Surface: shown=true
+"""
+        self.assertEqual("retry", MODULE.capture_decision(dump, False))
+
+    def test_capture_decision_accepts_clear_humanoid_capture(self):
+        dump = """  Window #4 Window{def u0 MainActivity}:
+    Surface: shown=true
+"""
+        self.assertEqual("accept", MODULE.capture_decision(dump, True))
+
+    def test_capture_decision_rejects_non_retryable_visible_overlay(self):
+        dump = """  Window #2 Window{abc u0 ImmersiveModeConfirmation}:
+    Surface: shown=true
+"""
+        self.assertEqual("fatal", MODULE.capture_decision(dump, False))
+
     def test_unrelated_visible_window_does_not_block_capture(self):
         dump = """  Window #1 Window{abc u0 MainActivity}:
     Surface: shown=true

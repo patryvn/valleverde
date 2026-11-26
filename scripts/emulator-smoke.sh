@@ -53,6 +53,61 @@ wait_for_clear_windows() {
   python3 scripts/verify-window-state.py "$dump_path"
 }
 
+
+capture_humanoid_frame() {
+  local stage="$1"
+  local image_path="$2"
+  local windows_path="$3"
+  for attempt in $(seq 1 5); do
+    wait_for_clear_windows "$stage before capture ($attempt/5)" "$windows_path" || return 1
+    assert_game_alive "$stage capture $attempt" || return 1
+    adb exec-out screencap -p > "$image_path"
+    if [[ ! -s "$image_path" ]]; then
+      echo "Empty screenshot during $stage; retrying."
+      sleep 2
+      continue
+    fi
+
+    # Check window state after screencap as well as before it. SystemUI can
+    # surface an ANR in the narrow interval between the pre-check and capture.
+    adb shell dumpsys window windows > "$windows_path" 2>&1 || true
+    local pixels_valid=0
+    if python3 scripts/verify-player-screenshot.py "$image_path"; then
+      pixels_valid=1
+    fi
+
+    local decision
+    set +e
+    python3 scripts/verify-window-state.py --capture-decision "$windows_path" "$pixels_valid"
+    decision=$?
+    set -e
+    case "$decision" in
+      0)
+        return 0
+        ;;
+      1)
+        if python3 scripts/verify-window-state.py --retryable-systemui-anr "$windows_path"; then
+          wait_for_clear_windows "$stage after capture" "$windows_path" || return 1
+        else
+          echo "Humanoid pixels were not stable in capture $attempt; retrying after the frame settles."
+        fi
+        sleep 2
+        ;;
+      2)
+        python3 scripts/verify-window-state.py "$windows_path" || true
+        echo "A non-retryable Android overlay appeared during $stage capture."
+        return 1
+        ;;
+      *)
+        echo "Unexpected capture-decision exit code: $decision"
+        return 1
+        ;;
+    esac
+  done
+  echo "Could not obtain an unobstructed humanoid screenshot during $stage after five attempts."
+  return 1
+}
+
 adb wait-for-device
 boot_ready=0
 for attempt in $(seq 1 180); do
@@ -129,10 +184,7 @@ if [[ -z "$initial_line" ]]; then
 fi
 initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
 assert_game_alive "initial scene capture" || exit 1
-wait_for_clear_windows "initial capture" emulator-output/windows-before-initial-capture.txt
-adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
-test -s emulator-output/valle-cernego-initial.png
-python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-initial.png
+capture_humanoid_frame "initial scene" emulator-output/valle-cernego-initial.png emulator-output/windows-before-initial-capture.txt
 
 layout_line=""
 for attempt in $(seq 1 30); do
@@ -187,10 +239,7 @@ if [[ "$movement_ok" != "1" ]]; then
   grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
   exit 1
 fi
-wait_for_clear_windows "moving capture" emulator-output/windows-before-moving-capture.txt
-adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
-test -s emulator-output/valle-cernego-moving.png
-python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-moving.png
+capture_humanoid_frame "moving scene" emulator-output/valle-cernego-moving.png emulator-output/windows-before-moving-capture.txt
 
 adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: es.valledecernego.game|Fatal signal.*es.valledecernego.game|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then

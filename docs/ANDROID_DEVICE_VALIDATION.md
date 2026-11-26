@@ -217,3 +217,14 @@ La versión de prueba pasa a 0.26.0 (versionCode 30). GitHub Actions verifica es
 Instalar la APK release-test 0.26.0 y comprobar a simple vista, desde atrás y de perfil, que se distinguen cabeza/gorra, cuello, torso, dos brazos, dos piernas y botas. Observar reposo, caminar en cuatro direcciones, giro de cámara y salto; las articulaciones deben pivotar sin que las extremidades queden horizontales, se separen del cuerpo o desaparezcan. Confirmar que el seguimiento de cámara es estable y que no hay parpadeo de profundidad ni errores OpenGL.
 
 El emulador CI usa SwiftShader por software y solo valida esa ruta. La GPU/controlador EGL del Poco X6 Pro con Android 16 no está conectado al flujo de GitHub Actions. La validación en ese teléfono continúa pendiente y requiere capturas/logcat del propio dispositivo.
+
+
+## Diagnóstico de 0.26.0: captura móvil cubierta por SystemUI (26-11-2026)
+
+La ejecución [45834722177](https://github.com/patryvn/valleverde/actions/runs/45834722177) completó correctamente `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, firma/versión y publicación de artefactos. La captura inicial de la APK release-test 0.26.0 superó el análisis de píxeles: skin=790, chaqueta=2910, botas=619, extremidades oscuras=1387 y separación cabeza-pies=95,6 px. La imagen inicial muestra cabeza/gorra, torso, brazos, piernas, botas y mochila en el AVD.
+
+El test de movimiento alcanzó 0,45 m y el registro informa 60 piezas, 11 piezas de compatibilidad, GL_NO_ERROR y 0,00 m de error de seguimiento de cámara. Sin embargo, la captura final contiene una ventana del sistema **“System UI isn't responding”** que tapa el centro de la escena. Por eso el verificador de píxeles solo encontró el grupo oscuro de la parte inferior y rechazó la imagen. No es evidencia de que el modelo se haya reducido a un rectángulo: la captura estaba obstruida. La comprobación previa de ventanas tenía una carrera temporal: el diálogo apareció entre el chequeo y el screencap.
+
+El smoke test ahora comprueba la ventana **después** de cada captura y aplica una política de reintento limitada a cinco capturas. Si aparece una ANR visible de SystemUI, espera a que desaparezca y vuelve a capturar; si el diálogo desaparece antes del volcado pero la imagen quedó contaminada, repite el análisis de píxeles. Un diálogo inmersivo u otra superposición visible no reintentable sigue siendo un fallo inmediato. Si la escena no contiene un humanoide en cinco capturas limpias, el test también falla. Se añaden cuatro pruebas unitarias de esta política.
+
+Esta corrección hace más fiable la evidencia de CI, pero no sustituye la validación física en el Poco X6 Pro con Android 16. La captura inicial de SwiftShader no prueba el controlador gráfico del teléfono.
