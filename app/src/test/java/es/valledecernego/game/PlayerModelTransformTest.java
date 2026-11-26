@@ -82,4 +82,21 @@ public class PlayerModelTransformTest {
         assertEquals(first.sy, moved.sy, .0001f);
         assertEquals(first.sz, moved.sz, .0001f);
     }
+
+    @Test public void compatibilityBoxLimbsKeepTheSameAnimatedUpperPivot() {
+        PlayerModelSpec.Part[] fallback = PlayerModelSpec.fallbackParts();
+        for (PlayerModelSpec.Part part : fallback) {
+            if (part.motion == PlayerModelSpec.Motion.NONE) continue;
+            assertEquals(PlayerModelSpec.Shape.BOX, part.shape);
+            for (float angle : new float[] {-0.65f, 0f, 0.65f}) {
+                PlayerModelTransform.Pose pose = PlayerModelTransform.partPose(
+                    2f, 0.1f, -3f, 0.4f, 0.02f, part, angle);
+                assertEquals(angle, pose.pitch, 0.0001f);
+                assertEquals(part.sx, pose.sx, 0.0001f);
+                assertEquals(part.sy, pose.sy, 0.0001f);
+                assertEquals(part.sz, pose.sz, 0.0001f);
+            }
+        }
+    }
+
 }
