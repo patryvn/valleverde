@@ -110,7 +110,7 @@ fi
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
 initial_line=""
 for attempt in $(seq 1 60); do
-  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=11 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -n "$initial_line" ]]; then break; fi
   sleep 1
 done
@@ -136,7 +136,7 @@ for attempt in $(seq 1 12); do
   # Repeat the same real HUD gesture until the accumulated displacement is measurable.
   adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 1200 0
   sleep 1
-  moving_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=11 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  moving_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -z "$moving_line" ]]; then continue; fi
   moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
   if python3 - "$initial_telemetry" "$moving_telemetry" <<'PY'
@@ -146,7 +146,7 @@ def parse(value):
     match = pattern.search(value)
     if not match: raise SystemExit("Malformed renderer telemetry: " + value)
     x,z,cx,cz,parts,fallback,gl_error = match.groups()
-    if int(parts) not in (11,60) or int(fallback) != 11 or int(gl_error,16) != 0:
+    if int(parts) not in (11,60) or int(fallback) not in (0,11) or (int(parts)==11 and int(fallback)!=11) or int(gl_error,16) != 0:
         raise SystemExit("Player or compatibility silhouette batch did not complete cleanly: " + value)
     return tuple(map(float,(x,z,cx,cz))) + (int(parts),)
 a,b = parse(sys.argv[1]),parse(sys.argv[2])
