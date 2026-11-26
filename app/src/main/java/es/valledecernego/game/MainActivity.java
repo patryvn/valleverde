@@ -411,7 +411,7 @@ public class MainActivity extends Activity {
         FloatBuffer vb;
         int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform;
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
-        volatile boolean rendererReady=false,silhouetteReady=false;
+        volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
         volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
         final PlayerModelSpec.Part[] silhouetteParts=PlayerModelSpec.fallbackParts();
@@ -491,6 +491,21 @@ public class MainActivity extends Activity {
                 silhouetteReady=silhouettePos>=0 && silhouetteColor>=0 && silhouetteMvp>=0;
             }
             if(!silhouetteReady) android.util.Log.w("ValleCernego","Silueta de compatibilidad no disponible.");
+            if(!rendererReady && silhouetteReady){
+                // Si falla también el shader plano inicial, reutiliza el shader mínimo
+                // como renderizador principal para mantener escena y personaje visibles.
+                program=silhouetteProgram;
+                pos=silhouettePos;
+                normalAttr=-1;
+                color=silhouetteColor;
+                mvp=silhouetteMvp;
+                normalMatrixUniform=-1;
+                materialStyleUniform=-1;
+                rendererReady=true;
+                compatibilityRenderer=true;
+                silhouetteReady=false;
+                android.util.Log.w("ValleCernego","Renderizador GLES compatible activado para la escena completa.");
+            }
 
             float[] cube={
                 -.5f,-.5f,-.5f, .5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,.5f,-.5f,
@@ -850,6 +865,9 @@ public class MainActivity extends Activity {
             if(playerGlError!=GLES20.GL_NO_ERROR){
                 return "3D ERROR GL 0x"+Integer.toHexString(playerGlError)
                     +" · "+playerDrawCalls+"/"+PlayerModelSpec.size();
+            }
+            if(compatibilityRenderer && playerDrawCalls>=PlayerModelSpec.size()){
+                return "3D COMPATIBLE · "+playerDrawCalls+" piezas · shader GLES plano · GL OK";
             }
             if(rendererReady && playerDrawCalls>=PlayerModelSpec.size()){
                 return "3D OK · "+playerDrawCalls+" piezas · respaldo humanoide "+silhouetteDrawCalls+" · GL OK";
