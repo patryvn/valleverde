@@ -8,6 +8,7 @@ MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
 
+
 class WindowStateTests(unittest.TestCase):
     def test_hidden_systemui_anr_does_not_block_capture(self):
         dump = """  Window #3 Window{abc u0 Application Not Responding: com.android.systemui}:
@@ -19,24 +20,43 @@ class WindowStateTests(unittest.TestCase):
     Surface: shown=true
 """
         self.assertEqual([], MODULE.visible_blocking_windows(dump))
+        self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
 
-    def test_visible_systemui_anr_blocks_capture(self):
+    def test_visible_systemui_anr_blocks_capture_but_is_retryable(self):
         dump = """  Window #3 Window{abc u0 Application Not Responding: com.android.systemui}:
     Surface: shown=true      mDrawState=HAS_DRAWN
 """
         self.assertEqual(1, len(MODULE.visible_blocking_windows(dump)))
+        self.assertTrue(MODULE.is_retryable_systemui_anr(dump))
 
-    def test_visible_immersive_confirmation_blocks_capture(self):
+    def test_visible_game_anr_is_not_retryable(self):
+        dump = """  Window #3 Window{abc u0 Application Not Responding: es.valledecernego.game}:
+    Surface: shown=true
+"""
+        self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
+
+    def test_visible_immersive_confirmation_blocks_and_is_not_retryable(self):
         dump = """  Window #2 Window{abc u0 ImmersiveModeConfirmation}:
     Surface: shown=true
 """
         self.assertEqual(1, len(MODULE.visible_blocking_windows(dump)))
+        self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
+
+    def test_mixed_systemui_anr_and_immersive_confirmation_is_not_retryable(self):
+        dump = """  Window #2 Window{abc u0 Application Not Responding: com.android.systemui}:
+    Surface: shown=true
+  Window #3 Window{def u0 ImmersiveModeConfirmation}:
+    Surface: shown=true
+"""
+        self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
 
     def test_unrelated_visible_window_does_not_block_capture(self):
         dump = """  Window #1 Window{abc u0 MainActivity}:
     Surface: shown=true
 """
         self.assertEqual([], MODULE.visible_blocking_windows(dump))
+        self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
+
 
 if __name__ == "__main__":
     unittest.main()
