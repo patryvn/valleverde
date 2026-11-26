@@ -8,7 +8,7 @@ public class AnimalSystemTest {
         AnimalSystem herd = new AnimalSystem();
         herd.addForage(2);
 
-        assertEquals(AnimalSystem.FED, herd.feedNearest(3.0f, -1.0f));
+        assertEquals(AnimalSystem.FED, herd.feedNearest(WorldLayout.COW_X, WorldLayout.COW_Z));
         assertEquals(1, herd.getForage());
         assertEquals(25.0f, herd.getCowHunger(), 0.01f);
         assertEquals(70.0f, herd.getBullHunger(), 0.01f);
@@ -25,8 +25,8 @@ public class AnimalSystemTest {
     @Test public void caredForPairStartsPregnancyAndProducesGrowingCalf() {
         AnimalSystem herd = new AnimalSystem();
         herd.addForage(2);
-        assertEquals(AnimalSystem.FED, herd.feedNearest(3.0f, -1.0f));
-        assertEquals(AnimalSystem.FED, herd.feedNearest(6.0f, -2.0f));
+        assertEquals(AnimalSystem.FED, herd.feedNearest(WorldLayout.COW_X, WorldLayout.COW_Z));
+        assertEquals(AnimalSystem.FED, herd.feedNearest(WorldLayout.BULL_X, WorldLayout.BULL_Z));
 
         herd.update(AnimalSystem.BREEDING_READY_MS - 1L);
         assertFalse(herd.isPregnant());
@@ -71,8 +71,8 @@ public class AnimalSystemTest {
     @Test public void saveAndRestoreKeepsPregnancyProgress() {
         AnimalSystem herd = new AnimalSystem();
         herd.addForage(2);
-        herd.feedNearest(3.0f, -1.0f);
-        herd.feedNearest(6.0f, -2.0f);
+        herd.feedNearest(WorldLayout.COW_X, WorldLayout.COW_Z);
+        herd.feedNearest(WorldLayout.BULL_X, WorldLayout.BULL_Z);
         herd.update(AnimalSystem.BREEDING_READY_MS + 45_000L);
         assertTrue(herd.isPregnant());
 

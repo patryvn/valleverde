@@ -1,6 +1,6 @@
 # Validación del personaje y cámara en Android
 
-## Cambios incluidos en 0.14.0
+## Cambios incluidos en 0.27.2
 
 - El personaje se construye en el renderizador OpenGL ES 2.0 con piezas 3D separadas y reutiliza la misma especificación en las pruebas.
 - La silueta incluye cabeza, cuello, torso, chaqueta abierta, brazos, manos, pantalón, piernas, botas con suela y cordones, gorro tejido, pelo, ojos verdes, pupilas, boca y bandolera.
@@ -15,11 +15,17 @@ GitHub Actions ejecuta `:app:testDebugUnitTest`, `:app:assembleDebug` y `:app:as
 
 Las pruebas unitarias validan geometría declarativa, materiales, accesorios traseros, transformaciones y seguimiento de cámara; no pueden certificar que una GPU concreta dibuje correctamente el personaje.
 
+## Verificación automatizada de la versión 0.27.2
+
+El workflow de esta rama ejecuta las pruebas unitarias, compila APK debug y release-test, verifica ambas firmas y ejecuta una prueba de escena en un emulador Android API 35. La captura se analiza por grupos de color de piel, chaqueta, botas y extremidades, además de comprobar la separación vertical entre cabeza y pies. El emulador usa Google SwiftShader; este resultado sirve para detectar regresiones reproducibles, pero no representa la GPU física del Poco X6 Pro.
+
+El personaje principal tiene 60 piezas procedurales y una base humana opaca de 11 piezas para compatibilidad. Las piezas usan materiales de color e iluminación por normales; todavía no hay mapas UV ni texturas fotográficas. La animación de caminar y el balanceo de reposo se calculan por separado de la cámara, que sigue la posición del jugador.
+
 ## Validación física pendiente
 
 En un móvil Android real, comprobar:
 
-1. Instalar la APK 0.14.0 y comprobar que el HUD indique `3D OK · 60 piezas · GL OK` después del primer fotograma. Este estado confirma el envío de las piezas sin error GL notificado, no su visibilidad real.
+1. Instalar la APK 0.27.2 y comprobar que el HUD indique `3D OK · 60 piezas · GL OK` después del primer fotograma. Este estado confirma el envío de las piezas sin error GL notificado, no su visibilidad real.
 2. Que el personaje se vea completo, no como un rectángulo o una pantalla azul.
 3. Que se distingan cabeza, torso, brazos, piernas, gorro, botas, mochila y bandolera desde el inicio.
 4. Que la cámara permanezca detrás del personaje y lo mantenga en pantalla al caminar en las cuatro direcciones.
