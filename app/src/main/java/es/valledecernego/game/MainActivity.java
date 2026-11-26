@@ -929,7 +929,7 @@ public class MainActivity extends Activity {
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
             }
 
-            if(PlayerRenderPolicy.shouldDrawOpaqueBase(silhouetteReady)){
+            if(PlayerRenderPolicy.shouldDrawOpaqueBase(rendererReady,silhouetteReady)){
                 fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA);
             }
 
@@ -1025,20 +1025,18 @@ public class MainActivity extends Activity {
             for(PlayerModelSpec.Part part:silhouetteParts){
                 PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
                     px,py,pz,playerFacing,bob,part,playerPartAngle(part));
-                FloatBuffer mesh;
-                int count;
-                float sy=pose.sy;
-                if(part.shape==PlayerModelSpec.Shape.LIMB){
-                    mesh=capsuleBuffer;count=capsuleVertexCount;sy*=.5f;
-                }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
-                    mesh=sphereBuffer;count=sphereVertexCount;
+                // fallbackParts() is cube-only. Prefer the main renderer when it is
+                // ready, so the opaque humanoid base survives even if a separate
+                // compatibility shader fails to link on a particular mobile driver.
+                boolean partDrawn;
+                if(rendererReady){
+                    partDrawn=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
+                        part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
                 }else{
-                    mesh=vb;count=36;
+                    partDrawn=drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
+                        part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll);
                 }
-                if(drawSilhouetteMesh(mesh,count,pose.x,pose.y,pose.z,pose.sx,sy,pose.sz,
-                    part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll)){
-                    submitted++;
-                }
+                if(partDrawn)submitted++;
             }
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);

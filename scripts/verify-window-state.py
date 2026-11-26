@@ -48,6 +48,8 @@ def capture_decision(dump: str, screenshot_valid: bool) -> str:
         return "retry" if is_retryable_systemui_anr(dump) else "fatal"
     return "accept" if screenshot_valid else "retry"
 
+
+def main() -> int:
     if len(sys.argv) == 4 and sys.argv[1] == "--capture-decision":
         dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
         screenshot_valid = sys.argv[3] == "1"
@@ -55,7 +57,6 @@ def capture_decision(dump: str, screenshot_valid: bool) -> str:
         print("Capture decision: " + decision)
         return {"accept": 0, "retry": 1, "fatal": 2}[decision]
 
-def main() -> int:
     if len(sys.argv) == 3 and sys.argv[1] == "--retryable-systemui-anr":
         dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
         if is_retryable_systemui_anr(dump):

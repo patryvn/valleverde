@@ -9,7 +9,12 @@ public final class PlayerRenderPolicy {
 
     private PlayerRenderPolicy() { }
 
-    public static boolean shouldDrawOpaqueBase(boolean silhouetteShaderReady) {
-        return silhouetteShaderReady;
+    /**
+     * Draw the cube-only base whenever either available renderer can draw it.
+     * The primary renderer is preferred; the independent flat shader is the
+     * last-resort path when the main program could not be created.
+     */
+    public static boolean shouldDrawOpaqueBase(boolean rendererReady, boolean silhouetteShaderReady) {
+        return rendererReady || silhouetteShaderReady;
     }
 }
