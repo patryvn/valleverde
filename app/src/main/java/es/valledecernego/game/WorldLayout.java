@@ -12,6 +12,7 @@ public final class WorldLayout {
     public static final int MARKET = 7;
     public static final int VILLAGE_BOARD = 8;
     public static final int HOUSE = 9;
+    public static final int WATER_SOURCE = 10;
 
     private static final float[][] INITIAL_OBJECTS = {
         {-10f,16f,TREE,1f},
@@ -31,7 +32,8 @@ public final class WorldLayout {
         {-9f,21f,STABLE,1f},
         {10f,25f,MARKET,1f},
         {-6f,14f,VILLAGE_BOARD,1f},
-        {0f,36f,HOUSE,1f}
+        {0f,36f,HOUSE,1f},
+        {-10f,12f,WATER_SOURCE,1f}
     };
 
     private WorldLayout() { }
