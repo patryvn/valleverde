@@ -3,7 +3,6 @@ set -Eeuo pipefail
 
 mkdir -p emulator-output
 
-# Always preserve system and GL diagnostics, including when a command fails.
 collect_diagnostics() {
   local exit_code=$?
   if command -v adb >/dev/null 2>&1; then
@@ -63,7 +62,7 @@ fi
 adb shell input keyevent 224 || true
 adb shell input keyevent 82 || true
 adb shell am force-stop es.valledecernego.game || true
-adb shell am start -W -n es.valledecernego.game/.MainActivity
+adb shell am start -W -n es.valledecernego.game/.MainActivity --ez debug_telemetry true
 
 app_ready=0
 for attempt in $(seq 1 90); do
@@ -81,13 +80,31 @@ if [[ "$app_ready" != "1" ]]; then
   exit 1
 fi
 
-sleep 10
+# Do not take the baseline until the GL renderer has really submitted every part.
+hud_ready=0
+for attempt in $(seq 1 60); do
+  adb shell uiautomator dump /data/local/tmp/window.xml >/dev/null 2>&1 || true
+  adb pull /data/local/tmp/window.xml emulator-output/window.xml >/dev/null 2>&1 || true
+  if grep -Fq "VALLE DE CERNEGO" emulator-output/window.xml \
+      && grep -Fq "60 piezas enviadas" emulator-output/window.xml \
+      && grep -Fq "GL OK" emulator-output/window.xml; then
+    hud_ready=1
+    break
+  fi
+  sleep 1
+done
+if [[ "$hud_ready" != "1" ]]; then
+  echo "The player renderer did not reach 60 submitted pieces with GL OK."
+  exit 1
+fi
+
+initial_telemetry="$(grep -oE 'POS=-?[0-9]+([.][0-9]+)?,-?[0-9]+([.][0-9]+)? CAM=-?[0-9]+([.][0-9]+)?,-?[0-9]+([.][0-9]+)?' emulator-output/window.xml | tail -n 1)"
+if [[ -z "$initial_telemetry" ]]; then
+  echo "Initial player/camera telemetry is missing."
+  exit 1
+fi
 adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
-adb shell uiautomator dump /data/local/tmp/window.xml
-adb pull /data/local/tmp/window.xml emulator-output/window.xml
-grep -F "VALLE DE CERNEGO" emulator-output/window.xml
-grep -F "60 piezas enviadas" emulator-output/window.xml
 
 screen_size="$(adb shell wm size | sed -n 's/.*: //p' | tail -n 1 | tr -d '\r')"
 if [[ ! "$screen_size" =~ ^[0-9]+x[0-9]+$ ]]; then
@@ -101,20 +118,56 @@ joy_x=$((unit * 20 / 100))
 joy_y=$((screen_h - unit * 22 / 100))
 move_x=$((joy_x + unit * 10 / 100))
 
-# Android 15/35 input requires an explicit display ID after the duration.
+# Match Hud's joystick geometry exactly; keep the gesture inside its active radius.
 adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 900 0
-sleep 3
-adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
-test -s emulator-output/valle-cernego-moving.png
-if cmp -s emulator-output/valle-cernego-initial.png emulator-output/valle-cernego-moving.png; then
-  echo "The scene capture did not change after the joystick gesture."
+
+movement_verified=0
+moving_telemetry=""
+for attempt in $(seq 1 20); do
+  sleep 1
+  adb shell uiautomator dump /data/local/tmp/window-after-move.xml >/dev/null 2>&1 || true
+  adb pull /data/local/tmp/window-after-move.xml emulator-output/window-after-move.xml >/dev/null 2>&1 || true
+  moving_telemetry="$(grep -oE 'POS=-?[0-9]+([.][0-9]+)?,-?[0-9]+([.][0-9]+)? CAM=-?[0-9]+([.][0-9]+)?,-?[0-9]+([.][0-9]+)?' emulator-output/window-after-move.xml | tail -n 1 || true)"
+  if [[ -n "$moving_telemetry" ]]; then
+    if python3 - "$initial_telemetry" "$moving_telemetry" <<'PY'
+import math, re, sys
+pattern = re.compile(r"POS=(-?[0-9.]+),(-?[0-9.]+) CAM=(-?[0-9.]+),(-?[0-9.]+)")
+first = pattern.fullmatch(sys.argv[1])
+last = pattern.fullmatch(sys.argv[2])
+if not first or not last:
+    raise SystemExit(2)
+a = [float(value) for value in first.groups()]
+b = [float(value) for value in last.groups()]
+dx, dz = b[0] - a[0], b[1] - a[1]
+camera_dx, camera_dz = b[2] - a[2], b[3] - a[3]
+if math.hypot(dx, dz) < 0.75:
+    raise SystemExit(1)
+if math.hypot(camera_dx - dx, camera_dz - dz) > 0.15:
+    raise SystemExit(1)
+print(f"Player moved {math.hypot(dx, dz):.2f} m; camera followed by ({camera_dx:.2f}, {camera_dz:.2f}) m.")
+PY
+    then
+      movement_verified=1
+      break
+    fi
+  fi
+done
+if [[ "$movement_verified" != "1" ]]; then
+  echo "Joystick movement or third-person camera follow was not verified."
+  echo "Initial telemetry: $initial_telemetry"
+  echo "Latest telemetry: $moving_telemetry"
   exit 1
 fi
 
+grep -F "60 piezas enviadas" emulator-output/window-after-move.xml
+grep -F "GL OK" emulator-output/window-after-move.xml
+adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
+test -s emulator-output/valle-cernego-moving.png
 adb shell dumpsys gfxinfo es.valledecernego.game > emulator-output/gfxinfo.txt
+adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: es.valledecernego.game|DeadSystemException|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
   echo "Fatal app, system-server, or player OpenGL error detected."
   exit 1
 fi
 
-echo "Emulator smoke test completed; inspect both PNG captures before accepting player visibility."
+echo "Emulator smoke test completed: 60 model parts, player movement, and camera translation verified."

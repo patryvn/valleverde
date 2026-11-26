@@ -75,3 +75,17 @@ El emulador sí terminó de arrancar y PackageManager respondió, pero el paso d
 Para evitar que el intérprete fragmente estructuras de control, la lógica de espera, instalación, apertura, captura y movimiento se ha trasladado a `scripts/emulator-smoke.sh`. El action ejecuta ahora una única orden: `bash scripts/emulator-smoke.sh`. El script guarda siempre `getprop`, `logcat`, actividades, ventanas y `gfxinfo`; falla si no puede instalar/abrir la actividad, si el HUD no informa de las 60 piezas o si la captura no cambia tras mover el joystick. La comparación de capturas demuestra que hubo un cambio visual, no que la silueta sea correcta: ambas imágenes aún deben inspeccionarse.
 
 La siguiente ejecución debe volver a generar las APK, ejecutar `testDebugUnitTest`, `assembleDebug` y `assembleRelease`, y producir las dos capturas del emulador. La validación física en el Poco X6 Pro con Android 16 sigue pendiente.
+
+
+## Captura real de la versión 0.17.0 (run 45724145643)
+
+La ejecución terminó correctamente: pasaron `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, la verificación de firmas/versión y el arranque de la aplicación en Android 35. El artefacto de capturas contiene dos PNG reales. En ellos se aprecia un personaje humanoide 3D estilizado desde atrás, con cabeza, gorra, torso, brazos, piernas, botas y mochila; la segunda captura muestra `3D OK · 60 piezas enviadas · GL OK`. No aparece el rectángulo azul en esa ejecución del emulador.
+
+La comparación anterior de PNG completos no probaba por sí sola el movimiento: el HUD cambia al terminar de inicializar el renderizador y la animación también altera píxeles. Además, el escenario de inicio carecía de referencias visibles delante del personaje, por lo que no permitía juzgar el paralaje de la cámara. Esta limitación se corrige en 0.18.0 con objetos rurales situados delante del punto de aparición, un camino, una cerca, lomas de fondo y telemetría de prueba del jugador/cámara. El script espera a que el HUD confirme 60 piezas y GL OK antes de capturar; después comprueba que el joystick desplaza al jugador y que la cámara se traslada exactamente con él. La telemetría solo se activa mediante un extra de Intent usado por CI y no se muestra en partidas normales.
+
+## Escenario y prueba de seguimiento (0.18.0)
+
+- El punto de inicio ahora mira hacia un pequeño conjunto de robles, rocas, matorrales, ganado, tablón, mercado, cuadra y casa; el plano de terreno cubre esa zona.
+- Se añade un camino de tierra, una cerca de madera y lomas suaves para ofrecer referencias visuales de profundidad.
+- `WorldLayoutTest` comprueba que los elementos de la zona rural están delante del jugador, dentro de los límites del escenario y que el catálogo no se comparte entre partidas.
+- El smoke test de Android espera al estado `60 piezas enviadas · GL OK`, captura el estado inicial, realiza un gesto en el centro real del joystick y verifica por telemetría que el jugador se desplaza al menos 0,75 m y que la cámara acompaña el mismo desplazamiento. Esto valida el seguimiento matemático y el movimiento en el emulador; la inspección visual y el dispositivo físico siguen siendo necesarios.

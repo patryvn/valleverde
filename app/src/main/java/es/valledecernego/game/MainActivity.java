@@ -25,6 +25,7 @@ public class MainActivity extends Activity {
     TextView status;
     SharedPreferences preferences;
     int wood=0, stone=0;
+    boolean debugTelemetry=false;
 
     private final Handler hudHandler = new Handler(Looper.getMainLooper());
     private final Runnable hudTicker = new Runnable() {
@@ -38,6 +39,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         getWindow().getDecorView().setSystemUiVisibility(5894|1024|512|4096);
         preferences = getSharedPreferences("valle_de_cernego_save", MODE_PRIVATE);
+        debugTelemetry = getIntent().getBooleanExtra("debug_telemetry", false);
         wood = preferences.getInt("wood", 0);
         stone = preferences.getInt("stone", 0);
 
@@ -86,9 +88,10 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        return "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
+        return text;
     }
-
     void saveProgress() {
         if (preferences == null || renderer == null) return;
         preferences.edit()
@@ -434,18 +437,7 @@ public class MainActivity extends Activity {
         final float[] modelViewMatrix=new float[16];
 
         GameRenderer(){
-            for(int i=0;i<9;i++) objects.add(new float[]{-7+i*1.7f,-3-(i%3)*2,1,1});
-            objects.add(new float[]{5,-4,2,1});
-            objects.add(new float[]{-3,-7,2,1});
-            objects.add(new float[]{3,-1,4,1});
-            objects.add(new float[]{6,-2,5,1});
-            objects.add(new float[]{-7,-1,3,1});
-            objects.add(new float[]{0,-9,3,1});
-            objects.add(new float[]{8,2,3,1});
-            objects.add(new float[]{-5,-10,6,1});
-            objects.add(new float[]{10,-10,7,1});
-            objects.add(new float[]{-10,4,8,1});
-            objects.add(new float[]{-2,-5,9,1});
+            for(float[] object:WorldLayout.initialObjects()) objects.add(object);
         }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
@@ -673,7 +665,8 @@ public class MainActivity extends Activity {
             ThirdPersonCamera.Pose camera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
             Matrix.setLookAtM(view,0,camera.x(),camera.y(),camera.z(),px,camera.targetY(),pz,0,1,0);
 
-            draw(0,PlayerModelSpec.GROUND_LEVEL-.25f,0,45,.5f,45,.25f,.42f,.23f);
+            draw(0,PlayerModelSpec.GROUND_LEVEL-.25f,0,100,.5f,100,.25f,.42f,.23f);
+            drawRuralLandmarks();
             draw(-10,-.12f,-4,2,.12f,32,.18f,.48f,.62f);
             draw(0,-.08f,6,2,.12f,28,.55f,.42f,.25f);
             for(int i=0;i<8;i++)draw(-23+i*7,-1,-24,8,5,5,.25f,.43f,.28f);
@@ -681,17 +674,17 @@ public class MainActivity extends Activity {
             for(float[] o:objects){
                 if(o[3]==0)continue;
                 int t=(int)o[2];
-                if(t==1){
+                if(t==WorldLayout.TREE){
                     drawTree(o[0],o[1]);
                 }
-                if(t==2)draw(o[0],.35f,o[1],1.1f,.7f,1,.48f,.48f,.46f);
-                if(t==3){
+                if(t==WorldLayout.ROCK)draw(o[0],.35f,o[1],1.1f,.7f,1,.48f,.48f,.46f);
+                if(t==WorldLayout.BUSH){
                     draw(o[0],.34f,o[1],1.15f,.42f,.9f,.18f,.39f,.13f);
                     draw(o[0]-.25f,.52f,o[1]+.18f,.48f,.34f,.48f,.23f,.48f,.16f);
                 }
-                if(t==4) drawCow(o[0],o[1],.83f,.82f,.72f,1f,false);
-                if(t==5) drawCow(o[0],o[1],.48f,.34f,.22f,1.08f,true);
-                if(t==6){
+                if(t==WorldLayout.COW) drawCow(o[0],o[1],.83f,.82f,.72f,1f,false);
+                if(t==WorldLayout.CALF) drawCow(o[0],o[1],.48f,.34f,.22f,1.08f,true);
+                if(t==WorldLayout.STABLE){
                     if(buildings.isStableBuilt()){
                         draw(o[0],.68f,o[1],2.3f,1.35f,2.3f,.48f,.32f,.18f);
                         draw(o[0],1.48f,o[1],2.6f,.32f,2.6f,.30f,.16f,.11f);
@@ -708,20 +701,20 @@ public class MainActivity extends Activity {
                         draw(o[0]+1.05f,.62f,o[1]+1.05f,.16f,1.1f,.16f,.38f,.24f,.13f);
                     }
                 }
-                if(t==7){
+                if(t==WorldLayout.MARKET){
                     draw(o[0],.52f,o[1],2.2f,.75f,1.15f,.43f,.27f,.14f);
                     draw(o[0],1.12f,o[1],2.35f,.24f,1.3f,.68f,.25f,.16f);
                     draw(o[0]-.82f,.3f,o[1],.12f,.6f,.12f,.3f,.2f,.12f);
                     draw(o[0]+.82f,.3f,o[1],.12f,.6f,.12f,.3f,.2f,.12f);
                 }
-                if(t==8){
+                if(t==WorldLayout.VILLAGE_BOARD){
                     draw(o[0],.48f,o[1],1.65f,.72f,.68f,.43f,.28f,.16f);
                     draw(o[0]-.62f,.95f,o[1],.12f,.55f,.12f,.30f,.19f,.10f);
                     draw(o[0]+.62f,.95f,o[1],.12f,.55f,.12f,.30f,.19f,.10f);
                     draw(o[0],1.48f,o[1]-.34f,1.75f,.92f,.12f,.52f,.36f,.20f);
                     draw(o[0],1.5f,o[1]-.42f,1.35f,.10f,.06f,.83f,.70f,.38f);
                 }
-                if(t==9){
+                if(t==WorldLayout.HOUSE){
                     if(house.isBuilt()){
                         // Galician granite farmhouse: stone walls, slate gable roof, chimney and timber details.
                         draw(o[0],.94f,o[1],3.05f,1.82f,2.65f,.53f,.51f,.46f);
@@ -790,6 +783,35 @@ public class MainActivity extends Activity {
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
             draw(7,1.75f,-7,4,.7f,3.4f,.35f,.18f,.14f);
             drawPlayer();
+        }
+
+        void drawRuralLandmarks(){
+            // Camino de tierra que conecta la zona de inicio con la aldea.
+            draw(0f,PlayerModelSpec.GROUND_LEVEL-.06f,26f,2.7f,.12f,36f,.48f,.40f,.31f);
+
+            // Lomas verdes suaves al fondo: dan referencias de profundidad para la cámara.
+            for(int i=0;i<7;i++){
+                float x=-25f+i*8.4f;
+                float z=43f+(i%2)*1.4f;
+                drawMesh(sphereBuffer,sphereVertexCount,x,1.62f,z,9f,3.4f,8f,
+                    .25f,.38f,.24f,1f,0f,0f);
+            }
+
+            // Cierre tradicional de madera a la izquierda del camino.
+            for(int i=0;i<7;i++){
+                float z=13f+i*4f;
+                draw(-7.2f,.50f,z,.14f,.90f,.14f,.38f,.25f,.14f);
+                if(i<6){
+                    draw(-7.2f,.72f,z+2f,.12f,.12f,4f,.43f,.29f,.16f);
+                    draw(-7.2f,.36f,z+2f,.12f,.12f,4f,.43f,.29f,.16f);
+                }
+            }
+        }
+
+        String getDebugTelemetry(){
+            ThirdPersonCamera.Pose camera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
+            return String.format(Locale.US,"POS=%.2f,%.2f CAM=%.2f,%.2f",
+                px,pz,camera.x(),camera.z());
         }
 
         String getRenderStatus(){
