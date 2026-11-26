@@ -926,8 +926,9 @@ public class MainActivity extends Activity {
             }
 
             // Independent low-feature silhouette protects the essential human shape on mobile GPUs.
-            if(silhouetteReady)drawPlayerSilhouette(rendererReady ? 0.18f : 1f);
-            playerDrawCalls=(rendererReady && submittedParts>0)?submittedParts:silhouetteDrawCalls;
+            boolean detailedComplete=rendererReady && submittedParts>=PlayerModelSpec.size();
+            if(silhouetteReady)drawPlayerSilhouette(detailedComplete ? 0.18f : 1f);
+            playerDrawCalls=detailedComplete?submittedParts:silhouetteDrawCalls;
             playerGlError=GLES20.glGetError();
             if(playerGlError!=GLES20.GL_NO_ERROR){
                 android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(playerGlError)
