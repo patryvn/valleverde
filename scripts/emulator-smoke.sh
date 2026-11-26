@@ -21,6 +21,16 @@ collect_diagnostics() {
 }
 trap collect_diagnostics EXIT
 
+assert_game_alive() {
+  local stage="$1"
+  local app_pid
+  app_pid="$(adb shell pidof es.valledecernego.game 2>/dev/null | tr -d '\r' || true)"
+  if [[ -n "$app_pid" ]]; then return 0; fi
+  echo "Game process exited during $stage."
+  adb logcat -d -v time | grep -A 24 -B 5 -E 'FATAL EXCEPTION|AndroidRuntime|IllegalFormatConversionException|Process: es.valledecernego.game' | tail -n 80 || true
+  return 1
+}
+
 adb wait-for-device
 boot_ready=0
 for attempt in $(seq 1 180); do
@@ -107,6 +117,8 @@ if printf '%s\n' "$activity_dump" | grep -q 'mCurrentFocus=Window{.*ImmersiveMod
   exit 1
 fi
 
+assert_game_alive "immersive-mode confirmation dismissal" || exit 1
+
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
 initial_line=""
 for attempt in $(seq 1 60); do
@@ -120,6 +132,7 @@ if [[ -z "$initial_line" ]]; then
   exit 1
 fi
 initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+assert_game_alive "initial scene capture" || exit 1
 adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-initial.png
@@ -157,6 +170,7 @@ for attempt in $(seq 1 8); do
   # Explicit touchscreen source avoids depending on the shell input default.
   adb shell input touchscreen swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 2200
   sleep 1
+  assert_game_alive "joystick swipe $attempt" || exit 1
   touch_down_line="$(grep -E 'HUD_TOUCH DOWN .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
   touch_move_line="$(grep -E 'HUD_TOUCH MOVE .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
