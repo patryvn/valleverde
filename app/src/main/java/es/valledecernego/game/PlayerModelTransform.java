@@ -14,7 +14,9 @@ public final class PlayerModelTransform {
         float localZ = part.z;
         float localPitch = 0f;
 
-        if (part.shape == PlayerModelSpec.Shape.LIMB) {
+        // Motion is independent of mesh shape: the compatibility model uses
+        // boxes for limbs but must keep the same upper-pivot walk animation.
+        if (part.motion != PlayerModelSpec.Motion.NONE) {
             float halfLength = part.sy * 0.5f;
             localY += VillagerAnimationSystem.limbCenterYOffset(halfLength, motionAngle);
             localZ += VillagerAnimationSystem.limbCenterZOffset(halfLength, motionAngle);
