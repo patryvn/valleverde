@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
         FrameLayout root=new FrameLayout(this);
         surface=new GLSurfaceView(this);
         surface.setEGLContextClientVersion(2);
-        surface.setEGLConfigChooser(8,8,8,8,16,0);
+        surface.setEGLConfigChooser(new PreferredDepthConfigChooser());
         surface.setPreserveEGLContextOnPause(true);
         renderer=new GameRenderer();
         renderer.setDebugTelemetry(debugTelemetry);
@@ -492,9 +492,12 @@ public class MainActivity extends Activity {
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
             GLES20.glDisable(GLES20.GL_CULL_FACE);
             if(debugTelemetry){
+                int[] depthBits=new int[1];
+                GLES20.glGetIntegerv(GLES20.GL_DEPTH_BITS,depthBits,0);
                 android.util.Log.i("ValleCernego","GL_DEVICE vendor="+String.valueOf(GLES20.glGetString(GLES20.GL_VENDOR))
                     +" renderer="+String.valueOf(GLES20.glGetString(GLES20.GL_RENDERER))
-                    +" version="+String.valueOf(GLES20.glGetString(GLES20.GL_VERSION)));
+                    +" version="+String.valueOf(GLES20.glGetString(GLES20.GL_VERSION))
+                    +" depthBits="+depthBits[0]);
             }
             String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; varying vec3 vLocal; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); vLocal=aPos; gl_Position=uMVP*vec4(aPos,1.0);} ";
             String fs="precision mediump float; uniform vec4 uColor; uniform float uMaterialStyle; varying float vLight; varying vec3 vLocal; void main(){vec3 base=uColor.rgb; if(uMaterialStyle>0.5 && uMaterialStyle<1.5){base*=0.97+0.03*sin(vLocal.x*42.0)*sin(vLocal.y*42.0);} else if(uMaterialStyle>1.5 && uMaterialStyle<2.5){base*=0.98+0.02*sin((vLocal.x+vLocal.y)*56.0);} else if(uMaterialStyle>2.5 && uMaterialStyle<3.5){base*=0.95+0.05*sin(vLocal.y*18.0+vLocal.x*6.0);} else if(uMaterialStyle>3.5 && uMaterialStyle<4.5){base*=0.99+0.01*sin(vLocal.y*12.0);} else if(uMaterialStyle>4.5){base=mix(base,vec3(0.78,0.67,0.42),0.18)*(0.92+0.08*abs(sin(vLocal.x*20.0)));} gl_FragColor=vec4(base*vLight,uColor.a);}";
