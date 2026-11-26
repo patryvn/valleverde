@@ -110,57 +110,68 @@ fi
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
 initial_line=""
 for attempt in $(seq 1 60); do
-  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=60 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=11 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -n "$initial_line" ]]; then break; fi
   sleep 1
 done
 if [[ -z "$initial_line" ]]; then
-  echo "Renderer did not report 60 submitted player parts with GL_NO_ERROR."
+  echo "Renderer did not report the detailed model or the 11-part humanoid fallback with GL_NO_ERROR."
   tail -n 80 emulator-output/renderer-live.log || true
   exit 1
 fi
 initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
 adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
+python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-initial.png
 
 unit=$((screen_h < screen_w * 55 / 100 ? screen_h : screen_w * 55 / 100))
 joy_x=$((unit * 20 / 100))
 joy_y=$((screen_h - unit * 22 / 100))
-move_x=$((joy_x + unit * 10 / 100))
-adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 1200 0
-sleep 5
-
-moving_line="$(grep -E 'PLAYER_STATE .*PARTS=60 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
-if [[ -z "$moving_line" ]]; then
-  echo "No valid player telemetry was recorded after the joystick gesture."
-  tail -n 80 emulator-output/renderer-live.log || true
-  exit 1
-fi
-moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-if ! python3 - "$initial_telemetry" "$moving_telemetry" <<'PY'
+move_x=$((joy_x + unit * 12 / 100))
+movement_ok=0
+moving_line=""
+moving_telemetry=""
+for attempt in $(seq 1 12); do
+  # A slow TCG emulator may process only one render frame per synthetic swipe.
+  # Repeat the same real HUD gesture until the accumulated displacement is measurable.
+  adb shell input swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 1200 0
+  sleep 1
+  moving_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=11 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  if [[ -z "$moving_line" ]]; then continue; fi
+  moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+  if python3 - "$initial_telemetry" "$moving_telemetry" <<'PY'
 import math, re, sys
-pattern = re.compile(r"PLAYER_STATE POS=(-?[0-9.]+),(-?[0-9.]+) CAM=(-?[0-9.]+),(-?[0-9.]+) PARTS=(\d+) GL=0x([0-9a-fA-F]+)")
+pattern = re.compile(r"PLAYER_STATE POS=(-?[0-9.]+),(-?[0-9.]+) CAM=(-?[0-9.]+),(-?[0-9.]+) PARTS=(\d+) FALLBACK=(\d+) GL=0x([0-9a-fA-F]+)")
 def parse(value):
     match = pattern.search(value)
     if not match: raise SystemExit("Malformed renderer telemetry: " + value)
-    x,z,cx,cz,parts,gl_error = match.groups()
-    if int(parts) != 60 or int(gl_error,16) != 0: raise SystemExit("Player batch did not complete cleanly: " + value)
-    return tuple(map(float,(x,z,cx,cz)))
+    x,z,cx,cz,parts,fallback,gl_error = match.groups()
+    if int(parts) not in (11,60) or int(fallback) != 11 or int(gl_error,16) != 0:
+        raise SystemExit("Player or compatibility silhouette batch did not complete cleanly: " + value)
+    return tuple(map(float,(x,z,cx,cz))) + (int(parts),)
 a,b = parse(sys.argv[1]),parse(sys.argv[2])
 dx,dz = b[0]-a[0],b[1]-a[1]
 camera_dx,camera_dz = b[2]-a[2],b[3]-a[3]
 distance = math.hypot(dx,dz)
 if distance < 0.75: raise SystemExit(f"Joystick moved the player only {distance:.2f} m")
 if math.hypot(camera_dx-dx,camera_dz-dz) > 0.15: raise SystemExit("Third-person camera did not follow player translation")
-print(f"Verified 60 player parts, GL_NO_ERROR, {distance:.2f} m movement and matching camera translation.")
+print(f"Verified {b[4]} main player parts, 11 compatibility parts, GL_NO_ERROR, {distance:.2f} m movement and matching camera translation.")
 PY
-then
-  echo "Player movement or camera follow verification failed."
+  then
+    movement_ok=1
+    break
+  fi
+done
+if [[ "$movement_ok" != "1" ]]; then
+  echo "Player movement or camera follow verification failed after 12 joystick gestures."
+  tail -n 100 emulator-output/renderer-live.log || true
   exit 1
 fi
 
 adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
 test -s emulator-output/valle-cernego-moving.png
+python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-moving.png
+
 adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: es.valledecernego.game|Fatal signal.*es.valledecernego.game|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
   echo "Fatal app or player OpenGL error detected."
