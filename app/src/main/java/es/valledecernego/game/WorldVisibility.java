@@ -35,7 +35,8 @@ public final class WorldVisibility {
             case WorldLayout.TREE: return 2.2f;
             case WorldLayout.ROCK:
             case WorldLayout.BUSH: return 1.0f;
-            case WorldLayout.COW: return 1.8f;
+            case WorldLayout.COW:
+            case WorldLayout.BULL: return 1.8f;
             case WorldLayout.CALF: return 1.2f;
             case WorldLayout.STABLE:
             case WorldLayout.MARKET: return 3.0f;

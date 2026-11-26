@@ -14,6 +14,14 @@ public class AnimalSystemTest {
         assertEquals(70.0f, herd.getBullHunger(), 0.01f);
     }
 
+    @Test public void actualWorldSpawnPointsCanFeedBothAdults() {
+        AnimalSystem herd = new AnimalSystem();
+        herd.addForage(2);
+        assertEquals(AnimalSystem.FED, herd.feedNearest(WorldLayout.COW_X, WorldLayout.COW_Z));
+        assertEquals(AnimalSystem.FED, herd.feedNearest(WorldLayout.BULL_X, WorldLayout.BULL_Z));
+        assertEquals(0, herd.getForage());
+    }
+
     @Test public void caredForPairStartsPregnancyAndProducesGrowingCalf() {
         AnimalSystem herd = new AnimalSystem();
         herd.addForage(2);
@@ -31,6 +39,22 @@ public class AnimalSystemTest {
         assertTrue(herd.isCalfGrowing());
 
         herd.update(AnimalSystem.CALF_GROWTH_DURATION_MS);
+        assertFalse(herd.isCalfGrowing());
+    }
+
+    @Test public void calfGrowthProgressMovesFromNewbornToAdult() {
+        AnimalSystem herd = new AnimalSystem();
+        herd.addForage(2);
+        herd.feedNearest(WorldLayout.COW_X, WorldLayout.COW_Z);
+        herd.feedNearest(WorldLayout.BULL_X, WorldLayout.BULL_Z);
+        herd.update(AnimalSystem.BREEDING_READY_MS + AnimalSystem.GESTATION_DURATION_MS);
+
+        assertTrue(herd.hasCalf());
+        assertEquals(0f, herd.getCalfGrowthProgress(), 0.001f);
+        herd.update(AnimalSystem.CALF_GROWTH_DURATION_MS / 2L);
+        assertEquals(0.5f, herd.getCalfGrowthProgress(), 0.001f);
+        herd.update(AnimalSystem.CALF_GROWTH_DURATION_MS / 2L);
+        assertEquals(1f, herd.getCalfGrowthProgress(), 0.001f);
         assertFalse(herd.isCalfGrowing());
     }
 

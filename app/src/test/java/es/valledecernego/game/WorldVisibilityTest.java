@@ -30,5 +30,7 @@ public class WorldVisibilityTest {
     @Test public void typeBoundsMatchTheRuralScene() {
         assertTrue(WorldVisibility.radiusForType(WorldLayout.HOUSE)>WorldVisibility.radiusForType(WorldLayout.ROCK));
         assertTrue(WorldVisibility.radiusForType(WorldLayout.COW)>WorldVisibility.radiusForType(WorldLayout.BUSH));
+        assertEquals(WorldVisibility.radiusForType(WorldLayout.COW),
+            WorldVisibility.radiusForType(WorldLayout.BULL), 0f);
     }
 }

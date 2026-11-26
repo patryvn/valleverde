@@ -170,7 +170,7 @@ public class MainActivity extends Activity {
             if(k==1){wood+=2;renderer.removeNearby();toast("Has recogido madera +2");rewardQuest(renderer.recordWoodQuest(2),0);}
             else if(k==2){stone+=2;renderer.removeNearby();toast("Has recogido piedra +2");rewardQuest(renderer.recordStoneQuest(2),0);}
             else if(k==3){renderer.collectForage();toast("Has recogido hierba para el ganado +2");}
-            else if(k==4 || k==5){
+            else if(k==WorldLayout.COW || k==WorldLayout.BULL){
                 int feedResult=renderer.feedNearestAnimal();
                 if(feedResult==AnimalSystem.FED) toast("Has alimentado al animal. El ganado está mejor cuidado.");
                 else if(feedResult==AnimalSystem.NO_FORAGE) toast("No tienes forraje. Recoge hierba de los matorrales.");
@@ -759,7 +759,7 @@ public class MainActivity extends Activity {
                     draw(o[0]-.25f,.52f,o[1]+.18f,.48f,.34f,.48f,.23f,.48f,.16f);
                 }
                 if(t==WorldLayout.COW) drawCow(o[0],o[1],.83f,.82f,.72f,1f,false);
-                if(t==WorldLayout.CALF) drawCow(o[0],o[1],.48f,.34f,.22f,1.08f,true);
+                if(t==WorldLayout.BULL) drawCow(o[0],o[1],.58f,.36f,.24f,1.04f,false);
                 if(t==WorldLayout.STABLE){
                     if(buildings.isStableBuilt()){
                         draw(o[0],.68f,o[1],2.3f,1.35f,2.3f,.48f,.32f,.18f);
@@ -850,9 +850,12 @@ public class MainActivity extends Activity {
                 }
             }
 
-            if(animals.hasCalf()){
-                draw(4.1f,.38f,-1.6f,.75f,.55f,.95f,.78f,.73f,.62f);
-                draw(4.35f,.62f,-1.78f,.38f,.38f,.38f,.78f,.73f,.62f);
+            if(animals.hasCalf() && WorldVisibility.isVisible(px,pz,yaw,
+                    WorldLayout.CALF_X,WorldLayout.CALF_Z,1.5f,42f)){
+                float growth=animals.getCalfGrowthProgress();
+                float calfScale=1.08f+.65f*growth;
+                drawCow(WorldLayout.CALF_X,WorldLayout.CALF_Z,
+                    .48f,.34f,.22f,calfScale,animals.isCalfGrowing());
             }
 
             drawVillagers();
@@ -1289,8 +1292,8 @@ public class MainActivity extends Activity {
             if(kind==1)return "ÁRBOL · HACER: +2 MADERA";
             if(kind==2)return "ROCA · HACER: +2 PIEDRA";
             if(kind==3)return "MATORRAL · HACER: +2 FORRAJE";
-            if(kind==4)return "VACA · HACER: ALIMENTAR";
-            if(kind==5)return "TORO · HACER: ALIMENTAR";
+            if(kind==WorldLayout.COW)return "VACA · HACER: ALIMENTAR";
+            if(kind==WorldLayout.BULL)return "TORO · HACER: ALIMENTAR";
             if(kind==6)return "CUADRA · HACER: CONSTRUIR/ABRIR";
             if(kind==7)return "MERCADO · HACER: COMERCIAR";
             if(kind==8)return "TABLÓN · HACER: OFICIOS";

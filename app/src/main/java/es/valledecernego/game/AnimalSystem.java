@@ -55,8 +55,8 @@ public final class AnimalSystem {
     }
 
     public synchronized int feedNearest(float x, float z) {
-        float cowDistance = distance(x, z, 3.0f, -1.0f);
-        float bullDistance = distance(x, z, 6.0f, -2.0f);
+        float cowDistance = distance(x, z, WorldLayout.COW_X, WorldLayout.COW_Z);
+        float bullDistance = distance(x, z, WorldLayout.BULL_X, WorldLayout.BULL_Z);
         if (Math.min(cowDistance, bullDistance) > INTERACTION_DISTANCE) return NO_ANIMAL;
         if (forage <= 0) return NO_FORAGE;
 
@@ -139,6 +139,12 @@ public final class AnimalSystem {
     public synchronized boolean hasCalf() { return calfBorn; }
     public synchronized boolean isCalfGrowing() {
         return calfBorn && calfAgeMs < CALF_GROWTH_DURATION_MS;
+    }
+
+    /** Progress used to scale the calf smoothly from newborn to adult size. */
+    public synchronized float getCalfGrowthProgress() {
+        if (!calfBorn) return 0.0f;
+        return Math.min(1.0f, calfAgeMs / (float) CALF_GROWTH_DURATION_MS);
     }
 
     public synchronized String getSummary() {

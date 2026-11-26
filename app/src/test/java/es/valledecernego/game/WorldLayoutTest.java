@@ -17,7 +17,9 @@ public class WorldLayoutTest {
         assertTrue(WorldLayout.countType(WorldLayout.TREE) >= 6);
         assertTrue(WorldLayout.countType(WorldLayout.ROCK) >= 2);
         assertTrue(WorldLayout.countType(WorldLayout.COW) >= 1);
-        assertTrue(WorldLayout.countType(WorldLayout.CALF) >= 1);
+        assertTrue(WorldLayout.countType(WorldLayout.BULL) >= 1);
+        assertEquals("A calf appears only after the herd reproduces", 0,
+            WorldLayout.countType(WorldLayout.CALF));
         assertTrue(WorldLayout.countType(WorldLayout.STABLE) >= 1);
         assertTrue(WorldLayout.countType(WorldLayout.MARKET) >= 1);
         assertTrue(WorldLayout.countType(WorldLayout.VILLAGE_BOARD) >= 1);

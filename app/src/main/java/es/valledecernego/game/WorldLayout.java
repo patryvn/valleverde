@@ -13,6 +13,15 @@ public final class WorldLayout {
     public static final int VILLAGE_BOARD = 8;
     public static final int HOUSE = 9;
     public static final int WATER_SOURCE = 10;
+    public static final int BULL = 11;
+
+    // Shared world coordinates keep feeding, rendering and interaction aligned.
+    public static final float COW_X = 4f;
+    public static final float COW_Z = 17f;
+    public static final float BULL_X = 6f;
+    public static final float BULL_Z = 19f;
+    public static final float CALF_X = 2.8f;
+    public static final float CALF_Z = 18.2f;
 
     private static final float[][] INITIAL_OBJECTS = {
         {-10f,16f,TREE,1f},
@@ -27,8 +36,8 @@ public final class WorldLayout {
         {-12f,26f,ROCK,1f},
         {3f,13f,BUSH,1f},
         {-8f,20f,BUSH,1f},
-        {4f,17f,COW,1f},
-        {6f,19f,CALF,1f},
+        {COW_X,COW_Z,COW,1f},
+        {BULL_X,BULL_Z,BULL,1f},
         {-9f,21f,STABLE,1f},
         {10f,25f,MARKET,1f},
         {-6f,14f,VILLAGE_BOARD,1f},
