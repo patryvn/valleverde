@@ -180,25 +180,7 @@ for attempt in $(seq 1 8); do
   moving_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -z "$moving_line" ]]; then continue; fi
   moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-  if python3 - "$initial_telemetry" "$moving_telemetry" <<'PY'
-import math, re, sys
-pattern = re.compile(r"PLAYER_STATE POS=(-?[0-9.]+),(-?[0-9.]+) CAM=(-?[0-9.]+),(-?[0-9.]+) PARTS=(\d+) FALLBACK=(\d+) GL=0x([0-9a-fA-F]+)")
-def parse(value):
-    match = pattern.search(value)
-    if not match: raise SystemExit("Malformed renderer telemetry: " + value)
-    x,z,cx,cz,parts,fallback,gl_error = match.groups()
-    if int(parts) not in (11,60) or int(fallback) not in (0,11) or (int(parts)==11 and int(fallback)!=11) or int(gl_error,16) != 0:
-        raise SystemExit("Player or compatibility silhouette batch did not complete cleanly: " + value)
-    return tuple(map(float,(x,z,cx,cz))) + (int(parts),int(fallback))
-a,b = parse(sys.argv[1]),parse(sys.argv[2])
-dx,dz = b[0]-a[0],b[1]-a[1]
-camera_dx,camera_dz = b[2]-a[2],b[3]-a[3]
-distance = math.hypot(dx,dz)
-if distance < 0.75: raise SystemExit(f"Joystick moved the player only {distance:.2f} m")
-if math.hypot(camera_dx-dx,camera_dz-dz) > 0.15: raise SystemExit("Third-person camera did not follow player translation")
-print(f"Verified {b[4]} main player parts, {b[5]} compatibility parts, GL_NO_ERROR, {distance:.2f} m movement and matching camera translation.")
-PY
-  then
+  if python3 scripts/verify-player-motion.py "$initial_telemetry" "$moving_telemetry"; then
     movement_ok=1
     break
   fi
