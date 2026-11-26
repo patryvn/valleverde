@@ -228,3 +228,14 @@ El test de movimiento alcanzó 0,45 m y el registro informa 60 piezas, 11 piezas
 El smoke test ahora comprueba la ventana **después** de cada captura y aplica una política de reintento limitada a cinco capturas. Si aparece una ANR visible de SystemUI, espera a que desaparezca y vuelve a capturar; si el diálogo desaparece antes del volcado pero la imagen quedó contaminada, repite el análisis de píxeles. Un diálogo inmersivo u otra superposición visible no reintentable sigue siendo un fallo inmediato. Si la escena no contiene un humanoide en cinco capturas limpias, el test también falla. Se añaden cuatro pruebas unitarias de esta política.
 
 Esta corrección hace más fiable la evidencia de CI, pero no sustituye la validación física en el Poco X6 Pro con Android 16. La captura inicial de SwiftShader no prueba el controlador gráfico del teléfono.
+
+
+## 0.27.0: respaldo humanoide independiente de cápsulas y esferas (26-11-2026)
+
+La incidencia del rectángulo azul en el teléfono físico no se considera resuelta por las capturas de SwiftShader. Para reducir la dependencia de las rutas de geometría que pueden variar entre controladores, el respaldo de 11 piezas se ha simplificado: cabeza, gorra, torso, brazos, piernas, botas y mochila se dibujan ahora con el búfer de cubo (vb) y el shader GLES mínimo. Las piezas esféricas se convierten a cajas con las mismas dimensiones exteriores; las extremidades se ensanchan ligeramente para mantener una silueta legible en pantallas pequeñas.
+
+La animación no se elimina: PlayerModelTransform aplica el pivote y el ángulo según Motion, independientemente de que la pieza se dibuje como cápsula o caja. El modelo detallado de 60 piezas conserva esferas, cápsulas, colores y materiales procedurales; el respaldo opaco de 11 cajas queda debajo para que una ruta de esfera/cápsula que falle no convierta el personaje en un torso rectangular.
+
+Se añade una prueba unitaria para confirmar que las extremidades del respaldo siguen animándose y conservan sus escalas. La versión de prueba pasa a 0.27.0 (versionCode 31); CI comprueba la versión del APK antes de subir los artefactos y vuelve a instalar la variante release para la prueba de movimiento.
+
+**Límite de validación:** este cambio hace que el respaldo dependa de un solo búfer de cubo ya utilizado por el terreno y las construcciones, pero aún necesita captura inicial y en movimiento en el emulador. La prueba definitiva del controlador físico sigue pendiente en el Poco X6 Pro con Android 16. Comprobar en el HUD que aparece 0.27.0, que se ve cabeza, torso, ambos brazos y piernas, y que el personaje no se deforma al caminar y girar la cámara.
