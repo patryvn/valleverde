@@ -27,6 +27,7 @@ public final class WorldMaterialSpec {
 
     /** Expected brightness multiplier for the two terrain-noise octaves. */
     public static float terrainBrightness(float x, float z) {
+        if (!isFinite(x) || !isFinite(z)) return 0.91f;
         float detail = 0.5f + 0.5f * (float) Math.sin(x * DETAIL_SCALE + Math.sin(z * 3.1f));
         return 0.80f + 0.16f * noise(x, z, PATCH_SCALE) + 0.06f * detail;
     }
