@@ -31,6 +31,28 @@ assert_game_alive() {
   return 1
 }
 
+wait_for_clear_windows() {
+  local stage="$1"
+  local dump_path="$2"
+  for attempt in $(seq 1 20); do
+    adb shell dumpsys window windows > "$dump_path" 2>&1 || true
+    if python3 scripts/verify-window-state.py "$dump_path"; then return 0; fi
+    if python3 scripts/verify-window-state.py --retryable-systemui-anr "$dump_path"; then
+      echo "SystemUI ANR overlay during $stage; waiting for Android UI recovery ($attempt/20)."
+      assert_game_alive "$stage while waiting for SystemUI recovery" || return 1
+      if [[ "$attempt" == "4" ]]; then
+        adb shell input keyevent 4 >/dev/null 2>&1 || true
+      fi
+      sleep 2
+      continue
+    fi
+    python3 scripts/verify-window-state.py "$dump_path"
+    return 1
+  done
+  echo "SystemUI ANR overlay did not clear during $stage after 40 seconds."
+  python3 scripts/verify-window-state.py "$dump_path"
+}
+
 adb wait-for-device
 boot_ready=0
 for attempt in $(seq 1 180); do
@@ -47,6 +69,11 @@ for attempt in $(seq 1 90); do
   sleep 2
 done
 if [[ "$package_ready" != "1" ]]; then echo "PackageManager did not become ready after Android boot."; exit 1; fi
+
+# SystemUI can finish its first-run service initialization after boot_completed.
+# Give it time before launching the game; otherwise a transient SystemUI ANR can
+# cover the player even though the game's GL thread and input remain healthy.
+sleep 30
 
 # SwiftShader is CPU-bound in CI; keep the landscape surface small.
 adb shell wm size 720x405 >/dev/null 2>&1 || true
@@ -82,12 +109,10 @@ if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed 
 # visible in that mode, avoiding Android 15's immersive confirmation activity.
 # On the CPU-only AVD that system activity produced a Settings ANR and covered
 # the player in run 156, so the test must not try to tap through a system dialog.
-window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-printf '%s\n' "$window_dump" > emulator-output/windows-after-launch.txt
 # dumpsys lists hidden windows too. Only a Surface: shown=true overlay can
-# invalidate the screenshot; a pending SystemUI ANR window with shown=false
-# must not abort the game smoke test.
-python3 scripts/verify-window-state.py emulator-output/windows-after-launch.txt
+# invalidate the screenshot. A visible SystemUI ANR is retried for up to 40 s;
+# an immersive confirmation or an app ANR remains an immediate failure.
+wait_for_clear_windows "post-launch" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
@@ -104,8 +129,7 @@ if [[ -z "$initial_line" ]]; then
 fi
 initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
 assert_game_alive "initial scene capture" || exit 1
-adb shell dumpsys window windows > emulator-output/windows-before-initial-capture.txt
-python3 scripts/verify-window-state.py emulator-output/windows-before-initial-capture.txt
+wait_for_clear_windows "initial capture" emulator-output/windows-before-initial-capture.txt
 adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-initial.png
@@ -163,8 +187,7 @@ if [[ "$movement_ok" != "1" ]]; then
   grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
   exit 1
 fi
-adb shell dumpsys window windows > emulator-output/windows-before-moving-capture.txt
-python3 scripts/verify-window-state.py emulator-output/windows-before-moving-capture.txt
+wait_for_clear_windows "moving capture" emulator-output/windows-before-moving-capture.txt
 adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
 test -s emulator-output/valle-cernego-moving.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-moving.png
