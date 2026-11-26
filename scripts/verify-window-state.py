@@ -8,7 +8,7 @@ from pathlib import Path
 
 BLOCKING_TOKENS = ("ImmersiveModeConfirmation", "Application Not Responding")
 SYSTEMUI_ANR = "Application Not Responding: com.android.systemui"
-WINDOW_HEADER = re.compile(r"^\\s*Window #\\d+ Window\\{")
+WINDOW_HEADER = re.compile(r"^\s*Window #\d+ Window\{")
 
 
 def visible_blocking_windows(dump: str) -> list[str]:
