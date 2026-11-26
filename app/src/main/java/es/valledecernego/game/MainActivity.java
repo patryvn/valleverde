@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
         renderer.loadVillagers(preferences.getString("villagers", ""));
         renderer.loadVillagerWorld(preferences.getString("villager_world", ""));
         renderer.loadSeason(preferences.getString("season", ""));
+        renderer.loadSurvival(preferences.getString("survival", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -72,11 +73,19 @@ public class MainActivity extends Activity {
         status.setTextSize(14);
         status.setText(statusText());
         top.addView(status);
+        LinearLayout topButtons=new LinearLayout(this);
+        topButtons.setOrientation(LinearLayout.HORIZONTAL);
         Button journal=new Button(this);
         journal.setText("DIARIO · TAREAS");
         journal.setTextSize(12);
         journal.setOnClickListener(v -> showQuestJournal());
-        top.addView(journal,new LinearLayout.LayoutParams(-2,-2));
+        topButtons.addView(journal,new LinearLayout.LayoutParams(-2,-2));
+        Button eatButton=new Button(this);
+        eatButton.setText("COMER");
+        eatButton.setTextSize(12);
+        eatButton.setOnClickListener(v -> eat());
+        topButtons.addView(eatButton,new LinearLayout.LayoutParams(-2,-2));
+        top.addView(topButtons);
         FrameLayout.LayoutParams tp=new FrameLayout.LayoutParams(-1,-2,Gravity.TOP);
         root.addView(top,tp);
 
@@ -89,7 +98,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + "  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + "  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getSurvivalSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
@@ -107,6 +116,7 @@ public class MainActivity extends Activity {
             .putString("villagers", renderer.saveVillagers())
             .putString("villager_world", renderer.saveVillagerWorld())
             .putString("season", renderer.saveSeason())
+            .putString("survival", renderer.saveSurvival())
             .apply();
     }
 
@@ -185,6 +195,10 @@ public class MainActivity extends Activity {
             }
             else if(k==7){showMarket();}
             else if(k==8){showVillageBoard();}
+            else if(k==WorldLayout.WATER_SOURCE){
+                if(renderer.drinkWater()) toast("Has bebido agua del manantial. Sed recuperada.");
+                else toast("No tienes sed ahora.");
+            }
             else if(k==9){
                 if(renderer.isHouseBuilt()){
                     new AlertDialog.Builder(this).setTitle("Mi casa de Cernego")
@@ -202,8 +216,17 @@ public class MainActivity extends Activity {
             }
             else {toast("No hay nada con lo que interactuar");}
         } else {
-            toast("Acércate a un árbol, piedra, parcela, animal o tablón de trabajos");
+            toast("Acércate a un árbol, piedra, parcela, animal, manantial o tablón de trabajos");
         }
+        saveProgress();
+        if(status!=null) status.setText(statusText());
+    }
+
+    void eat(){
+        int result=renderer.eatFood();
+        if(result==SurvivalSystem.ATE) toast("Has comido una cosecha. Hambre recuperada.");
+        else if(result==SurvivalSystem.NOT_HUNGRY) toast("No tienes hambre ahora.");
+        else toast("No tienes comida. Cultiva y recoge una cosecha para comer.");
         saveProgress();
         if(status!=null) status.setText(statusText());
     }
@@ -468,6 +491,7 @@ public class MainActivity extends Activity {
         final VillagerSystem villagers=new VillagerSystem();
         final VillagerWorldSystem villagerWorld=new VillagerWorldSystem();
         final SeasonSystem seasons=new SeasonSystem();
+        final SurvivalSystem survival=new SurvivalSystem();
         final QuestSystem quests=new QuestSystem();
         int lastQuestSeedReward=0;
         final float[] modelViewMatrix=new float[16];
@@ -711,7 +735,7 @@ public class MainActivity extends Activity {
             pitch=Math.max(-.2f,Math.min(.55f,pitch+(y-lastY)*.002f));
             lastX=x;lastY=y;
         }
-        void jump(){if(!jumping){vy=.13f;jumping=true;}}
+        void jump(){if(!jumping && survival.spendStamina(12f)){vy=.13f;jumping=true;}}
 
         public void onDrawFrame(GL10 gl){
             long now=System.nanoTime();
@@ -734,10 +758,11 @@ public class MainActivity extends Activity {
             GLES20.glClearColor(seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),1f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
             playerMoving=JoystickControl.isMoving(moveX,moveY);
+            survival.update(delta,playerMoving,seasons.getSeason(),seasons.getWeather());
             float moveWorldX=(float)(Math.sin(yaw)*(-moveY)+Math.cos(yaw)*moveX);
             float moveWorldZ=(float)(Math.cos(yaw)*(-moveY)-Math.sin(yaw)*moveX);
             if(playerMoving){
-                float speed=4.2f*deltaSeconds;
+                float speed=4.2f*deltaSeconds*survival.movementFactor();
                 px+=moveWorldX*speed;
                 pz+=moveWorldZ*speed;
                 playerFacing=(float)Math.atan2(moveWorldX,moveWorldZ);
@@ -757,6 +782,7 @@ public class MainActivity extends Activity {
                 if(o[3]==0)continue;
                 int t=(int)o[2];
                 if(!WorldVisibility.isVisible(px,pz,yaw,o[0],o[1],WorldVisibility.radiusForType(t),42f))continue;
+                if(t==WorldLayout.WATER_SOURCE) drawWaterSource(o[0],o[1]);
                 if(t==WorldLayout.TREE){
                     drawTree(o[0],o[1]);
                 }
@@ -898,6 +924,16 @@ public class MainActivity extends Activity {
                     draw(-7.2f,.36f,z+2f,.12f,.12f,4f,.43f,.29f,.16f);
                 }
             }
+        }
+
+        void drawWaterSource(float x,float z){
+            // Manantial de piedra junto al regato: agua visible y punto de hidratación.
+            draw(x,.16f,z,1.15f,.24f,1.05f,.48f,.47f,.42f);
+            draw(x,.30f,z,.78f,.07f,.68f,.12f,.43f,.61f);
+            draw(x-.43f,.62f,z,.10f,.72f,.10f,.34f,.23f,.13f);
+            draw(x+.43f,.62f,z,.10f,.72f,.10f,.34f,.23f,.13f);
+            draw(x,.99f,z,.98f,.12f,.13f,.39f,.27f,.15f);
+            draw(x,.55f,z-.25f,.30f,.42f,.30f,.42f,.29f,.18f);
         }
 
         String getDebugTelemetry(){
@@ -1279,6 +1315,7 @@ public class MainActivity extends Activity {
             if(kind==7)return "MERCADO · HACER: COMERCIAR";
             if(kind==8)return "TABLÓN · HACER: OFICIOS";
             if(kind==9)return "CASA · HACER: CONSTRUIR/VER";
+            if(kind==WorldLayout.WATER_SOURCE)return "MANANTIAL · HACER: BEBER";
             return "HACER · INTERACTUAR";
         }
 
@@ -1331,6 +1368,15 @@ public class MainActivity extends Activity {
         void loadVillagerWorld(String state){villagerWorld.loadState(state);}
         String saveSeason(){return seasons.saveState();}
         void loadSeason(String state){seasons.loadState(state);}
+        String saveSurvival(){return survival.saveState();}
+        void loadSurvival(String state){survival.loadState(state);}
+        String getSurvivalSummary(){return survival.getSummary();}
+        int eatFood(){
+            if(survival.hunger()>=95f)return SurvivalSystem.NOT_HUNGRY;
+            if(!crops.consumeHarvestUnit())return SurvivalSystem.NO_FOOD;
+            return survival.eatFood()?SurvivalSystem.ATE:SurvivalSystem.NOT_HUNGRY;
+        }
+        boolean drinkWater(){return survival.drinkWater();}
         String getSeasonSummary(){return seasons.getSummary();}
         String getVillagerSummary(){return villagers.getSummary();}
         String getVillagerPendingSummary(){return villagers.getPendingSummary();}
