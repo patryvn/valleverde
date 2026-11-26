@@ -1073,32 +1073,94 @@ public class MainActivity extends Activity {
         // Roble/castaño atlántico: raíces, tronco irregular, ramas y copas superpuestas.
         // La variación es determinista para que cada árbol conserve su aspecto entre fotogramas.
         // Árbol atlántico con LOD: la copa distante usa una sola esfera para reducir draw calls.
+        // Frondosas atlánticas y coníferas perennes: variantes deterministas por posición.
+        // La copa usa volúmenes suaves y LOD sencillo para mantener el coste bajo en móvil.
         void drawTree(float x,float z){
-            float leafR=seasons.foliageRed(),leafG=seasons.foliageGreen(),leafB=seasons.foliageBlue();
-            float seed=(float)(Math.abs(Math.sin(x*12.73f+z*4.91f)));
-            float crown=1f+(seed-.5f)*.18f;
+            int species=TreeVisualSpec.species(x,z);
+            float seed=TreeVisualSpec.seed(x,z);
+            float size=TreeVisualSpec.scale(x,z);
+            float crown=TreeVisualSpec.crownScale(x,z);
+            float shade=TreeVisualSpec.foliageShade(x,z);
+            float leafR=seasons.foliageRed();
+            float leafG=seasons.foliageGreen();
+            float leafB=seasons.foliageBlue();
+            if(species==TreeVisualSpec.CONIFER && seasons.getSeason()==SeasonSystem.WINTER){
+                // Las coníferas conservan el follaje en invierno.
+                leafR=.12f; leafG=.29f; leafB=.15f;
+            }
+            leafR=Math.min(1f,leafR*shade);
+            leafG=Math.min(1f,leafG*shade);
+            leafB=Math.min(1f,leafB*shade);
             float distance=(float)Math.hypot(x-px,z-pz);
-            drawMesh(capsuleBuffer,capsuleVertexCount,x,.98f,z,.20f,.98f,.20f,.27f,.16f,.085f,1f,0f,0f);
             if(distance>20f){
-                drawMesh(sphereBuffer,sphereVertexCount,x,2.18f,z,.82f*crown,.88f*crown,.78f*crown,
-                    leafR,leafG,leafB,1f,0f,0f);
+                if(species==TreeVisualSpec.CONIFER){
+                    drawMesh(sphereBuffer,sphereVertexCount,x,1.78f*size,z,
+                        .56f*size,1.20f*size,.56f*size,leafR,leafG,leafB,1f,0f,0f);
+                }else{
+                    drawMesh(sphereBuffer,sphereVertexCount,x,2.18f*size,z,
+                        .82f*crown,.88f*crown,.78f*crown,leafR,leafG,leafB,1f,0f,0f);
+                }
                 return;
             }
-            for(int i=0;i<2;i++){
-                float a=(float)(i*Math.PI+seed*.7f);
-                drawMesh(capsuleBuffer,capsuleVertexCount,x+(float)Math.cos(a)*.22f,.13f,z+(float)Math.sin(a)*.22f,
-                    .075f,.42f,.075f,.29f,.18f,.095f,1f,0f,0f,(float)Math.cos(a)*.72f);
+
+            drawMesh(capsuleBuffer,capsuleVertexCount,x,.98f*size,z,
+                .20f*size,.98f*size,.20f*size,.27f,.16f,.085f,1f,0f,0f);
+
+            if(species==TreeVisualSpec.CONIFER){
+                // Ramas visibles bajo las cuatro capas de follaje.
+                for(int branch=0;branch<3;branch++){
+                    float angle=seed*6.2831853f+branch*2.0943951f;
+                    float bx=x+(float)Math.cos(angle)*.22f*size;
+                    float bz=z+(float)Math.sin(angle)*.22f*size;
+                    drawMesh(capsuleBuffer,capsuleVertexCount,bx,1.30f*size,bz,
+                        .065f*size,.43f*size,.065f*size,.28f,.17f,.09f,1f,
+                        angle,0f,-.58f);
+                }
+                for(int tier=0;tier<TreeVisualSpec.CONIFER_TIER_COUNT;tier++){
+                    float radius=TreeVisualSpec.coniferTierRadius(tier)*size;
+                    float height=TreeVisualSpec.coniferTierHeight(tier)*size;
+                    float y=TreeVisualSpec.coniferTierCenterY(tier)*size;
+                    float tierShade=.86f+tier*.045f;
+                    float drift=(seed-.5f)*.10f*(tier+1);
+                    drawMesh(sphereBuffer,sphereVertexCount,x+drift,y,z-drift*.55f,
+                        radius,height,radius,Math.min(1f,leafR*tierShade),
+                        Math.min(1f,leafG*tierShade),Math.min(1f,leafB*tierShade),
+                        1f,0f,0f);
+                }
+                drawMesh(sphereBuffer,sphereVertexCount,x+(seed-.5f)*.08f,3.02f*size,z,
+                    .17f*size,.34f*size,.17f*size,leafR,leafG,leafB,1f,0f,0f);
+                return;
             }
-            drawMesh(capsuleBuffer,capsuleVertexCount,x-.30f,1.38f,z,.105f,.78f,.105f,.30f,.18f,.095f,1f,0f,0f,-.68f);
-            drawMesh(capsuleBuffer,capsuleVertexCount,x+.30f,1.43f,z+.03f,.105f,.82f,.105f,.30f,.18f,.095f,1f,0f,0f,.66f);
-            drawMesh(sphereBuffer,sphereVertexCount,x,2.18f,z,.76f*crown,.88f*crown,.73f*crown,
-                leafR*.91f,leafG*.91f,leafB*.91f,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.48f,2.02f,z+.12f,.54f,.62f,.55f,
+
+            // Raíces y ramas abiertas de roble/castaño.
+            for(int i=0;i<2;i++){
+                float angle=(float)(i*Math.PI+seed*.7f);
+                drawMesh(capsuleBuffer,capsuleVertexCount,
+                    x+(float)Math.cos(angle)*.22f*size,.13f*size,
+                    z+(float)Math.sin(angle)*.22f*size,
+                    .075f*size,.42f*size,.075f*size,.29f,.18f,.095f,
+                    1f,0f,0f,(float)Math.cos(angle)*.72f);
+            }
+            drawMesh(capsuleBuffer,capsuleVertexCount,x-.30f*size,1.38f*size,z,
+                .105f*size,.78f*size,.105f*size,.30f,.18f,.095f,1f,0f,0f,-.68f);
+            drawMesh(capsuleBuffer,capsuleVertexCount,x+.30f*size,1.43f*size,z+.03f*size,
+                .105f*size,.82f*size,.105f*size,.30f,.18f,.095f,1f,0f,0f,.66f);
+            float drift=(seed-.5f)*.12f;
+            drawMesh(sphereBuffer,sphereVertexCount,x+drift,2.18f*size,z,
+                .76f*crown,.88f*crown,.73f*crown,leafR*.91f,leafG*.91f,leafB*.91f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.48f*size,2.02f*size,z+.12f*size,
+                .54f*crown,.62f*crown,.55f*crown,
                 Math.min(1f,leafR*1.08f),Math.min(1f,leafG*1.08f),Math.min(1f,leafB*1.08f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+.48f,2.06f,z-.12f,.57f,.68f,.58f,
+            drawMesh(sphereBuffer,sphereVertexCount,x+.48f*size,2.06f*size,z-.12f*size,
+                .57f*crown,.68f*crown,.58f*crown,
                 Math.max(0f,leafR*.86f),Math.max(0f,leafG*.90f),Math.max(0f,leafB*.86f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.16f,2.55f,z-.24f,.48f,.55f,.48f,
+            drawMesh(sphereBuffer,sphereVertexCount,x-.16f*size,2.55f*size,z-.24f*size,
+                .48f*crown,.55f*crown,.48f*crown,
                 Math.min(1f,leafR*1.04f),Math.min(1f,leafG*1.05f),Math.min(1f,leafB*1.04f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.12f*size,1.98f*size,z+.48f*size,
+                .46f*crown,.52f*crown,.45f*crown,leafR*.96f,leafG*.98f,leafB*.96f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.14f*size,2.04f*size,z-.46f*size,
+                .47f*crown,.54f*crown,.46f*crown,leafR*.88f,leafG*.92f,leafB*.88f,1f,0f,0f);
         }
 
         // Ganado de raza cárnica: silueta más natural, cuello, articulaciones, pezuñas y rasgos faciales.
