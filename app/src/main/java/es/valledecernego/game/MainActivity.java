@@ -450,6 +450,8 @@ public class MainActivity extends Activity {
             playerFrameRendered=false;
             playerDrawCalls=0;
             playerGlError=GLES20.GL_NO_ERROR;
+            compatibilityRenderer=false;
+            silhouetteReady=false;
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
@@ -462,6 +464,7 @@ public class MainActivity extends Activity {
                 String fallbackVs="attribute vec3 aPos; uniform mat4 uMVP; void main(){gl_Position=uMVP*vec4(aPos,1.0);}";
                 String fallbackFs="precision mediump float; uniform vec4 uColor; void main(){gl_FragColor=uColor;}";
                 program=buildProgram(fallbackVs,fallbackFs);
+                compatibilityRenderer=program!=0;
             }
             pos=normalAttr=color=mvp=normalMatrixUniform=materialStyleUniform=-1;
             if(program==0){
