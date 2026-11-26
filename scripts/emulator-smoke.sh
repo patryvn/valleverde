@@ -97,13 +97,13 @@ fi
 window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
 if immersive_prompt_visible "$window_dump"; then
   echo "Android immersive-mode confirmation still covers the game after tapping its visible surface."
-  printf '%s\\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
+  printf '%s\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
   exit 1
 fi
 activity_dump="$(adb shell dumpsys activity activities 2>/dev/null || true)"
-if printf '%s\\n' "$activity_dump" | grep -q 'mCurrentFocus=Window{.*ImmersiveModeConfirmation'; then
+if printf '%s\n' "$activity_dump" | grep -q 'mCurrentFocus=Window{.*ImmersiveModeConfirmation'; then
   echo "Immersive confirmation still owns input focus after its surface was dismissed."
-  printf '%s\\n' "$activity_dump" | grep 'mCurrentFocus' || true
+  printf '%s\n' "$activity_dump" | grep 'mCurrentFocus' || true
   exit 1
 fi
 
