@@ -7,14 +7,18 @@ public final class WorldVisibility {
 
     private WorldVisibility() { }
 
+    private static boolean isFinite(float value) {
+        return !Float.isNaN(value) && !Float.isInfinite(value);
+    }
+
     public static boolean isVisible(float playerX, float playerZ, float yaw,
                                     float objectX, float objectZ,
                                     float radius, float maxDistance) {
         if (radius < 0f || maxDistance <= 0f
-                || !Float.isFinite(playerX) || !Float.isFinite(playerZ)
-                || !Float.isFinite(yaw) || !Float.isFinite(objectX)
-                || !Float.isFinite(objectZ) || !Float.isFinite(radius)
-                || !Float.isFinite(maxDistance)) return false;
+                || !isFinite(playerX) || !isFinite(playerZ)
+                || !isFinite(yaw) || !isFinite(objectX)
+                || !isFinite(objectZ) || !isFinite(radius)
+                || !isFinite(maxDistance)) return false;
         float dx = objectX - playerX;
         float dz = objectZ - playerZ;
         float forward = dx * (float)Math.sin(yaw) + dz * (float)Math.cos(yaw);
