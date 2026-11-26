@@ -113,4 +113,30 @@ public class PlayerModelSpecTest {
             PlayerModelSpec.find("left-eye-white").z+PlayerModelSpec.find("left-eye-white").sz
                 > PlayerModelSpec.find("head").z+PlayerModelSpec.find("head").sz);
     }
+    @Test public void compatibilitySilhouetteContainsAllEssentialHumanParts() {
+        PlayerModelSpec.Part[] fallback=PlayerModelSpec.fallbackParts();
+        assertEquals(11,fallback.length);
+        assertEquals(PlayerModelSpec.Shape.BOX,PlayerModelSpec.find("torso").shape);
+        assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("head").shape);
+        assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("left-arm").shape);
+        assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("right-arm").shape);
+        assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("left-leg").shape);
+        assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("right-leg").shape);
+        assertNotNull(PlayerModelSpec.find("left-boot"));
+        assertNotNull(PlayerModelSpec.find("right-boot"));
+        assertNotNull(PlayerModelSpec.find("neck"));
+        assertNotNull(PlayerModelSpec.find("cap"));
+        assertNotNull(PlayerModelSpec.find("backpack"));
+        for(PlayerModelSpec.Part part:fallback){
+            assertTrue(part.sx>0f && part.sy>0f && part.sz>0f);
+        }
+    }
+
+    @Test public void explorerJacketContrastsWithTheGreenWorldAndKeepsItsShirtAccent() {
+        PlayerModelSpec.Part torso=PlayerModelSpec.find("torso");
+        assertTrue("blue component must distinguish jacket from green grass",torso.b>torso.g+.08f);
+        assertNotNull(PlayerModelSpec.find("shirt-front"));
+        assertNotNull(PlayerModelSpec.find("shirt-orange-stripe"));
+    }
+
 }
