@@ -23,6 +23,18 @@ public class WorldVisibilityTest {
     @Test public void objectBoundsCanOverlapTheNearPlane() {
         assertTrue(WorldVisibility.isVisible(0f,0f,0f,0f,-1f,2f,40f));
     }
+    @Test public void nearbyTreeRemainsVisibleBehindThePlayerDuringCameraOrbit() {
+        assertTrue(WorldVisibility.isVisible(0f,0f,0f,0f,-5f,
+            WorldVisibility.radiusForType(WorldLayout.TREE),40f));
+    }
+    @Test public void nearbyTreeRemainsVisibleAtTheSideWhileApproaching() {
+        assertTrue(WorldVisibility.isVisible(0f,0f,0f,5f,0f,
+            WorldVisibility.radiusForType(WorldLayout.TREE),40f));
+    }
+    @Test public void nearFieldGraceDoesNotOverrideMaximumRenderDistance() {
+        assertFalse(WorldVisibility.isVisible(0f,0f,0f,0f,-5f,
+            WorldVisibility.radiusForType(WorldLayout.TREE),1f));
+    }
     @Test public void invalidBoundsAreNeverRendered() {
         assertFalse(WorldVisibility.isVisible(0f,0f,0f,1f,2f,-1f,40f));
         assertFalse(WorldVisibility.isVisible(Float.NaN,0f,0f,1f,2f,1f,40f));

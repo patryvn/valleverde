@@ -4,6 +4,8 @@ package es.valledecernego.game;
 public final class WorldVisibility {
     private static final float HORIZONTAL_TANGENT = 1.12f;
     private static final float NEAR_ALLOWANCE = 1.5f;
+    // Keep nearby scenery alive while the third-person camera orbits around the player.
+    private static final float NEAR_FIELD_GRACE = 3.5f;
 
     private WorldVisibility() { }
 
@@ -21,6 +23,12 @@ public final class WorldVisibility {
                 || !isFinite(maxDistance)) return false;
         float dx = objectX - playerX;
         float dz = objectZ - playerZ;
+        double distance = Math.hypot((double)dx, (double)dz);
+        // Frustum-only culling caused trees to pop out as the player approached
+        // them from the side or while looking away. Preserve a radial near field,
+        // but still enforce the configured far-distance limit.
+        if (distance > (double)maxDistance + radius) return false;
+        if (distance <= (double)radius + NEAR_FIELD_GRACE) return true;
         float forward = dx * (float)Math.sin(yaw) + dz * (float)Math.cos(yaw);
         float side = dx * (float)Math.cos(yaw) - dz * (float)Math.sin(yaw);
         if (forward + radius < -NEAR_ALLOWANCE) return false;
