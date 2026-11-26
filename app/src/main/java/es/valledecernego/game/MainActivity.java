@@ -461,7 +461,7 @@ public class MainActivity extends Activity {
 
     static class GameRenderer implements GLSurfaceView.Renderer {
         FloatBuffer vb;
-        int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform;
+        int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform,modelMatrixUniform;
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
         volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
@@ -523,8 +523,8 @@ public class MainActivity extends Activity {
                     +" version="+String.valueOf(GLES20.glGetString(GLES20.GL_VERSION))
                     +" depthBits="+depthBits[0]);
             }
-            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; varying vec3 vLocal; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); vLocal=aPos; gl_Position=uMVP*vec4(aPos,1.0);} ";
-            String fs="precision mediump float; uniform vec4 uColor; uniform float uMaterialStyle; varying float vLight; varying vec3 vLocal; void main(){vec3 base=uColor.rgb; if(uMaterialStyle>0.5 && uMaterialStyle<1.5){base*=0.97+0.03*sin(vLocal.x*42.0)*sin(vLocal.y*42.0);} else if(uMaterialStyle>1.5 && uMaterialStyle<2.5){base*=0.98+0.02*sin((vLocal.x+vLocal.y)*56.0);} else if(uMaterialStyle>2.5 && uMaterialStyle<3.5){base*=0.95+0.05*sin(vLocal.y*18.0+vLocal.x*6.0);} else if(uMaterialStyle>3.5 && uMaterialStyle<4.5){base*=0.99+0.01*sin(vLocal.y*12.0);} else if(uMaterialStyle>4.5){base=mix(base,vec3(0.78,0.67,0.42),0.18)*(0.92+0.08*abs(sin(vLocal.x*20.0)));} gl_FragColor=vec4(base*vLight,uColor.a);}";
+            String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uModel; uniform mat4 uNormalMatrix; varying float vLight; varying vec3 vLocal; varying vec3 vWorld; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); vLocal=aPos; vWorld=(uModel*vec4(aPos,1.0)).xyz; gl_Position=uMVP*vec4(aPos,1.0);} ";
+            String fs="precision mediump float; uniform vec4 uColor; uniform float uMaterialStyle; varying float vLight; varying vec3 vLocal; varying vec3 vWorld; float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);} float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.0-2.0*f);float a=hash(i);float b=hash(i+vec2(1.0,0.0));float c=hash(i+vec2(0.0,1.0));float d=hash(i+vec2(1.0,1.0));return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);} void main(){vec3 base=uColor.rgb;float lighting=vLight; if(uMaterialStyle>0.5 && uMaterialStyle<1.5){base*=0.97+0.03*sin(vLocal.x*42.0)*sin(vLocal.y*42.0);} else if(uMaterialStyle>1.5 && uMaterialStyle<2.5){base*=0.98+0.02*sin((vLocal.x+vLocal.y)*56.0);} else if(uMaterialStyle>2.5 && uMaterialStyle<3.5){base*=0.95+0.05*sin(vLocal.y*18.0+vLocal.x*6.0);} else if(uMaterialStyle>3.5 && uMaterialStyle<4.5){base*=0.99+0.01*sin(vLocal.y*12.0);} else if(uMaterialStyle>4.5 && uMaterialStyle<5.5){base=mix(base,vec3(0.78,0.67,0.42),0.18)*(0.92+0.08*abs(sin(vLocal.x*20.0)));} else if(uMaterialStyle>5.5 && uMaterialStyle<6.5){float broad=noise(vWorld.xz*0.42);float detail=0.5+0.5*sin(vWorld.x*3.7+sin(vWorld.z*3.1));base*=0.80+0.16*broad+0.06*detail;} else if(uMaterialStyle>6.5 && uMaterialStyle<7.5){float gradient=smoothstep(-0.28,0.68,vLocal.y);vec3 horizon=base;vec3 zenith=base*vec3(0.56,0.72,0.90);base=mix(horizon,zenith,gradient);lighting=1.0;} gl_FragColor=vec4(base*lighting,uColor.a);}";
             program=buildProgram(vs,fs);
             if(program==0){
                 android.util.Log.w("ValleCernego","Shader iluminado no disponible; se activa el shader plano de compatibilidad.");
@@ -533,7 +533,7 @@ public class MainActivity extends Activity {
                 program=buildProgram(fallbackVs,fallbackFs);
                 compatibilityRenderer=program!=0;
             }
-            pos=normalAttr=color=mvp=normalMatrixUniform=materialStyleUniform=-1;
+            pos=normalAttr=color=mvp=normalMatrixUniform=materialStyleUniform=modelMatrixUniform=-1;
             if(program==0){
                 rendererReady=false;
                 android.util.Log.e("ValleCernego","Shader principal no disponible; se conservará la silueta humana independiente.");
@@ -544,8 +544,10 @@ public class MainActivity extends Activity {
                 mvp=GLES20.glGetUniformLocation(program,"uMVP");
                 normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
                 materialStyleUniform=GLES20.glGetUniformLocation(program,"uMaterialStyle");
+                modelMatrixUniform=GLES20.glGetUniformLocation(program,"uModel");
                 rendererReady=pos>=0 && color>=0 && mvp>=0
-                    && (normalAttr<0 || normalMatrixUniform>=0);
+                    && (normalAttr<0 || normalMatrixUniform>=0)
+                    && (materialStyleUniform<0 || modelMatrixUniform>=0);
                 if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
             }
 
@@ -571,6 +573,7 @@ public class MainActivity extends Activity {
                 mvp=silhouetteMvp;
                 normalMatrixUniform=-1;
                 materialStyleUniform=-1;
+                modelMatrixUniform=-1;
                 rendererReady=true;
                 compatibilityRenderer=true;
                 silhouetteReady=false;
@@ -739,7 +742,13 @@ public class MainActivity extends Activity {
             ThirdPersonCamera.Pose camera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
             Matrix.setLookAtM(view,0,camera.x(),camera.y(),camera.z(),px,camera.targetY(),pz,0,1,0);
 
-            draw(0,PlayerModelSpec.GROUND_LEVEL-.25f,0,100,.5f,100,.25f,.42f,.23f);
+            // Cúpula de cielo con degradado vertical, dibujada primero.
+            drawMesh(sphereBuffer,sphereVertexCount,camera.x(),camera.y(),camera.z(),
+                96f,96f,96f,seasons.skyRed(),seasons.skyGreen(),seasons.skyBlue(),
+                1f,0f,0f,0f,WorldMaterialSpec.SKY);
+            // Suelo con ruido procedural de baja frecuencia y detalle fino.
+            drawMesh(vb,36,0,PlayerModelSpec.GROUND_LEVEL-.25f,0,100,.5f,100,
+                .25f,.42f,.23f,1f,0f,0f,0f,WorldMaterialSpec.TERRAIN);
             drawRuralLandmarks();
             draw(-10,-.12f,-4,2,.12f,32,.18f,.48f,.62f);
             draw(0,-.08f,6,2,.12f,28,.55f,.42f,.25f);
@@ -1317,6 +1326,7 @@ public class MainActivity extends Activity {
 
             GLES20.glUseProgram(program);
             GLES20.glUniformMatrix4fv(mvp,1,false,mvpM,0);
+            if(modelMatrixUniform>=0)GLES20.glUniformMatrix4fv(modelMatrixUniform,1,false,model,0);
             if(normalMatrixUniform>=0){
                 GLES20.glUniformMatrix4fv(normalMatrixUniform,1,false,normalMatrixM,0);
             }

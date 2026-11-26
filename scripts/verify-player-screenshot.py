@@ -105,12 +105,30 @@ def verify(path):
     bounds = (min(xs), min(ys), max(xs), max(ys)) if xs and ys else None
     if bounds is None or bounds[2] - bounds[0] < 20 or bounds[3] - bounds[1] < 80:
         failures.append("humanoid pixel bounds too small: %s" % (bounds,))
+    # The lower central strip is clear of the joystick and action buttons.
+    # A single flat green colour here is a visual regression of the terrain shader.
+    terrain_colors = set()
+    terrain_pixels = 0
+    gx0, gx1 = int(width * .25), int(width * .75)
+    gy0, gy1 = int(height * .74), int(height * .87)
+    for y in range(gy0, min(gy1, height)):
+        row = rows[y]
+        for x in range(gx0, min(gx1, width)):
+            i = x * channels
+            r, g, b = row[i], row[i+1], row[i+2]
+            if g > r * 1.15 and g > b * 1.05 and g > 45:
+                terrain_pixels += 1
+                terrain_colors.add((r // 4, g // 4, b // 4))
+    if terrain_pixels < 5000:
+        failures.append("too few visible grass pixels: %d<5000" % terrain_pixels)
+    if len(terrain_colors) < 10:
+        failures.append("terrain is too uniform: %d quantized green colours<10" % len(terrain_colors))
     if failures:
-        raise SystemExit("Humanoid screenshot check failed: %s; counts=%s; bounds=%s"
-                         % (", ".join(failures), counts, bounds))
-    print("Visible humanoid pixels verified (%dx%d): skin=%d jacket=%d boots=%d dark-limbs=%d head-feet=%.1fpx bounds=%s"
+        raise SystemExit("Humanoid/world screenshot check failed: %s; counts=%s; bounds=%s; terrain=%d pixels/%d colours"
+                         % (", ".join(failures), counts, bounds, terrain_pixels, len(terrain_colors)))
+    print("Visible humanoid/world verified (%dx%d): skin=%d jacket=%d boots=%d dark-limbs=%d head-feet=%.1fpx bounds=%s terrain=%d pixels/%d colours"
           % (width, height, counts["skin"], counts["jacket"], counts["boots"],
-             counts["dark"], separation, bounds))
+             counts["dark"], separation, bounds, terrain_pixels, len(terrain_colors)))
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

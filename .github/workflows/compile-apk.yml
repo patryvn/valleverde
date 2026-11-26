@@ -23,7 +23,7 @@ jobs:
       - name: Validate Android smoke scripts
         run: |
           bash -n scripts/emulator-smoke.sh
-          python3 -m py_compile scripts/verify-player-screenshot.py scripts/verify-player-motion.py scripts/test_player_motion.py scripts/verify-window-state.py scripts/test_window_state.py
+          python3 -m py_compile scripts/verify-player-screenshot.py scripts/verify-player-motion.py scripts/test_player_motion.py scripts/test_emulator_smoke.py scripts/verify-window-state.py scripts/test_window_state.py
           python3 -m unittest discover -s scripts -p 'test_*.py' -v
 
       - name: Set up Java 17
@@ -58,7 +58,7 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game' versionCode='35' versionName='0.27.4'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game.preview' versionCode='36' versionName='0.27.5'"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

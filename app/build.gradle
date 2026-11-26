@@ -9,14 +9,16 @@ android {
         applicationId 'es.valledecernego.game'
         minSdk 23
         targetSdk 35
-        versionCode 35
-        versionName '0.27.4'
+        versionCode 36
+        versionName '0.27.5'
     }
     testOptions {
         unitTests.returnDefaultValues = true
     }
     buildTypes {
         release {
+            // Separate preview package lets testers keep the existing save-bearing app installed.
+            applicationIdSuffix ".preview"
             // Signed with the CI debug key so the release-test APK is directly installable.
             // This is not a Play Store signing key.
             signingConfig signingConfigs.debug

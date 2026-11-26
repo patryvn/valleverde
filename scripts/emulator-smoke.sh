@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 
 mkdir -p emulator-output
+APP_ID="es.valledecernego.game.preview"
+ACTIVITY_CLASS="es.valledecernego.game.MainActivity"
 LOGCAT_PID=""
 
 collect_diagnostics() {
@@ -15,7 +17,7 @@ collect_diagnostics() {
     adb logcat -b all -d -v time > emulator-output/logcat.txt 2>&1 || true
     adb shell dumpsys activity activities > emulator-output/activities.txt 2>&1 || true
     adb shell dumpsys window windows > emulator-output/windows.txt 2>&1 || true
-    adb shell dumpsys gfxinfo es.valledecernego.game > emulator-output/gfxinfo.txt 2>&1 || true
+    adb shell dumpsys gfxinfo "$APP_ID" > emulator-output/gfxinfo.txt 2>&1 || true
   fi
   exit "$exit_code"
 }
@@ -24,10 +26,10 @@ trap collect_diagnostics EXIT
 assert_game_alive() {
   local stage="$1"
   local app_pid
-  app_pid="$(adb shell pidof es.valledecernego.game 2>/dev/null | tr -d '\r' || true)"
+  app_pid="$(adb shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' || true)"
   if [[ -n "$app_pid" ]]; then return 0; fi
   echo "Game process exited during $stage."
-  adb logcat -d -v time | grep -A 24 -B 5 -E 'FATAL EXCEPTION|AndroidRuntime|IllegalFormatConversionException|Process: es.valledecernego.game' | tail -n 80 || true
+  adb logcat -d -v time | grep -A 24 -B 5 -E "FATAL EXCEPTION|AndroidRuntime|IllegalFormatConversionException|Process: $APP_ID" | tail -n 80 || true
   return 1
 }
 
@@ -184,16 +186,16 @@ done
 if [[ "$install_ok" != "1" ]]; then echo "Release-test APK installation failed after five attempts."; exit 1; fi
 
 adb shell input keyevent 224 || true
-adb shell am force-stop es.valledecernego.game || true
+adb shell am force-stop "$APP_ID" || true
 adb logcat -v time -s ValleCernego:I > emulator-output/renderer-live.log 2>&1 &
 LOGCAT_PID=$!
-adb shell am start -n es.valledecernego.game/.MainActivity --ez debug_telemetry true
+adb shell am start -n "$APP_ID/$ACTIVITY_CLASS" --ez debug_telemetry true
 
 app_ready=0
 for attempt in $(seq 1 30); do
   resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -E 'mResumedActivity|topResumedActivity' | tail -n 1 || true)"
-  app_pid="$(adb shell pidof es.valledecernego.game 2>/dev/null | tr -d '\r' || true)"
-  if [[ -n "$app_pid" ]] && printf '%s\n' "$resumed" | grep -Fq 'es.valledecernego.game'; then app_ready=1; break; fi
+  app_pid="$(adb shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' || true)"
+  if [[ -n "$app_pid" ]] && printf '%s\n' "$resumed" | grep -Fq "$APP_ID"; then app_ready=1; break; fi
   sleep 2
 done
 if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed state."; exit 1; fi
@@ -290,7 +292,7 @@ fi
 capture_moving_humanoid_frame "moving scene" emulator-output/valle-cernego-moving.png emulator-output/windows-before-moving-capture.txt
 
 adb logcat -d -v time > emulator-output/logcat.txt
-if grep -E "FATAL EXCEPTION.*Process: es.valledecernego.game|Fatal signal.*es.valledecernego.game|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
+if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
   echo "Fatal app or player OpenGL error detected."
   exit 1
 fi

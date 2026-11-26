@@ -260,3 +260,14 @@ El script ahora especifica el display principal (`input touchscreen -d 0 swipe`)
 
 
 El test `scripts/test_emulator_smoke.py` protege el uso explícito del display 0 en el gesto principal y en su alternativa, y comprueba que el smoke test siga exigiendo eventos `DOWN` y `MOVE` del joystick. La ejecución automatizada no sustituye la comprobación manual del control táctil en el Poco X6 Pro.
+
+
+## Verificación completa de la rama 0.27.4 (run 45906553532)
+
+La ejecución de GitHub Actions terminó en verde el 26-11-2026: validación de scripts, testDebugUnitTest, assembleDebug, assembleRelease, firma/paquete y prueba de escena en Android 35. La captura inicial detectó piel, chaqueta, botas y extremidades del personaje (60 piezas detalladas, 11 de compatibilidad, GL_NO_ERROR). El registro de movimiento confirmó un desplazamiento de 0,29 m y error de seguimiento de cámara de 0,00 m. La captura móvil quedó cubierta por un aviso de ANR de SystemUI; el script omitió solo esa comprobación de píxeles en movimiento, pero la telemetría del renderizador y la cámara sí pasó. Esto no sustituye la prueba física en el Poco X6 Pro.
+
+## Paquete paralelo y materiales del mundo (0.27.5)
+
+La versión release-test usa el identificador es.valledecernego.game.preview y la etiqueta «Valle de Cernego · Prueba». Se instala al lado de la aplicación anterior, sin pedir desinstalarla ni borrar su partida. La versión de desarrollo conserva el identificador principal; el paquete preview tiene su propio almacenamiento y empieza con una partida separada.
+
+El terreno recibe variación procedural de baja frecuencia y grano fino en el shader OpenGL ES 2.0; el cielo usa una cúpula con degradado vertical derivado del color meteorológico actual. No se descargan texturas ni recursos externos. La prueba de captura exige ahora variedad de tonos verdes en el terreno además de la silueta humana, para detectar regresiones a un plano completamente uniforme. La validación física de rendimiento, temperatura, legibilidad del HUD y control táctil sigue pendiente.
