@@ -23,7 +23,8 @@ jobs:
       - name: Validate Android smoke scripts
         run: |
           bash -n scripts/emulator-smoke.sh
-          python3 -m py_compile scripts/verify-player-screenshot.py
+          python3 -m py_compile scripts/verify-player-screenshot.py scripts/verify-player-motion.py scripts/test_player_motion.py
+          python3 -m unittest discover -s scripts -p 'test_*.py' -v
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
