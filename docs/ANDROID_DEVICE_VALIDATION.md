@@ -107,3 +107,10 @@ La ejecución 45738355635 (versión 0.19.0) pasó `testDebugUnitTest`, `assemble
 La versión 0.20.0 actualiza `scripts/emulator-smoke.sh` para detectar `ImmersiveModeConfirmation`, pulsar «Got it» según el tamaño real del AVD y comprobar que la ventana haya desaparecido antes de capturar o usar el joystick. El gesto se mantiene en el centro del joystick calculado a partir de los mismos factores que usa `Hud.onDraw()`. Se aumenta su duración a 1,2 s y se deja tiempo para que la telemetría recoja el desplazamiento. La prueba sigue exigiendo al menos 0,75 m de movimiento y que la cámara acompañe el vector con un error máximo de 0,15 m.
 
 Esta corrección valida el flujo de prueba, no altera la geometría del personaje ni sustituye la inspección visual. La captura sin el diálogo deberá mostrar el modelo completo y se inspeccionarán tanto la imagen inicial como la imagen en movimiento. La validación física en el Poco X6 Pro con Android 16 sigue pendiente.
+
+
+## Corrección de espera de superficie del diálogo (0.20.1)
+
+La ejecución 45745324047 volvió a pasar las pruebas unitarias, ambas compilaciones y la verificación de APK. El smoke test detectó que el diálogo inmersivo seguía visible. El registro final muestra que el primer intento se envió antes de que Android hubiera creado la superficie del diálogo; al finalizar el script, la ventana todavía tenía `Surface: shown=true` y seguía siendo `mCurrentFocus`. Por tanto, el tap no había llegado al botón «Got it». El archivo de diagnóstico de este run no contiene captura de la escena ni telemetría del personaje, así que no se puede juzgar el movimiento en 0.20.0.
+
+En 0.20.1 el script no confunde la existencia de la ventana con su visibilidad. Espera a que el bloque `ImmersiveModeConfirmation` indique `Surface: shown=true`, entonces pulsa el botón y vuelve a consultar el estado de la superficie y el foco de entrada. Solo continúa con la captura y el joystick cuando el aviso ya no es visible ni conserva el foco. Así se evita enviar los toques antes de que el diálogo esté listo.

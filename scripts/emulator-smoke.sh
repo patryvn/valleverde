@@ -69,20 +69,41 @@ for attempt in $(seq 1 30); do
 done
 if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed state."; exit 1; fi
 
-# Android 15 can place an immersive-mode confirmation window above the game on
-# the first launch. It keeps the Activity resumed but intercepts every touch,
-# which made the joystick test report zero movement. Dismiss its "Got it" button
-# before capturing pixels or injecting gameplay input.
-for attempt in $(seq 1 10); do
+# Android 15 can create the immersive confirmation window before it has
+# drawn its surface. Tapping while mDrawState=NO_SURFACE is ignored, so wait
+# for the actual "Got it" overlay to be visible before sending the tap.
+immersive_prompt_visible() {
+  printf '%s\n' "$1" | awk '
+    /Window #[0-9]+ Window\\{.*ImmersiveModeConfirmation/ { in_prompt=1; next }
+    in_prompt && /^  Window #[0-9]+ Window\\{/ { in_prompt=0 }
+    in_prompt && /Surface: shown=true/ { shown=1 }
+    END { exit !shown }
+  '
+}
+prompt_visible=0
+for attempt in $(seq 1 30); do
   window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-  if ! printf '%s\n' "$window_dump" | grep -q 'ImmersiveModeConfirmation'; then break; fi
-  adb shell input tap "$((screen_w * 70 / 100))" "$((screen_h * 35 / 100))"
+  if immersive_prompt_visible "$window_dump"; then prompt_visible=1; break; fi
   sleep 1
 done
+if [[ "$prompt_visible" == "1" ]]; then
+  for attempt in $(seq 1 8); do
+    adb shell input tap "$((screen_w * 70 / 100))" "$((screen_h * 35 / 100))"
+    sleep 1
+    window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
+    if ! immersive_prompt_visible "$window_dump"; then break; fi
+  done
+fi
 window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-if printf '%s\n' "$window_dump" | grep -q 'ImmersiveModeConfirmation'; then
-  echo "Android immersive-mode confirmation still covers the game after dismissal attempts."
-  printf '%s\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
+if immersive_prompt_visible "$window_dump"; then
+  echo "Android immersive-mode confirmation still covers the game after tapping its visible surface."
+  printf '%s\\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
+  exit 1
+fi
+activity_dump="$(adb shell dumpsys activity activities 2>/dev/null || true)"
+if printf '%s\\n' "$activity_dump" | grep -q 'mCurrentFocus=Window{.*ImmersiveModeConfirmation'; then
+  echo "Immersive confirmation still owns input focus after its surface was dismissed."
+  printf '%s\\n' "$activity_dump" | grep 'mCurrentFocus' || true
   exit 1
 fi
 
