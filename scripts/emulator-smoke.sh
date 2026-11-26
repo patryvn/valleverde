@@ -49,7 +49,7 @@ done
 if [[ "$package_ready" != "1" ]]; then echo "PackageManager did not become ready after Android boot."; exit 1; fi
 
 # SwiftShader is CPU-bound in CI; keep the landscape surface small.
-adb shell wm size 960x540 >/dev/null 2>&1 || true
+adb shell wm size 720x405 >/dev/null 2>&1 || true
 adb shell wm density 160 >/dev/null 2>&1 || true
 screen_size="$(adb shell wm size | sed -n 's/.*size: //p' | tail -n 1 | tr -d '\r')"
 if [[ ! "$screen_size" =~ ^[0-9]+x[0-9]+$ ]]; then echo "Could not determine emulator screen size: $screen_size"; exit 1; fi
@@ -64,7 +64,6 @@ done
 if [[ "$install_ok" != "1" ]]; then echo "Release-test APK installation failed after five attempts."; exit 1; fi
 
 adb shell input keyevent 224 || true
-adb shell input keyevent 82 || true
 adb shell am force-stop es.valledecernego.game || true
 adb logcat -v time -s ValleCernego:I > emulator-output/renderer-live.log 2>&1 &
 LOGCAT_PID=$!
@@ -79,45 +78,22 @@ for attempt in $(seq 1 30); do
 done
 if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed state."; exit 1; fi
 
-# Android 15 can create the immersive confirmation window before it has
-# drawn its surface. Tapping while mDrawState=NO_SURFACE is ignored, so wait
-# for the actual "Got it" overlay to be visible before sending the tap.
-immersive_prompt_visible() {
-  printf '%s\n' "$1" | awk '
-    /ImmersiveModeConfirmation/ { in_prompt=1; next }
-    in_prompt && /^  Window #[0-9]+ Window/ { in_prompt=0 }
-    in_prompt && /Surface: shown=true/ { shown=1 }
-    END { exit !shown }
-  '
-}
-prompt_visible=0
-for attempt in $(seq 1 30); do
-  window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-  if immersive_prompt_visible "$window_dump"; then prompt_visible=1; break; fi
-  sleep 1
-done
-if [[ "$prompt_visible" == "1" ]]; then
-  for attempt in $(seq 1 8); do
-    adb shell input tap "$((screen_w * 70 / 100))" "$((screen_h * 35 / 100))"
-    sleep 1
-    window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-    if ! immersive_prompt_visible "$window_dump"; then break; fi
-  done
-fi
+# CI launches with debug_telemetry=true. WindowModePolicy leaves system bars
+# visible in that mode, avoiding Android 15's immersive confirmation activity.
+# On the CPU-only AVD that system activity produced a Settings ANR and covered
+# the player in run 156, so the test must not try to tap through a system dialog.
 window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-if immersive_prompt_visible "$window_dump"; then
-  echo "Android immersive-mode confirmation still covers the game after tapping its visible surface."
+if printf '%s\n' "$window_dump" | grep -q 'ImmersiveModeConfirmation'; then
+  echo "Unexpected immersive confirmation in debug telemetry mode."
   printf '%s\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
   exit 1
 fi
-activity_dump="$(adb shell dumpsys activity activities 2>/dev/null || true)"
-if printf '%s\n' "$activity_dump" | grep -q 'mCurrentFocus=Window{.*ImmersiveModeConfirmation'; then
-  echo "Immersive confirmation still owns input focus after its surface was dismissed."
-  printf '%s\n' "$activity_dump" | grep 'mCurrentFocus' || true
+if printf '%s\n' "$window_dump" | grep -q 'Application Not Responding'; then
+  echo "Android system ANR dialog is covering the game; screenshot is not valid."
+  printf '%s\n' "$window_dump" | grep -C 2 'Application Not Responding' || true
   exit 1
 fi
-
-assert_game_alive "immersive-mode confirmation dismissal" || exit 1
+assert_game_alive "debug launch" || exit 1
 
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
 initial_line=""

@@ -37,9 +37,9 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
-        getWindow().getDecorView().setSystemUiVisibility(5894|1024|512|4096);
-        preferences = getSharedPreferences("valle_de_cernego_save", MODE_PRIVATE);
         debugTelemetry = getIntent().getBooleanExtra("debug_telemetry", false);
+        getWindow().getDecorView().setSystemUiVisibility(WindowModePolicy.flags(debugTelemetry));
+        preferences = getSharedPreferences("valle_de_cernego_save", MODE_PRIVATE);
         wood = preferences.getInt("wood", 0);
         stone = preferences.getInt("stone", 0);
 
@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO 0.23.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO 0.24.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }

@@ -166,3 +166,12 @@ Esta evidencia confirma el modelo y el seguimiento matemático en el AVD de CI, 
 ## Validación de la variante que instala la usuaria
 
 La captura del run 45771143048 se obtuvo instalando `app-debug.apk`; la APK release-test se compiló, firmó y verificó, pero todavía no se había ejecutado en el emulador. Aunque `app/build.gradle` declara `minifyEnabled false` y ambas variantes comparten el mismo código fuente, esa prueba no era equivalente a instalar la release-test que se entrega para comprobar el juego. El smoke test se ha cambiado para instalar `app/build/outputs/apk/release/app-release.apk` después de verificar su firma y su versionCode/versionName. La siguiente captura inicial, la captura en movimiento y el test de píxeles corresponderán por tanto a la misma variante release-test que se descarga desde Artifacts. La prueba física en el Poco X6 Pro sigue siendo necesaria.
+
+
+## Corrección del smoke test release 0.24.0
+
+El run 45778953612 instaló correctamente la APK **release-test 0.23.0**, superó pruebas unitarias, compilaciones debug/release y verificación de firma/versión. El smoke test falló en la comprobación de píxeles: skin=0, jacket=0, boots=0 y bounds reducidos. La captura real muestra un cuadro del sistema Android **“Settings isn't responding”** que tapa el centro del juego. El proceso del juego seguía vivo; el registro del renderizador informa 60 piezas enviadas y GL_NO_ERROR, pero esos contadores no sustituyen la evidencia visual. Por tanto, ese resultado no permite concluir que el modelo falte ni que esté visible.
+
+La versión 0.24.0 introduce una política de ventana específica para CI: cuando se inicia con `debug_telemetry=true`, no activa el modo inmersivo y mantiene visibles las barras del sistema. El modo normal del juego conserva el modo inmersivo original. Se añade una prueba unitaria para esta política. El smoke test deja de intentar cerrar una ventana de confirmación del sistema y falla con un diagnóstico explícito si aparece una ventana ANR. Para reducir carga del AVD SwiftShader, la superficie se reduce a 720×405 y la memoria del emulador sube a 3072 MB; las coordenadas del joystick siguen derivándose del tamaño real del HUD.
+
+La siguiente ejecución debe validar la APK release-test 0.24.0 con capturas inicial y en movimiento, análisis de píxeles del personaje, desplazamiento y seguimiento de cámara. La validación en el Poco X6 Pro con Android 16 continúa pendiente.
