@@ -2,6 +2,9 @@ plugins { id 'com.android.application' }
 android {
     namespace 'es.valledecernego.game'
     compileSdk 35
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId 'es.valledecernego.game'
         minSdk 23
