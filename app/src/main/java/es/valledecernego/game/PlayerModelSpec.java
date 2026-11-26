@@ -65,16 +65,16 @@ public final class PlayerModelSpec {
         part("right-boot",Shape.BOX,Motion.NONE,.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
         part("left-leg",Shape.LIMB,Motion.LEFT_LEG,-.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
         part("right-leg",Shape.LIMB,Motion.RIGHT_LEG,.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
-        part("torso",Shape.BOX,Motion.NONE,0f,.99f,0f,.52f,.64f,.32f,.18f,.34f,.17f,true),
-        part("jacket-hem",Shape.BOX,Motion.NONE,0f,.72f,.012f,.53f,.12f,.33f,.11f,.27f,.17f,true),
+        part("torso",Shape.BOX,Motion.NONE,0f,.99f,0f,.52f,.64f,.32f,.10f,.22f,.34f,true),
+        part("jacket-hem",Shape.BOX,Motion.NONE,0f,.72f,.012f,.53f,.12f,.33f,.08f,.17f,.26f,true),
         part("collar",Shape.BOX,Motion.NONE,0f,1.31f,.015f,.19f,.14f,.20f,.72f,.69f,.55f,true),
         part("zipper",Shape.BOX,Motion.NONE,0f,1.00f,.166f,.025f,.45f,.014f,.76f,.70f,.52f,true),
-        part("left-pocket",Shape.BOX,Motion.NONE,-.15f,.98f,.17f,.12f,.13f,.025f,.20f,.42f,.27f,true),
-        part("right-pocket",Shape.BOX,Motion.NONE,.15f,.98f,.17f,.12f,.13f,.025f,.20f,.42f,.27f,true),
-        part("left-shoulder",Shape.SPHERE,Motion.NONE,-.29f,1.20f,0f,.16f,.16f,.16f,.15f,.36f,.23f,true),
-        part("right-shoulder",Shape.SPHERE,Motion.NONE,.29f,1.20f,0f,.16f,.16f,.16f,.15f,.36f,.23f,true),
-        part("left-arm",Shape.LIMB,Motion.LEFT_ARM,-.31f,1.20f,0f,.15f,.44f,.17f,.17f,.39f,.25f,true),
-        part("right-arm",Shape.LIMB,Motion.RIGHT_ARM,.31f,1.20f,0f,.15f,.44f,.17f,.17f,.39f,.25f,true),
+        part("left-pocket",Shape.BOX,Motion.NONE,-.15f,.98f,.17f,.12f,.13f,.025f,.14f,.30f,.40f,true),
+        part("right-pocket",Shape.BOX,Motion.NONE,.15f,.98f,.17f,.12f,.13f,.025f,.14f,.30f,.40f,true),
+        part("left-shoulder",Shape.SPHERE,Motion.NONE,-.29f,1.20f,0f,.16f,.16f,.16f,.11f,.24f,.36f,true),
+        part("right-shoulder",Shape.SPHERE,Motion.NONE,.29f,1.20f,0f,.16f,.16f,.16f,.11f,.24f,.36f,true),
+        part("left-arm",Shape.LIMB,Motion.LEFT_ARM,-.31f,1.20f,0f,.15f,.44f,.17f,.12f,.27f,.40f,true),
+        part("right-arm",Shape.LIMB,Motion.RIGHT_ARM,.31f,1.20f,0f,.15f,.44f,.17f,.12f,.27f,.40f,true),
         part("left-hand",Shape.SPHERE,Motion.NONE,-.32f,.82f,.025f,.09f,.11f,.09f,.75f,.54f,.38f,true),
         part("right-hand",Shape.SPHERE,Motion.NONE,.32f,.82f,.025f,.09f,.11f,.09f,.75f,.54f,.38f,true),
         part("neck",Shape.BOX,Motion.NONE,0f,1.35f,.015f,.17f,.18f,.17f,.72f,.51f,.36f,true),
@@ -93,10 +93,10 @@ public final class PlayerModelSpec {
         part("shirt-front",Shape.BOX,Motion.NONE,0f,1.00f,.174f,.27f,.50f,.035f,.04f,.58f,.52f,true),
         partWithRoll("shirt-orange-stripe",Shape.BOX,Motion.NONE,0f,1.00f,.205f,.12f,.43f,.025f,.94f,.29f,.08f,-.62f,true),
         // Open olive jacket fronts and folded collar.
-        part("jacket-left-front",Shape.BOX,Motion.NONE,-.205f,1.00f,.19f,.13f,.56f,.055f,.25f,.32f,.12f,true),
-        part("jacket-right-front",Shape.BOX,Motion.NONE,.205f,1.00f,.19f,.13f,.56f,.055f,.25f,.32f,.12f,true),
-        part("jacket-left-collar",Shape.BOX,Motion.NONE,-.16f,1.30f,.19f,.15f,.14f,.07f,.31f,.37f,.15f,true),
-        part("jacket-right-collar",Shape.BOX,Motion.NONE,.16f,1.30f,.19f,.15f,.14f,.07f,.31f,.37f,.15f,true),
+        part("jacket-left-front",Shape.BOX,Motion.NONE,-.205f,1.00f,.19f,.13f,.56f,.055f,.16f,.26f,.36f,true),
+        part("jacket-right-front",Shape.BOX,Motion.NONE,.205f,1.00f,.19f,.13f,.56f,.055f,.16f,.26f,.36f,true),
+        part("jacket-left-collar",Shape.BOX,Motion.NONE,-.16f,1.30f,.19f,.15f,.14f,.07f,.19f,.30f,.40f,true),
+        part("jacket-right-collar",Shape.BOX,Motion.NONE,.16f,1.30f,.19f,.15f,.14f,.07f,.19f,.30f,.40f,true),
         // Green eyes, dark pupils and simple brows.
         part("left-eye-white",Shape.SPHERE,Motion.NONE,-.08f,1.60f,.24f,.052f,.038f,.022f,.94f,.88f,.70f,true),
         part("right-eye-white",Shape.SPHERE,Motion.NONE,.08f,1.60f,.24f,.052f,.038f,.022f,.94f,.88f,.70f,true),
@@ -125,8 +125,13 @@ public final class PlayerModelSpec {
         part("right-boot-lace-upper",Shape.BOX,Motion.NONE,.13f,.18f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
         part("right-boot-lace-middle",Shape.BOX,Motion.NONE,.13f,.145f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
         part("right-boot-lace-lower",Shape.BOX,Motion.NONE,.13f,.11f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("left-sleeve-cuff",Shape.BOX,Motion.NONE,-.32f,.78f,.015f,.18f,.075f,.19f,.25f,.31f,.12f,true),
-        part("right-sleeve-cuff",Shape.BOX,Motion.NONE,.32f,.78f,.015f,.18f,.075f,.19f,.25f,.31f,.12f,true)
+        part("left-sleeve-cuff",Shape.BOX,Motion.NONE,-.32f,.78f,.015f,.18f,.075f,.19f,.15f,.25f,.35f,true),
+        part("right-sleeve-cuff",Shape.BOX,Motion.NONE,.32f,.78f,.015f,.18f,.075f,.19f,.15f,.25f,.35f,true)
+    };
+
+    private static final String[] FALLBACK_PART_IDS = {
+        "left-boot","right-boot","left-leg","right-leg","torso",
+        "left-arm","right-arm","neck","head","cap","backpack"
     };
 
     private PlayerModelSpec() { }
@@ -135,6 +140,16 @@ public final class PlayerModelSpec {
     public static Part partAt(int index) { return PARTS[index]; }
     public static Part[] parts() { return PARTS.clone(); }
     public static float nominalHeight() { return 1.92f; }
+
+    /** Core parts used by the independent low-feature GLES compatibility silhouette. */
+    public static Part[] fallbackParts() {
+        Part[] fallback = new Part[FALLBACK_PART_IDS.length];
+        for (int i=0;i<FALLBACK_PART_IDS.length;i++) {
+            fallback[i]=find(FALLBACK_PART_IDS[i]);
+            if (fallback[i]==null) throw new IllegalStateException("Missing fallback player part: "+FALLBACK_PART_IDS[i]);
+        }
+        return fallback;
+    }
 
     public static Part find(String id) {
         for (Part part : PARTS) if (part.id.equals(id)) return part;
