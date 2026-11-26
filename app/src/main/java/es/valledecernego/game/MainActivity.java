@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO 0.24.1  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + "  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
@@ -443,6 +443,9 @@ public class MainActivity extends Activity {
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
         volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
+        // Publish a whole immutable frame result so the UI never observes the counters
+        // half-reset between GL frames.
+        volatile PlayerRenderSnapshot renderSnapshot=PlayerRenderSnapshot.initial();
         final PlayerModelSpec.Part[] silhouetteParts=PlayerModelSpec.fallbackParts();
         volatile boolean debugTelemetry=false;
         long lastTelemetryNanos=0L;
@@ -476,15 +479,23 @@ public class MainActivity extends Activity {
         void setDebugTelemetry(boolean enabled){debugTelemetry=enabled;}
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
+            renderSnapshot=PlayerRenderSnapshot.initial();
             playerFrameRendered=false;
             playerDrawCalls=0;
+            silhouetteDrawCalls=0;
             playerGlError=GLES20.GL_NO_ERROR;
+            rendererReady=false;
             compatibilityRenderer=false;
             silhouetteReady=false;
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
             GLES20.glDisable(GLES20.GL_CULL_FACE);
+            if(debugTelemetry){
+                android.util.Log.i("ValleCernego","GL_DEVICE vendor="+String.valueOf(GLES20.glGetString(GLES20.GL_VENDOR))
+                    +" renderer="+String.valueOf(GLES20.glGetString(GLES20.GL_RENDERER))
+                    +" version="+String.valueOf(GLES20.glGetString(GLES20.GL_VERSION)));
+            }
             String vs="attribute vec3 aPos; attribute vec3 aNormal; uniform mat4 uMVP; uniform mat4 uNormalMatrix; varying float vLight; varying vec3 vLocal; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal); vec3 lightDir=normalize(vec3(-0.35,0.82,0.44)); vLight=0.58+0.42*max(dot(n,lightDir),0.0); vLocal=aPos; gl_Position=uMVP*vec4(aPos,1.0);} ";
             String fs="precision mediump float; uniform vec4 uColor; uniform float uMaterialStyle; varying float vLight; varying vec3 vLocal; void main(){vec3 base=uColor.rgb; if(uMaterialStyle>0.5 && uMaterialStyle<1.5){base*=0.97+0.03*sin(vLocal.x*42.0)*sin(vLocal.y*42.0);} else if(uMaterialStyle>1.5 && uMaterialStyle<2.5){base*=0.98+0.02*sin((vLocal.x+vLocal.y)*56.0);} else if(uMaterialStyle>2.5 && uMaterialStyle<3.5){base*=0.95+0.05*sin(vLocal.y*18.0+vLocal.x*6.0);} else if(uMaterialStyle>3.5 && uMaterialStyle<4.5){base*=0.99+0.01*sin(vLocal.y*12.0);} else if(uMaterialStyle>4.5){base=mix(base,vec3(0.78,0.67,0.42),0.18)*(0.92+0.08*abs(sin(vLocal.x*20.0)));} gl_FragColor=vec4(base*vLight,uColor.a);}";
             program=buildProgram(vs,fs);
@@ -562,6 +573,8 @@ public class MainActivity extends Activity {
             sphereVertexCount=sphereBuffer.limit()/6;
             capsuleBuffer=createCapsuleBuffer(10,24);
             capsuleVertexCount=capsuleBuffer.limit()/6;
+            renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,compatibilityRenderer,
+                0,0,GLES20.GL_NO_ERROR,false);
             android.util.Log.i("ValleCernego","Render 3D listo; personaje procedural con "+PlayerModelSpec.size()+" piezas.");
         }
 
@@ -891,31 +904,18 @@ public class MainActivity extends Activity {
         }
 
         String getRenderStatus(){
-            if(!rendererReady && !silhouetteReady)return "3D NO DISPONIBLE";
-            if(!playerFrameRendered)return "3D OK · esperando primer fotograma";
-            if(playerGlError!=GLES20.GL_NO_ERROR){
-                return "3D ERROR GL 0x"+Integer.toHexString(playerGlError)
-                    +" · "+playerDrawCalls+"/"+PlayerModelSpec.size();
-            }
-            if(compatibilityRenderer && playerDrawCalls>=PlayerModelSpec.size()){
-                return "3D COMPATIBLE · "+playerDrawCalls+" piezas · shader GLES plano · GL OK";
-            }
-            if(rendererReady && playerDrawCalls>=PlayerModelSpec.size()){
-                return "3D OK · "+playerDrawCalls+" piezas · respaldo humanoide "+silhouetteDrawCalls+" · GL OK";
-            }
-            if(silhouetteReady && silhouetteDrawCalls>=silhouetteParts.length){
-                return "3D COMPATIBLE · "+silhouetteDrawCalls+" piezas humanoides · GL OK";
-            }
-            return "3D INCOMPLETO · "+playerDrawCalls+"/"+PlayerModelSpec.size()+" piezas";
+            PlayerRenderSnapshot snapshot=renderSnapshot;
+            return snapshot.summary(PlayerModelSpec.size(),silhouetteParts.length);
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
         void drawPlayer(){
-            if(!rendererReady && !silhouetteReady)return;
+            if(!rendererReady && !silhouetteReady){
+                renderSnapshot=PlayerRenderSnapshot.initial();
+                return;
+            }
             int submittedParts=0;
-            playerDrawCalls=0;
-            silhouetteDrawCalls=0;
-            playerGlError=GLES20.GL_NO_ERROR;
+            int fallbackSubmitted=0;
             for(int i=0;i<8;i++){
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
             }
@@ -955,17 +955,24 @@ public class MainActivity extends Activity {
 
             // Independent low-feature silhouette protects the essential human shape on mobile GPUs.
             boolean detailedComplete=rendererReady && submittedParts>=PlayerModelSpec.size();
-            if(silhouetteReady)drawPlayerSilhouette(detailedComplete ? 0.18f : 1f);
-            playerDrawCalls=detailedComplete?submittedParts:silhouetteDrawCalls;
-            playerGlError=GLES20.glGetError();
-            if(playerGlError!=GLES20.GL_NO_ERROR){
-                android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(playerGlError)
+            if(silhouetteReady)fallbackSubmitted=drawPlayerSilhouette(detailedComplete ? 0.18f : 1f);
+            int publishedDrawCalls=detailedComplete?submittedParts:fallbackSubmitted;
+            int glError=GLES20.glGetError();
+            if(glError!=GLES20.GL_NO_ERROR){
+                android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(glError)
                     +" al terminar el lote del personaje.");
                 for(int i=0;i<8;i++){
                     if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
                 }
             }
-            playerFrameRendered=playerDrawCalls>0;
+            // Publish scalar telemetry only after the batch is complete; status reads
+            // use the immutable snapshot below and cannot observe a transient zero.
+            playerDrawCalls=publishedDrawCalls;
+            silhouetteDrawCalls=fallbackSubmitted;
+            playerGlError=glError;
+            playerFrameRendered=publishedDrawCalls>0;
+            renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,compatibilityRenderer,
+                submittedParts,fallbackSubmitted,glError,playerFrameRendered);
         }
 
         float playerPartAngle(PlayerModelSpec.Part part){
@@ -984,7 +991,8 @@ public class MainActivity extends Activity {
             return 0f;
         }
 
-        void drawPlayerSilhouette(float alpha){
+        int drawPlayerSilhouette(float alpha){
+            int submitted=0;
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
             GLES20.glDepthMask(false);
@@ -1008,11 +1016,12 @@ public class MainActivity extends Activity {
                 }
                 if(drawSilhouetteMesh(mesh,count,pose.x,pose.y,pose.z,pose.sx,sy,pose.sz,
                     part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll)){
-                    silhouetteDrawCalls++;
+                    submitted++;
                 }
             }
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
+            return submitted;
         }
 
         boolean drawSilhouetteMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
