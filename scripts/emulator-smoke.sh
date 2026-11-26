@@ -74,8 +74,8 @@ if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed 
 # for the actual "Got it" overlay to be visible before sending the tap.
 immersive_prompt_visible() {
   printf '%s\n' "$1" | awk '
-    /Window #[0-9]+ Window\\{.*ImmersiveModeConfirmation/ { in_prompt=1; next }
-    in_prompt && /^  Window #[0-9]+ Window\\{/ { in_prompt=0 }
+    /ImmersiveModeConfirmation/ { in_prompt=1; next }
+    in_prompt && /^  Window #[0-9]+ Window/ { in_prompt=0 }
     in_prompt && /Surface: shown=true/ { shown=1 }
     END { exit !shown }
   '
