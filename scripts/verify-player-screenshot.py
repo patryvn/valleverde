@@ -67,6 +67,7 @@ def verify(path):
     skin_top, skin_bottom = int(height * .36), int(height * .55)
     jacket_top, jacket_bottom = int(height * .42), int(height * .66)
     boots_top, boots_bottom = int(height * .63), int(height * .76)
+    legs_top, legs_bottom = int(height * .55), int(height * .72)
     counts = {"skin": 0, "jacket": 0, "boots": 0, "dark": 0}
     skin_y = []
     boots_y = []
@@ -88,7 +89,7 @@ def verify(path):
                 counts["boots"] += 1
                 boots_y.append(y)
                 xs.append(x); ys.append(y)
-            if max(r, g, b) < 58:
+            if legs_top <= y < legs_bottom and max(r, g, b) < 58:
                 counts["dark"] += 1
                 xs.append(x); ys.append(y)
     limits = {"skin": 80, "jacket": 180, "boots": 70, "dark": 120}
