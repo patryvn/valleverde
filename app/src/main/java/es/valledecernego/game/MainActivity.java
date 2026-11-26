@@ -481,6 +481,7 @@ public class MainActivity extends Activity {
             // Shader independiente y mínimo para conservar una silueta humana en otros controladores.
             String silhouetteVs="attribute vec3 aPos; uniform mat4 uMVP; void main(){gl_Position=uMVP*vec4(aPos,1.0);}";
             String silhouetteFs="precision mediump float; uniform vec4 uColor; void main(){gl_FragColor=uColor;}";
+            silhouetteReady=false;
             silhouetteProgram=buildProgram(silhouetteVs,silhouetteFs);
             if(silhouetteProgram!=0){
                 silhouettePos=GLES20.glGetAttribLocation(silhouetteProgram,"aPos");
@@ -904,7 +905,7 @@ public class MainActivity extends Activity {
 
             // Independent low-feature silhouette protects the essential human shape on mobile GPUs.
             if(silhouetteReady)drawPlayerSilhouette(rendererReady ? 0.18f : 1f);
-            playerDrawCalls=rendererReady?submittedParts:silhouetteDrawCalls;
+            playerDrawCalls=(rendererReady && submittedParts>0)?submittedParts:silhouetteDrawCalls;
             playerGlError=GLES20.glGetError();
             if(playerGlError!=GLES20.GL_NO_ERROR){
                 android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(playerGlError)
