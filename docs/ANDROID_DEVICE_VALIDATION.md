@@ -114,3 +114,14 @@ Esta corrección valida el flujo de prueba, no altera la geometría del personaj
 La ejecución 45745324047 volvió a pasar las pruebas unitarias, ambas compilaciones y la verificación de APK. El smoke test detectó que el diálogo inmersivo seguía visible. El registro final muestra que el primer intento se envió antes de que Android hubiera creado la superficie del diálogo; al finalizar el script, la ventana todavía tenía `Surface: shown=true` y seguía siendo `mCurrentFocus`. Por tanto, el tap no había llegado al botón «Got it». El archivo de diagnóstico de este run no contiene captura de la escena ni telemetría del personaje, así que no se puede juzgar el movimiento en 0.20.0.
 
 En 0.20.1 el script no confunde la existencia de la ventana con su visibilidad. Espera a que el bloque `ImmersiveModeConfirmation` indique `Surface: shown=true`, entonces pulsa el botón y vuelve a consultar el estado de la superficie y el foco de entrada. Solo continúa con la captura y el joystick cuando el aviso ya no es visible ni conserva el foco. Así se evita enviar los toques antes de que el diálogo esté listo.
+
+
+## Contraste y silueta de compatibilidad (0.21.0)
+
+La captura real del run 45746378469 muestra que el modelo humanoide sí se dibuja en el AVD: cabeza, torso, brazos, piernas y botas aparecen centrados y sin error OpenGL. Sin embargo, el movimiento acumulado fue solo 0,11 m y el test falló; por ello esa ejecución no demuestra todavía el seguimiento de cámara en movimiento. Además, la chaqueta verde anterior tenía luminancia casi idéntica al terreno verde y perdía separación visual a escala de teléfono.
+
+En 0.21.0 la chaqueta pasa a azul petróleo oscuro, manteniendo la camiseta turquesa, el detalle naranja, la piel, las botas y la mochila en tonos distintos. Se añade una segunda pasada de silueta de 11 piezas esenciales (cabeza, torso, dos brazos, dos piernas, botas, cuello, gorra y mochila) con un shader GLES 2.0 independiente y sin atributos de normales. La pasada se superpone con baja opacidad cuando el modelo detallado funciona y queda opaca como respaldo si el shader principal no está disponible. Las animaciones de brazos y piernas reutilizan las mismas transformaciones de caminar y reposo.
+
+El smoke test ahora exige telemetría de las 60 piezas detalladas o de las 11 piezas de compatibilidad, comprueba los píxeles de piel/chaqueta/botas en la captura inicial y en la captura tras movimiento, y repite el gesto real del joystick hasta alcanzar 0,75 m de desplazamiento. La cámara debe acompañar el mismo vector con un error máximo de 0,15 m. La verificación por píxeles es una salvaguarda automatizada para el AVD; no sustituye la inspección visual ni la prueba en el Poco X6 Pro con Android 16.
+
+La versión visible en el HUD es 0.21.0 para evitar confundir APK antiguas con la compilación nueva. La versión release-test continúa firmada con la clave de depuración de CI y no es una firma de publicación de Google Play.
