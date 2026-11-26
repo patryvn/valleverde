@@ -9,8 +9,8 @@ android {
         applicationId 'es.valledecernego.game'
         minSdk 23
         targetSdk 35
-        versionCode 34
-        versionName '0.27.3'
+        versionCode 35
+        versionName '0.27.4'
     }
     testOptions {
         unitTests.returnDefaultValues = true
