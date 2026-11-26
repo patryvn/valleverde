@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
         surface.setEGLConfigChooser(8,8,8,8,16,0);
         surface.setPreserveEGLContextOnPause(true);
         renderer=new GameRenderer();
+        renderer.setDebugTelemetry(debugTelemetry);
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
@@ -412,7 +413,8 @@ public class MainActivity extends Activity {
         volatile boolean rendererReady=false;
         volatile int playerDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
-        boolean playerDrawInProgress=false;
+        volatile boolean debugTelemetry=false;
+        long lastTelemetryNanos=0L;
         FloatBuffer sphereBuffer,capsuleBuffer;
         int sphereVertexCount,capsuleVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
@@ -439,6 +441,8 @@ public class MainActivity extends Activity {
         GameRenderer(){
             for(float[] object:WorldLayout.initialObjects()) objects.add(object);
         }
+
+        void setDebugTelemetry(boolean enabled){debugTelemetry=enabled;}
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
             playerFrameRendered=false;
@@ -674,6 +678,7 @@ public class MainActivity extends Activity {
             for(float[] o:objects){
                 if(o[3]==0)continue;
                 int t=(int)o[2];
+                if(!WorldVisibility.isVisible(px,pz,yaw,o[0],o[1],WorldVisibility.radiusForType(t),42f))continue;
                 if(t==WorldLayout.TREE){
                     drawTree(o[0],o[1]);
                 }
@@ -783,6 +788,13 @@ public class MainActivity extends Activity {
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
             draw(7,1.75f,-7,4,.7f,3.4f,.35f,.18f,.14f);
             drawPlayer();
+            if(debugTelemetry && now-lastTelemetryNanos>=1_000_000_000L){
+                ThirdPersonCamera.Pose debugCamera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
+                android.util.Log.i("ValleCernego",String.format(Locale.US,
+                    "PLAYER_STATE POS=%.2f,%.2f CAM=%.2f,%.2f PARTS=%d GL=0x%04x",
+                    px,pz,debugCamera.x(),debugCamera.z(),playerDrawCalls,playerGlError));
+                lastTelemetryNanos=now;
+            }
         }
 
         void drawRuralLandmarks(){
@@ -793,6 +805,7 @@ public class MainActivity extends Activity {
             for(int i=0;i<7;i++){
                 float x=-25f+i*8.4f;
                 float z=43f+(i%2)*1.4f;
+                if(!WorldVisibility.isVisible(px,pz,yaw,x,z,10f,58f))continue;
                 drawMesh(sphereBuffer,sphereVertexCount,x,1.62f,z,9f,3.4f,8f,
                     .25f,.38f,.24f,1f,0f,0f);
             }
@@ -800,6 +813,7 @@ public class MainActivity extends Activity {
             // Cierre tradicional de madera a la izquierda del camino.
             for(int i=0;i<7;i++){
                 float z=13f+i*4f;
+                if(!WorldVisibility.isVisible(px,pz,yaw,-7.2f,z,2f,38f))continue;
                 draw(-7.2f,.50f,z,.14f,.90f,.14f,.38f,.25f,.14f);
                 if(i<6){
                     draw(-7.2f,.72f,z+2f,.12f,.12f,4f,.43f,.29f,.16f);
@@ -834,7 +848,9 @@ public class MainActivity extends Activity {
             int submittedParts=0;
             playerDrawCalls=0;
             playerGlError=GLES20.GL_NO_ERROR;
-            playerDrawInProgress=true;
+            for(int i=0;i<8;i++){
+                if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
+            }
 
             // La sombra translúcida no escribe profundidad: no puede tapar las botas.
             GLES20.glEnable(GLES20.GL_BLEND);
@@ -876,35 +892,47 @@ public class MainActivity extends Activity {
                 if(submitted)submittedParts++;
             }
             playerDrawCalls=submittedParts;
-            playerDrawInProgress=false;
+            playerGlError=GLES20.glGetError();
+            if(playerGlError!=GLES20.GL_NO_ERROR){
+                android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(playerGlError)
+                    +" al terminar el lote del personaje.");
+                for(int i=0;i<8;i++){
+                    if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
+                }
+            }
             playerFrameRendered=true;
         }
 
         // Árbol de frondosa atlántica: tronco, ramas, copa en varios volúmenes y matices estacionales.
         // Roble/castaño atlántico: raíces, tronco irregular, ramas y copas superpuestas.
         // La variación es determinista para que cada árbol conserve su aspecto entre fotogramas.
+        // Árbol atlántico con LOD: la copa distante usa una sola esfera para reducir draw calls.
         void drawTree(float x,float z){
             float leafR=seasons.foliageRed(),leafG=seasons.foliageGreen(),leafB=seasons.foliageBlue();
             float seed=(float)(Math.abs(Math.sin(x*12.73f+z*4.91f)));
             float crown=1f+(seed-.5f)*.18f;
+            float distance=(float)Math.hypot(x-px,z-pz);
             drawMesh(capsuleBuffer,capsuleVertexCount,x,.98f,z,.20f,.98f,.20f,.27f,.16f,.085f,1f,0f,0f);
-            // Raíces visibles sobre el terreno.
-            for(int i=0;i<4;i++){
-                float a=(float)(i*Math.PI*.5+seed*.7f);
+            if(distance>20f){
+                drawMesh(sphereBuffer,sphereVertexCount,x,2.18f,z,.82f*crown,.88f*crown,.78f*crown,
+                    leafR,leafG,leafB,1f,0f,0f);
+                return;
+            }
+            for(int i=0;i<2;i++){
+                float a=(float)(i*Math.PI+seed*.7f);
                 drawMesh(capsuleBuffer,capsuleVertexCount,x+(float)Math.cos(a)*.22f,.13f,z+(float)Math.sin(a)*.22f,
                     .075f,.42f,.075f,.29f,.18f,.095f,1f,0f,0f,(float)Math.cos(a)*.72f);
             }
-            // Ramas principales que salen del tronco.
             drawMesh(capsuleBuffer,capsuleVertexCount,x-.30f,1.38f,z,.105f,.78f,.105f,.30f,.18f,.095f,1f,0f,0f,-.68f);
             drawMesh(capsuleBuffer,capsuleVertexCount,x+.30f,1.43f,z+.03f,.105f,.82f,.105f,.30f,.18f,.095f,1f,0f,0f,.66f);
-            drawMesh(capsuleBuffer,capsuleVertexCount,x+.02f,1.55f,z-.22f,.085f,.68f,.085f,.31f,.19f,.10f,1f,0f,0f,.32f);
-            // Copa formada por masas de follaje de distintos tamaños y tonos.
-            drawMesh(sphereBuffer,sphereVertexCount,x,2.18f,z,.76f*crown,.88f*crown,.73f*crown,leafR*.91f,leafG*.91f,leafB*.91f,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.48f,2.02f,z+.12f,.54f,.62f,.55f,Math.min(1f,leafR*1.08f),Math.min(1f,leafG*1.08f),Math.min(1f,leafB*1.08f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+.48f,2.06f,z-.12f,.57f,.68f,.58f,Math.max(0f,leafR*.86f),Math.max(0f,leafG*.90f),Math.max(0f,leafB*.86f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.16f,2.55f,z-.24f,.48f,.55f,.48f,Math.min(1f,leafR*1.04f),Math.min(1f,leafG*1.05f),Math.min(1f,leafB*1.04f),1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x+.30f,2.48f,z+.27f,.43f,.49f,.44f,leafR*.96f,leafG*.98f,leafB*.96f,1f,0f,0f);
-            drawMesh(sphereBuffer,sphereVertexCount,x-.55f,2.32f,z-.25f,.35f,.42f,.36f,leafR*.94f,leafG*.97f,leafB*.94f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x,2.18f,z,.76f*crown,.88f*crown,.73f*crown,
+                leafR*.91f,leafG*.91f,leafB*.91f,1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.48f,2.02f,z+.12f,.54f,.62f,.55f,
+                Math.min(1f,leafR*1.08f),Math.min(1f,leafG*1.08f),Math.min(1f,leafB*1.08f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x+.48f,2.06f,z-.12f,.57f,.68f,.58f,
+                Math.max(0f,leafR*.86f),Math.max(0f,leafG*.90f),Math.max(0f,leafB*.86f),1f,0f,0f);
+            drawMesh(sphereBuffer,sphereVertexCount,x-.16f,2.55f,z-.24f,.48f,.55f,.48f,
+                Math.min(1f,leafR*1.04f),Math.min(1f,leafG*1.05f),Math.min(1f,leafB*1.04f),1f,0f,0f);
         }
 
         // Ganado de raza cárnica: silueta más natural, cuello, articulaciones, pezuñas y rasgos faciales.
@@ -952,6 +980,7 @@ public class MainActivity extends Activity {
 
         void drawVillagers(){
             for(VillagerWorldSystem.Position villager:villagerWorld.snapshot()){
+                if(!WorldVisibility.isVisible(px,pz,yaw,villager.x(),villager.z(),1.6f,38f))continue;
                 float phase=villager.walkPhase();
                 float bodyBob=VillagerAnimationSystem.bodyBob(phase,villager.walking());
                 float leftLeg=VillagerAnimationSystem.legAngle(phase,villager.walking(),true);
@@ -1077,15 +1106,6 @@ public class MainActivity extends Activity {
             GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertexCount);
             GLES20.glDisableVertexAttribArray(pos);
             if(normalAttr>=0)GLES20.glDisableVertexAttribArray(normalAttr);
-            if(playerDrawInProgress){
-                int glError=GLES20.glGetError();
-                if(glError!=GLES20.GL_NO_ERROR){
-                    if(playerGlError==GLES20.GL_NO_ERROR)playerGlError=glError;
-                    android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(glError)
-                        +" al dibujar una pieza del personaje.");
-                    return false;
-                }
-            }
             return true;
         }
 
