@@ -463,20 +463,21 @@ public class MainActivity extends Activity {
                 String fallbackFs="precision mediump float; uniform vec4 uColor; void main(){gl_FragColor=uColor;}";
                 program=buildProgram(fallbackVs,fallbackFs);
             }
+            pos=normalAttr=color=mvp=normalMatrixUniform=materialStyleUniform=-1;
             if(program==0){
                 rendererReady=false;
-                android.util.Log.e("ValleCernego","No se pudo enlazar ningún shader OpenGL ES.");
-                return;
+                android.util.Log.e("ValleCernego","Shader principal no disponible; se conservará la silueta humana independiente.");
+            }else{
+                pos=GLES20.glGetAttribLocation(program,"aPos");
+                normalAttr=GLES20.glGetAttribLocation(program,"aNormal");
+                color=GLES20.glGetUniformLocation(program,"uColor");
+                mvp=GLES20.glGetUniformLocation(program,"uMVP");
+                normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
+                materialStyleUniform=GLES20.glGetUniformLocation(program,"uMaterialStyle");
+                rendererReady=pos>=0 && color>=0 && mvp>=0
+                    && (normalAttr<0 || normalMatrixUniform>=0);
+                if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
             }
-            pos=GLES20.glGetAttribLocation(program,"aPos");
-            normalAttr=GLES20.glGetAttribLocation(program,"aNormal");
-            color=GLES20.glGetUniformLocation(program,"uColor");
-            mvp=GLES20.glGetUniformLocation(program,"uMVP");
-            normalMatrixUniform=GLES20.glGetUniformLocation(program,"uNormalMatrix");
-            materialStyleUniform=GLES20.glGetUniformLocation(program,"uMaterialStyle");
-            rendererReady=pos>=0 && color>=0 && mvp>=0
-                && (normalAttr<0 || normalMatrixUniform>=0);
-            if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
 
             // Shader independiente y mínimo para conservar una silueta humana en otros controladores.
             String silhouetteVs="attribute vec3 aPos; uniform mat4 uMVP; void main(){gl_Position=uMVP*vec4(aPos,1.0);}";
