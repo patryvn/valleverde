@@ -1,6 +1,12 @@
+import importlib.util
 import unittest
+from pathlib import Path
 
-from verify_player_motion import verify_motion
+MODULE_PATH = Path(__file__).with_name("verify-player-motion.py")
+SPEC = importlib.util.spec_from_file_location("verify_player_motion", MODULE_PATH)
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+verify_motion = MODULE.verify_motion
 
 
 def telemetry(x, camera_x=None, parts=60, fallback=11, gl="0000", z=5.0, camera_z=0.96):
