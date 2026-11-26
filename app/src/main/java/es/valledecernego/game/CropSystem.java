@@ -114,6 +114,13 @@ public final class CropSystem {
         return added;
     }
 
+    /** Consumes one harvested food unit without disturbing the market inventory. */
+    public synchronized boolean consumeHarvestUnit() {
+        if (harvest <= 0) return false;
+        harvest--;
+        return true;
+    }
+
     /** Removes and returns all stored produce for a market transaction. */
     public synchronized int takeAllHarvest() {
         int sold = harvest;
