@@ -62,6 +62,18 @@ public class CropSystemTest {
         assertEquals(9_000L, winter.plotForTest(0).growthMs());
     }
 
+    @Test public void eatingConsumesExactlyOneHarvestUnitAndDoesNotAffectSeeds() {
+        CropSystem farm = new CropSystem();
+        assertEquals(3, farm.addHarvest(3));
+        assertTrue(farm.consumeHarvestUnit());
+        assertEquals(2, farm.getHarvest());
+        assertEquals(6, farm.getSeeds());
+        assertTrue(farm.consumeHarvestUnit());
+        assertTrue(farm.consumeHarvestUnit());
+        assertFalse(farm.consumeHarvestUnit());
+        assertEquals(0, farm.getHarvest());
+    }
+
     @Test public void interactionOutsideFarmDoesNothing() {
         CropSystem farm = new CropSystem();
         assertEquals(CropSystem.NO_PLOT, farm.interact(30.0f, 30.0f));
