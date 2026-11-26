@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO 0.22.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO 0.23.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
@@ -424,9 +424,8 @@ public class MainActivity extends Activity {
             long now=System.nanoTime();
             if("MOVE".equals(event)&&now-lastTouchDiagnosticNanos<200_000_000L)return;
             lastTouchDiagnosticNanos=now;
-            android.util.Log.i("ValleCernego",String.format(Locale.US,
-                "HUD_TOUCH %s x=%.1f y=%.1f view=%.0fx%.0f mode=%d joy=%.2f,%.2f move=%.2f,%.2f",
-                event,x,y,getWidth(),getHeight(),touchMode,jx,jy,renderer.moveX,renderer.moveY));
+            android.util.Log.i("ValleCernego",TouchDiagnostic.format(event,x,y,
+                getWidth(),getHeight(),touchMode,jx,jy,renderer.moveX,renderer.moveY));
         }
 
         void updateJoy(float x,float y){
