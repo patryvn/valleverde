@@ -682,45 +682,12 @@ public class MainActivity extends Activity {
         }
 
         FloatBuffer createCapsuleBuffer(int hemisphereStacks,int slices){
-            ArrayList<float[]> rings=new ArrayList<>();
-            for(int i=0;i<=hemisphereStacks;i++){
-                float angle=(float)(-Math.PI*.5+(Math.PI*.5*i/hemisphereStacks));
-                rings.add(new float[]{-.5f+.5f*(float)Math.sin(angle),.5f*(float)Math.cos(angle),(float)Math.sin(angle)});
-            }
-            for(int i=1;i<5;i++)rings.add(new float[]{-.5f+i*.2f,.5f,0f});
-            for(int i=0;i<=hemisphereStacks;i++){
-                float angle=(float)(Math.PI*.5*i/hemisphereStacks);
-                rings.add(new float[]{.5f+.5f*(float)Math.sin(angle),.5f*(float)Math.cos(angle),(float)Math.sin(angle)});
-            }
-            ArrayList<Float> data=new ArrayList<>();
-            for(int ring=0;ring<rings.size()-1;ring++){
-                float[] lower=rings.get(ring),upper=rings.get(ring+1);
-                for(int slice=0;slice<slices;slice++){
-                    float a=(float)(Math.PI*2.0*slice/slices);
-                    float b=(float)(Math.PI*2.0*(slice+1)/slices);
-                    addCapsuleVertex(data,lower,a);
-                    addCapsuleVertex(data,upper,a);
-                    addCapsuleVertex(data,upper,b);
-                    addCapsuleVertex(data,lower,a);
-                    addCapsuleVertex(data,upper,b);
-                    addCapsuleVertex(data,lower,b);
-                }
-            }
-            FloatBuffer buffer=ByteBuffer.allocateDirect(data.size()*4)
+            float[] vertices=CapsuleMeshSpec.buildInterleaved(hemisphereStacks,slices);
+            FloatBuffer buffer=ByteBuffer.allocateDirect(vertices.length*4)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
-            for(Float value:data)buffer.put(value);
+            buffer.put(vertices);
             buffer.position(0);
             return buffer;
-        }
-
-        void addCapsuleVertex(ArrayList<Float> data,float[] ring,float longitude){
-            float radial=(float)Math.sqrt(Math.max(0f,1f-ring[2]*ring[2]));
-            float nx=radial*(float)Math.cos(longitude);
-            float nz=radial*(float)Math.sin(longitude);
-            float x=ring[1]*(float)Math.cos(longitude);
-            float z=ring[1]*(float)Math.sin(longitude);
-            data.add(x);data.add(ring[0]);data.add(z);
-            data.add(nx);data.add(ring[2]);data.add(nz);
         }
 
         public void onSurfaceChanged(GL10 gl,int w,int h){
@@ -948,6 +915,9 @@ public class MainActivity extends Activity {
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
+        // Draw the opaque compatibility body first. A successful glDrawArrays call and
+        // GL_NO_ERROR do not prove that every mobile GPU displayed every detailed part.
+        // The detailed 60-part model then overlays this guaranteed 11-part humanoid base.
         void drawPlayer(){
             if(!rendererReady && !silhouetteReady){
                 renderSnapshot=PlayerRenderSnapshot.initial();
@@ -959,8 +929,12 @@ public class MainActivity extends Activity {
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
             }
 
+            if(PlayerRenderPolicy.shouldDrawOpaqueBase(silhouetteReady)){
+                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA);
+            }
+
             if(rendererReady){
-                // La sombra translúcida no escribe profundidad: no puede tapar las botas.
+                // The shadow is translucent and never writes depth, so it cannot hide boots.
                 GLES20.glEnable(GLES20.GL_BLEND);
                 GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
                 GLES20.glDepthMask(false);
@@ -992,9 +966,7 @@ public class MainActivity extends Activity {
                 }
             }
 
-            // Independent low-feature silhouette protects the essential human shape on mobile GPUs.
             boolean detailedComplete=rendererReady && submittedParts>=PlayerModelSpec.size();
-            if(silhouetteReady)fallbackSubmitted=drawPlayerSilhouette(detailedComplete ? 0.18f : 1f);
             int publishedDrawCalls=detailedComplete?submittedParts:fallbackSubmitted;
             int glError=GLES20.glGetError();
             if(glError!=GLES20.GL_NO_ERROR){
@@ -1004,8 +976,6 @@ public class MainActivity extends Activity {
                     if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
                 }
             }
-            // Publish scalar telemetry only after the batch is complete; status reads
-            // use the immutable snapshot below and cannot observe a transient zero.
             playerDrawCalls=publishedDrawCalls;
             silhouetteDrawCalls=fallbackSubmitted;
             playerGlError=glError;
@@ -1032,12 +1002,24 @@ public class MainActivity extends Activity {
 
         int drawPlayerSilhouette(float alpha){
             int submitted=0;
-            GLES20.glEnable(GLES20.GL_BLEND);
-            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
-            GLES20.glDepthMask(false);
+            boolean opaque=alpha>=0.999f;
             if(!rendererReady){
+                // Keep the fallback shadow blended even when the humanoid base is opaque.
+                GLES20.glEnable(GLES20.GL_BLEND);
+                GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+                GLES20.glDepthMask(false);
                 drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,
                     .52f,.035f,.34f,.045f,.055f,.045f,.28f,playerFacing,0f,0f);
+                GLES20.glDepthMask(true);
+                GLES20.glDisable(GLES20.GL_BLEND);
+            }
+            if(opaque){
+                GLES20.glDisable(GLES20.GL_BLEND);
+                GLES20.glDepthMask(true);
+            }else{
+                GLES20.glEnable(GLES20.GL_BLEND);
+                GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+                GLES20.glDepthMask(false);
             }
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
             for(PlayerModelSpec.Part part:silhouetteParts){
