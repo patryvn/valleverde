@@ -141,12 +141,38 @@ public final class PlayerModelSpec {
     public static Part[] parts() { return PARTS.clone(); }
     public static float nominalHeight() { return 1.92f; }
 
+    /**
+     * The compatibility silhouette deliberately uses only the cube mesh (vb).
+     * Some mobile drivers can accept sphere/capsule draw calls yet fail to show
+     * them consistently. Converting the 11 core parts to boxes keeps a complete
+     * animated human visible using one well-tested vertex buffer and shader.
+     */
+    private static Part asCompatibilityBox(Part source) {
+        float sx = source.sx;
+        float sy = source.sy;
+        float sz = source.sz;
+        if (source.shape == Shape.SPHERE) {
+            // Sphere scales are radii; a cube's scales are full side lengths.
+            sx *= 2f;
+            sy *= 2f;
+            sz *= 2f;
+        } else if (source.shape == Shape.LIMB) {
+            // Slightly widen the low-detail arms and legs for phone-sized screens.
+            sx = Math.max(sx, 0.18f);
+            sz = Math.max(sz, 0.18f);
+        }
+        return new Part(source.id, Shape.BOX, source.motion,
+            source.x, source.y, source.z, sx, sy, sz,
+            source.r, source.g, source.b, source.alpha, source.roll, source.followsBody);
+    }
+
     /** Core parts used by the independent low-feature GLES compatibility silhouette. */
     public static Part[] fallbackParts() {
         Part[] fallback = new Part[FALLBACK_PART_IDS.length];
         for (int i=0;i<FALLBACK_PART_IDS.length;i++) {
-            fallback[i]=find(FALLBACK_PART_IDS[i]);
-            if (fallback[i]==null) throw new IllegalStateException("Missing fallback player part: "+FALLBACK_PART_IDS[i]);
+            Part source=find(FALLBACK_PART_IDS[i]);
+            if (source==null) throw new IllegalStateException("Missing fallback player part: "+FALLBACK_PART_IDS[i]);
+            fallback[i]=asCompatibilityBox(source);
         }
         return fallback;
     }
