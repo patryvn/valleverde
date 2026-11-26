@@ -254,14 +254,24 @@ movement_ok=0
 moving_line=""
 moving_telemetry=""
 for attempt in $(seq 1 8); do
-  # Explicit touchscreen source avoids depending on the shell input default.
-  adb shell input touchscreen swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 2200
+  # Android 15 may expose more than one logical display. Target the primary
+  # display explicitly; without -d 0, input can exit successfully but deliver
+  # no MotionEvent to the app's landscape HUD.
+  if ! adb shell input touchscreen -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 2200; then
+    echo "Explicit display-0 touchscreen gesture command failed; trying the default input source."
+  fi
   sleep 1
   assert_game_alive "joystick swipe $attempt" || exit 1
   touch_down_line="$(grep -E 'HUD_TOUCH DOWN .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
   touch_move_line="$(grep -E 'HUD_TOUCH MOVE .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
   if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
-    echo "Touchscreen swipe did not reach the joystick handler (down=\${touch_down_line:+yes}, move=\${touch_move_line:+yes})."
+    adb shell input -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 2200 || true
+    sleep 1
+    touch_down_line="$(grep -E 'HUD_TOUCH DOWN .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
+    touch_move_line="$(grep -E 'HUD_TOUCH MOVE .*mode=1' emulator-output/renderer-live.log | tail -n 1 || true)"
+  fi
+  if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
+    echo "Display-0 swipe did not reach the joystick handler (down=\${touch_down_line:+yes}, move=\${touch_move_line:+yes})."
     continue
   fi
   moving_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
@@ -273,7 +283,7 @@ for attempt in $(seq 1 8); do
   fi
 done
 if [[ "$movement_ok" != "1" ]]; then
-  echo "Player movement or camera follow verification failed after eight measured touchscreen gestures."
+  echo "Player movement or camera follow verification failed after eight display-0 touchscreen gestures."
   grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
   exit 1
 fi
