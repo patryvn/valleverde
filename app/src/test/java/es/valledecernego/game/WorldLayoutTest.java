@@ -22,6 +22,7 @@ public class WorldLayoutTest {
         assertTrue(WorldLayout.countType(WorldLayout.MARKET) >= 1);
         assertTrue(WorldLayout.countType(WorldLayout.VILLAGE_BOARD) >= 1);
         assertTrue(WorldLayout.countType(WorldLayout.HOUSE) >= 1);
+        assertEquals(1, WorldLayout.countType(WorldLayout.WATER_SOURCE));
     }
 
     @Test public void eachSessionReceivesItsOwnMutableObjectCopies() {
