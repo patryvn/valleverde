@@ -139,4 +139,51 @@ public class PlayerModelSpecTest {
         assertNotNull(PlayerModelSpec.find("shirt-orange-stripe"));
     }
 
+
+    @Test public void compatibilityModelUsesOnlyCubeMeshForAllElevenCoreParts() {
+        PlayerModelSpec.Part[] parts = PlayerModelSpec.fallbackParts();
+        assertEquals(11, parts.length);
+        for (PlayerModelSpec.Part part : parts) {
+            assertEquals("fallback must not depend on sphere/capsule buffers: " + part.id,
+                PlayerModelSpec.Shape.BOX, part.shape);
+        }
+        for (String id : new String[] {
+            "head", "cap", "torso", "left-arm", "right-arm",
+            "left-leg", "right-leg", "left-boot", "right-boot", "neck", "backpack"
+        }) {
+            boolean found = false;
+            for (PlayerModelSpec.Part part : parts) {
+                if (id.equals(part.id)) found = true;
+            }
+            assertTrue("missing humanoid part " + id, found);
+        }
+    }
+
+    @Test public void sphereFallbackPreservesTheOriginalOutsideDimensions() {
+        PlayerModelSpec.Part original = PlayerModelSpec.find("head");
+        PlayerModelSpec.Part box = null;
+        for (PlayerModelSpec.Part part : PlayerModelSpec.fallbackParts()) {
+            if ("head".equals(part.id)) box = part;
+        }
+        assertNotNull(box);
+        assertEquals(original.sx * 2f, box.sx, 0.0001f);
+        assertEquals(original.sy * 2f, box.sy, 0.0001f);
+        assertEquals(original.sz * 2f, box.sz, 0.0001f);
+    }
+
+    @Test public void compatibilityArmsAndLegsStayArticulatedAndReadable() {
+        for (String id : new String[] {"left-arm", "right-arm", "left-leg", "right-leg"}) {
+            PlayerModelSpec.Part part = null;
+            for (PlayerModelSpec.Part candidate : PlayerModelSpec.fallbackParts()) {
+                if (id.equals(candidate.id)) part = candidate;
+            }
+            assertNotNull(part);
+            assertEquals(PlayerModelSpec.Shape.BOX, part.shape);
+            assertNotEquals(PlayerModelSpec.Motion.NONE, part.motion);
+            assertTrue("limb should remain wide enough for phone screens", part.sx >= 0.18f);
+            assertTrue(part.sy >= 0.44f);
+            assertTrue(part.sz >= 0.18f);
+        }
+    }
+
 }
