@@ -8,7 +8,9 @@ public class TreeVisualSpecTest {
         float seed = TreeVisualSpec.seed(-10f, 16f);
         assertTrue(seed >= 0f && seed < 1f);
         assertEquals(seed, TreeVisualSpec.seed(-10f, 16f), 0f);
-        assertEquals(TreeVisualSpec.species(-10f, 16f), TreeVisualSpec.species(-10f, 16f));
+        int species = TreeVisualSpec.species(-10f, 16f);
+        assertTrue(species == TreeVisualSpec.CONIFER || species == TreeVisualSpec.BROADLEAF);
+        assertEquals(species, TreeVisualSpec.species(-10f, 16f));
         assertEquals(TreeVisualSpec.scale(5f, 23f), TreeVisualSpec.scale(5f, 23f), 0f);
         assertTrue(TreeVisualSpec.scale(5f, 23f) >= 0.92f);
         assertTrue(TreeVisualSpec.scale(5f, 23f) < 1.08f);
@@ -32,6 +34,7 @@ public class TreeVisualSpecTest {
 
     @Test public void coniferCanopyNarrowsAndRisesAcrossFourTiers() {
         float previousRadius = Float.MAX_VALUE;
+        float previousHeight = Float.MAX_VALUE;
         float previousY = -Float.MAX_VALUE;
         for (int tier = 0; tier < TreeVisualSpec.CONIFER_TIER_COUNT; tier++) {
             float radius = TreeVisualSpec.coniferTierRadius(tier);
@@ -40,8 +43,10 @@ public class TreeVisualSpecTest {
             assertTrue(radius > 0f);
             assertTrue(height > 0f);
             assertTrue(radius < previousRadius);
+            assertTrue(height < previousHeight);
             assertTrue(centerY > previousY);
             previousRadius = radius;
+            previousHeight = height;
             previousY = centerY;
         }
         assertEquals(0f, TreeVisualSpec.coniferTierRadius(-1), 0f);
