@@ -83,16 +83,11 @@ if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed 
 # On the CPU-only AVD that system activity produced a Settings ANR and covered
 # the player in run 156, so the test must not try to tap through a system dialog.
 window_dump="$(adb shell dumpsys window windows 2>/dev/null || true)"
-if printf '%s\n' "$window_dump" | grep -q 'ImmersiveModeConfirmation'; then
-  echo "Unexpected immersive confirmation in debug telemetry mode."
-  printf '%s\n' "$window_dump" | grep -C 2 'ImmersiveModeConfirmation' || true
-  exit 1
-fi
-if printf '%s\n' "$window_dump" | grep -q 'Application Not Responding'; then
-  echo "Android system ANR dialog is covering the game; screenshot is not valid."
-  printf '%s\n' "$window_dump" | grep -C 2 'Application Not Responding' || true
-  exit 1
-fi
+printf '%s\n' "$window_dump" > emulator-output/windows-after-launch.txt
+# dumpsys lists hidden windows too. Only a Surface: shown=true overlay can
+# invalidate the screenshot; a pending SystemUI ANR window with shown=false
+# must not abort the game smoke test.
+python3 scripts/verify-window-state.py emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
 # Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
@@ -109,6 +104,8 @@ if [[ -z "$initial_line" ]]; then
 fi
 initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
 assert_game_alive "initial scene capture" || exit 1
+adb shell dumpsys window windows > emulator-output/windows-before-initial-capture.txt
+python3 scripts/verify-window-state.py emulator-output/windows-before-initial-capture.txt
 adb exec-out screencap -p > emulator-output/valle-cernego-initial.png
 test -s emulator-output/valle-cernego-initial.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-initial.png
@@ -166,6 +163,8 @@ if [[ "$movement_ok" != "1" ]]; then
   grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
   exit 1
 fi
+adb shell dumpsys window windows > emulator-output/windows-before-moving-capture.txt
+python3 scripts/verify-window-state.py emulator-output/windows-before-moving-capture.txt
 adb exec-out screencap -p > emulator-output/valle-cernego-moving.png
 test -s emulator-output/valle-cernego-moving.png
 python3 scripts/verify-player-screenshot.py emulator-output/valle-cernego-moving.png
