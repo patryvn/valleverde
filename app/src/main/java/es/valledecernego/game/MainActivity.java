@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO 0.21.0  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
@@ -410,9 +410,11 @@ public class MainActivity extends Activity {
     static class GameRenderer implements GLSurfaceView.Renderer {
         FloatBuffer vb;
         int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform;
-        volatile boolean rendererReady=false;
-        volatile int playerDrawCalls=0,playerGlError=0;
+        int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
+        volatile boolean rendererReady=false,silhouetteReady=false;
+        volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
+        final PlayerModelSpec.Part[] silhouetteParts=PlayerModelSpec.fallbackParts();
         volatile boolean debugTelemetry=false;
         long lastTelemetryNanos=0L;
         FloatBuffer sphereBuffer,capsuleBuffer;
@@ -475,6 +477,18 @@ public class MainActivity extends Activity {
             rendererReady=pos>=0 && color>=0 && mvp>=0
                 && (normalAttr<0 || normalMatrixUniform>=0);
             if(!rendererReady) android.util.Log.e("ValleCernego","Faltan ubicaciones OpenGL obligatorias.");
+
+            // Shader independiente y mínimo para conservar una silueta humana en otros controladores.
+            String silhouetteVs="attribute vec3 aPos; uniform mat4 uMVP; void main(){gl_Position=uMVP*vec4(aPos,1.0);}";
+            String silhouetteFs="precision mediump float; uniform vec4 uColor; void main(){gl_FragColor=uColor;}";
+            silhouetteProgram=buildProgram(silhouetteVs,silhouetteFs);
+            if(silhouetteProgram!=0){
+                silhouettePos=GLES20.glGetAttribLocation(silhouetteProgram,"aPos");
+                silhouetteColor=GLES20.glGetUniformLocation(silhouetteProgram,"uColor");
+                silhouetteMvp=GLES20.glGetUniformLocation(silhouetteProgram,"uMVP");
+                silhouetteReady=silhouettePos>=0 && silhouetteColor>=0 && silhouetteMvp>=0;
+            }
+            if(!silhouetteReady) android.util.Log.w("ValleCernego","Silueta de compatibilidad no disponible.");
 
             float[] cube={
                 -.5f,-.5f,-.5f, .5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,.5f,-.5f,
@@ -791,8 +805,8 @@ public class MainActivity extends Activity {
             if(debugTelemetry && now-lastTelemetryNanos>=1_000_000_000L){
                 ThirdPersonCamera.Pose debugCamera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
                 android.util.Log.i("ValleCernego",String.format(Locale.US,
-                    "PLAYER_STATE POS=%.2f,%.2f CAM=%.2f,%.2f PARTS=%d GL=0x%04x",
-                    px,pz,debugCamera.x(),debugCamera.z(),playerDrawCalls,playerGlError));
+                    "PLAYER_STATE POS=%.2f,%.2f CAM=%.2f,%.2f PARTS=%d FALLBACK=%d GL=0x%04x",
+                    px,pz,debugCamera.x(),debugCamera.z(),playerDrawCalls,silhouetteDrawCalls,playerGlError));
                 lastTelemetryNanos=now;
             }
         }
@@ -829,69 +843,68 @@ public class MainActivity extends Activity {
         }
 
         String getRenderStatus(){
-            if(!rendererReady)return "3D NO DISPONIBLE";
+            if(!rendererReady && !silhouetteReady)return "3D NO DISPONIBLE";
             if(!playerFrameRendered)return "3D OK · esperando primer fotograma";
             if(playerGlError!=GLES20.GL_NO_ERROR){
                 return "3D ERROR GL 0x"+Integer.toHexString(playerGlError)
                     +" · "+playerDrawCalls+"/"+PlayerModelSpec.size();
             }
-            if(playerDrawCalls<PlayerModelSpec.size()){
-                return "3D INCOMPLETO · "+playerDrawCalls+"/"+PlayerModelSpec.size()+" piezas";
+            if(rendererReady && playerDrawCalls>=PlayerModelSpec.size()){
+                return "3D OK · "+playerDrawCalls+" piezas · respaldo humanoide "+silhouetteDrawCalls+" · GL OK";
             }
-            return "3D OK · "+playerDrawCalls+" piezas enviadas · GL OK";
+            if(silhouetteReady && silhouetteDrawCalls>=silhouetteParts.length){
+                return "3D COMPATIBLE · "+silhouetteDrawCalls+" piezas humanoides · GL OK";
+            }
+            return "3D INCOMPLETO · "+playerDrawCalls+"/"+PlayerModelSpec.size()+" piezas";
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
         void drawPlayer(){
-            if(!rendererReady)return;
-            float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            if(!rendererReady && !silhouetteReady)return;
             int submittedParts=0;
             playerDrawCalls=0;
+            silhouetteDrawCalls=0;
             playerGlError=GLES20.GL_NO_ERROR;
             for(int i=0;i<8;i++){
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
             }
 
-            // La sombra translúcida no escribe profundidad: no puede tapar las botas.
-            GLES20.glEnable(GLES20.GL_BLEND);
-            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
-            GLES20.glDepthMask(false);
-            drawMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
-                .045f,.055f,.045f,.28f,playerFacing,0f);
-            GLES20.glDepthMask(true);
-            GLES20.glDisable(GLES20.GL_BLEND);
+            if(rendererReady){
+                // La sombra translúcida no escribe profundidad: no puede tapar las botas.
+                GLES20.glEnable(GLES20.GL_BLEND);
+                GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+                GLES20.glDepthMask(false);
+                drawMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
+                    .045f,.055f,.045f,.28f,playerFacing,0f);
+                GLES20.glDepthMask(true);
+                GLES20.glDisable(GLES20.GL_BLEND);
 
-            for(int i=0;i<PlayerModelSpec.size();i++){
-                PlayerModelSpec.Part part=PlayerModelSpec.partAt(i);
-                float angle=0f;
-                if(part.motion==PlayerModelSpec.Motion.LEFT_LEG){
-                    angle=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
-                }else if(part.motion==PlayerModelSpec.Motion.RIGHT_LEG){
-                    angle=VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,false);
-                }else if(part.motion==PlayerModelSpec.Motion.LEFT_ARM){
-                    angle=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
-                }else if(part.motion==PlayerModelSpec.Motion.RIGHT_ARM){
-                    angle=VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
+                float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+                for(int i=0;i<PlayerModelSpec.size();i++){
+                    PlayerModelSpec.Part part=PlayerModelSpec.partAt(i);
+                    float angle=playerPartAngle(part);
+                    PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                        px,py,pz,playerFacing,bob,part,angle);
+                    boolean submitted;
+                    if(part.shape==PlayerModelSpec.Shape.LIMB){
+                        submitted=drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
+                            pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
+                            pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                    }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
+                        submitted=drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
+                            pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
+                            pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                    }else{
+                        submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
+                            part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                    }
+                    if(submitted)submittedParts++;
                 }
-                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
-                    px,py,pz,playerFacing,bob,part,angle);
-                boolean submitted;
-                if(part.shape==PlayerModelSpec.Shape.LIMB){
-                    // El mesh cápsula mide 2 unidades de alto; sy/2 conserva las dimensiones del modelo.
-                    submitted=drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
-                        pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch,pose.roll,part.materialStyle);
-                }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
-                    submitted=drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
-                        pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch,pose.roll,part.materialStyle);
-                }else{
-                    submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
-                        part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
-                }
-                if(submitted)submittedParts++;
             }
-            playerDrawCalls=submittedParts;
+
+            // Independent low-feature silhouette protects the essential human shape on mobile GPUs.
+            if(silhouetteReady)drawPlayerSilhouette(rendererReady ? 0.18f : 1f);
+            playerDrawCalls=rendererReady?submittedParts:silhouetteDrawCalls;
             playerGlError=GLES20.glGetError();
             if(playerGlError!=GLES20.GL_NO_ERROR){
                 android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(playerGlError)
@@ -900,7 +913,77 @@ public class MainActivity extends Activity {
                     if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
                 }
             }
-            playerFrameRendered=true;
+            playerFrameRendered=playerDrawCalls>0;
+        }
+
+        float playerPartAngle(PlayerModelSpec.Part part){
+            if(part.motion==PlayerModelSpec.Motion.LEFT_LEG){
+                return VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,true);
+            }
+            if(part.motion==PlayerModelSpec.Motion.RIGHT_LEG){
+                return VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,false);
+            }
+            if(part.motion==PlayerModelSpec.Motion.LEFT_ARM){
+                return VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
+            }
+            if(part.motion==PlayerModelSpec.Motion.RIGHT_ARM){
+                return VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
+            }
+            return 0f;
+        }
+
+        void drawPlayerSilhouette(float alpha){
+            GLES20.glEnable(GLES20.GL_BLEND);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            GLES20.glDepthMask(false);
+            if(!rendererReady){
+                drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,
+                    .52f,.035f,.34f,.045f,.055f,.045f,.28f,playerFacing,0f,0f);
+            }
+            float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            for(PlayerModelSpec.Part part:silhouetteParts){
+                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                    px,py,pz,playerFacing,bob,part,playerPartAngle(part));
+                FloatBuffer mesh;
+                int count;
+                float sy=pose.sy;
+                if(part.shape==PlayerModelSpec.Shape.LIMB){
+                    mesh=capsuleBuffer;count=capsuleVertexCount;sy*=.5f;
+                }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
+                    mesh=sphereBuffer;count=sphereVertexCount;
+                }else{
+                    mesh=vb;count=36;
+                }
+                if(drawSilhouetteMesh(mesh,count,pose.x,pose.y,pose.z,pose.sx,sy,pose.sz,
+                    part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll)){
+                    silhouetteDrawCalls++;
+                }
+            }
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+        }
+
+        boolean drawSilhouetteMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,
+                                   float sx,float sy,float sz,float r,float g,float b,float alpha,
+                                   float angle,float localRotationX,float localRotationZ){
+            if(!silhouetteReady || mesh==null || vertexCount<=0)return false;
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,x,y,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationZ),0f,0f,1f);
+            Matrix.scaleM(model,0,sx,sy,sz);
+            Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0);
+            Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
+            GLES20.glUseProgram(silhouetteProgram);
+            GLES20.glUniformMatrix4fv(silhouetteMvp,1,false,mvpM,0);
+            GLES20.glUniform4f(silhouetteColor,r,g,b,alpha);
+            GLES20.glEnableVertexAttribArray(silhouettePos);
+            mesh.position(0);
+            GLES20.glVertexAttribPointer(silhouettePos,3,GLES20.GL_FLOAT,false,6*4,mesh);
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertexCount);
+            GLES20.glDisableVertexAttribArray(silhouettePos);
+            return true;
         }
 
         // Árbol de frondosa atlántica: tronco, ramas, copa en varios volúmenes y matices estacionales.
