@@ -11,17 +11,24 @@ public class WorldMaterialSpecTest {
         assertTrue(first >= 0f && first <= 1f);
     }
 
-    @Test public void terrainBrightnessHasNaturalVariationAndSafeRange() {
+    @Test public void terrainToneUsesMultipleScalesAndHasVisibleVariation() {
         float min = Float.MAX_VALUE, max = -Float.MAX_VALUE;
         for (int z = -12; z <= 12; z++) {
             for (int x = -12; x <= 12; x++) {
-                float value = WorldMaterialSpec.terrainBrightness(x * .73f, z * .61f);
-                min = Math.min(min, value);
-                max = Math.max(max, value);
-                assertTrue(value >= .80f && value <= 1.02f);
+                float tone = WorldMaterialSpec.terrainTone(x * .73f, z * .61f);
+                assertTrue(tone >= 0f && tone <= 1f);
+                min = Math.min(min, tone);
+                max = Math.max(max, tone);
+                float lightness = WorldMaterialSpec.terrainBrightness(x * .73f, z * .61f);
+                assertTrue(lightness >= .72f && lightness <= 1.22f);
             }
         }
-        assertTrue("procedural ground should not be a uniform flat colour", max - min > .025f);
+        assertTrue("multi-scale grass should form distinct dark, mid and light patches", max - min > .60f);
+    }
+
+    @Test public void invalidTerrainCoordinatesUseNeutralFiniteFallbacks() {
+        assertEquals(.5f, WorldMaterialSpec.terrainTone(Float.NaN, 1f), 0f);
+        assertEquals(.91f, WorldMaterialSpec.terrainBrightness(Float.NaN, 1f), 0f);
     }
 
     @Test public void skyGradientIsMonotonicAndClamped() {

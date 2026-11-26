@@ -19,6 +19,14 @@ La zona inicial mezcla frondosas atlánticas estilizadas y coníferas perennes. 
 
 Las pruebas `TreeVisualSpecTest` comprueban que el bosque inicial contiene ambas variantes, que el aspecto es estable y que la copa de las coníferas se estrecha y asciende correctamente. La prueba de escena de Android sigue comprobando que el renderizador no genera errores y que el personaje y la cámara continúan funcionando; la apariencia de los árboles debe validarse también en el móvil físico.
 
+## Suelo atlántico con variación multiescala en 0.27.6
+
+La captura visual de 0.27.5 detectó solo cinco tonos verdes cuantizados en la zona inferior del terreno, por debajo del mínimo de diez exigido por el smoke test. Las pruebas unitarias y las compilaciones Debug/Release sí terminaron correctamente, pero la verificación de escena falló y no debe considerarse una aprobación visual.
+
+En 0.27.6 el shader GLES mezcla tres escalas de ruido (parches amplios, variación media y detalle fino), una modulación de hierba y una pequeña variación de suelo seco. La paleta usa tonos de sombra, hierba media y zonas iluminadas para evitar una superficie verde plana. La fórmula CPU de referencia está cubierta por pruebas de rango, determinismo y variación espacial.
+
+Sigue siendo un material procedural por color: no incorpora todavía mapas UV, texturas fotográficas, geometría individual de briznas ni sombras proyectadas reales. La iluminación por normales existente continúa aplicándose sobre el terreno. El aspecto final debe comprobarse en el emulador y en una GPU física Android.
+
 ## Comprobaciones automatizadas
 
 GitHub Actions ejecuta `:app:testDebugUnitTest`, `:app:assembleDebug` y `:app:assembleRelease`. Las pruebas comprueban presencia de piezas, dimensiones positivas, materiales válidos, colocación frontal de los ojos, rotación de la franja, pivotes de extremidades, transformación al desplazarse y seguimiento de cámara.
@@ -37,7 +45,7 @@ En un móvil Android real, comprobar:
 
 1. Que los árboles no desaparezcan al acercarse desde distintos ángulos ni al girar la cámara.
 
-2. Instalar la APK 0.27.4 y comprobar que el HUD indique `3D OK · 60 piezas · GL OK` después del primer fotograma. Este estado confirma el envío de las piezas sin error GL notificado, no su visibilidad real.
+2. Instalar la APK 0.27.6 y comprobar que el HUD indique `3D OK · 60 piezas · GL OK` después del primer fotograma. Este estado confirma el envío de las piezas sin error GL notificado, no su visibilidad real.
 3. Que el personaje se vea completo, no como un rectángulo o una pantalla azul.
 4. Que se distingan cabeza, torso, brazos, piernas, gorro, botas, mochila y bandolera desde el inicio.
 5. Que la cámara permanezca detrás del personaje y lo mantenga en pantalla al caminar en las cuatro direcciones.

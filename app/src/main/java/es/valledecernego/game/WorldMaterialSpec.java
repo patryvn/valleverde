@@ -7,6 +7,9 @@ public final class WorldMaterialSpec {
     public static final float SKY = 7f;
     public static final float PATCH_SCALE = 0.42f;
     public static final float DETAIL_SCALE = 3.7f;
+    public static final float TERRAIN_BROAD_SCALE = 0.18f;
+    public static final float TERRAIN_MEDIUM_SCALE = 0.72f;
+    public static final float TERRAIN_FINE_SCALE = 2.6f;
 
     private WorldMaterialSpec() { }
 
@@ -25,11 +28,20 @@ public final class WorldMaterialSpec {
         return clamp(mix(mix(a, b, fx), mix(c, d, fx), fz), 0f, 1f);
     }
 
-    /** Expected brightness multiplier for the two terrain-noise octaves. */
+    /** Multi-scale grass tone mirrored by the GLES terrain shader, in [0,1]. */
+    public static float terrainTone(float x, float z) {
+        if (!isFinite(x) || !isFinite(z)) return 0.5f;
+        float broad = noise(x, z, TERRAIN_BROAD_SCALE);
+        float medium = noise(x, z, TERRAIN_MEDIUM_SCALE);
+        float fine = noise(x, z, TERRAIN_FINE_SCALE);
+        float blade = 0.5f + 0.5f * (float) Math.sin(x * 7.2f + Math.sin(z * 5.1f));
+        return clamp(0.48f * broad + 0.30f * medium + 0.16f * fine + 0.06f * blade, 0f, 1f);
+    }
+
+    /** Relative lightness envelope of the procedural grass palette. */
     public static float terrainBrightness(float x, float z) {
         if (!isFinite(x) || !isFinite(z)) return 0.91f;
-        float detail = 0.5f + 0.5f * (float) Math.sin(x * DETAIL_SCALE + Math.sin(z * 3.1f));
-        return 0.80f + 0.16f * noise(x, z, PATCH_SCALE) + 0.06f * detail;
+        return 0.72f + 0.50f * terrainTone(x, z);
     }
 
     /** Monotonic vertical sky gradient; -0.28 is horizon and 0.68 is zenith. */
