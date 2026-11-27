@@ -19,7 +19,14 @@ public class PlayerRenderSnapshotTest {
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
-    @Test public void detailedModelReportsAllPartsAndCompatibilitySilhouette() {
+    @Test public void detailedModelReportsTheRoundedModelWithoutDrawingTheBoxFallback() {
+        PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
+            true, true, false, DETAILED_PARTS, 0, 0, true);
+        assertEquals("3D OK · 60 piezas · modelo detallado · GL OK",
+            snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
+    }
+
+    @Test public void detailedModelCanStillReportFallbackWhenItWasActuallyNeeded() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
             true, true, false, DETAILED_PARTS, FALLBACK_PARTS, 0, true);
         assertEquals("3D OK · 60 piezas · respaldo humanoide 11 · GL OK",
