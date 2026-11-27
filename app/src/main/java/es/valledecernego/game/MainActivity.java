@@ -640,9 +640,11 @@ public class MainActivity extends Activity {
                 silhouetteReady=silhouettePos>=0 && silhouetteColor>=0 && silhouetteMvp>=0;
             }
             if(!silhouetteReady) android.util.Log.w("ValleCernego","Silueta de compatibilidad no disponible.");
-            if(!rendererReady && silhouetteReady){
-                // Si falla también el shader plano inicial, reutiliza el shader mínimo
-                // como renderizador principal para mantener escena y personaje visibles.
+            PlayerShaderPlan shaderPlan=PlayerShaderPlan.resolve(
+                rendererReady,compatibilityRenderer,silhouetteReady);
+            if(shaderPlan.promoteSilhouette){
+                // The minimal program is shared by the scene and rounded player path.
+                // Do not clear silhouetteReady: that would force the player back to cubes.
                 program=silhouetteProgram;
                 pos=silhouettePos;
                 normalAttr=-1;
@@ -651,11 +653,15 @@ public class MainActivity extends Activity {
                 normalMatrixUniform=-1;
                 materialStyleUniform=-1;
                 modelMatrixUniform=-1;
-                rendererReady=true;
-                compatibilityRenderer=true;
-                silhouetteReady=false;
-                android.util.Log.w("ValleCernego","Renderizador GLES compatible activado para la escena completa.");
+                android.util.Log.w("ValleCernego","Renderizador GLES mínimo promovido; se conserva el humanoide redondeado.");
             }
+            rendererReady=shaderPlan.rendererReady;
+            silhouetteReady=shaderPlan.silhouetteReady;
+            compatibilityRenderer=shaderPlan.compatibilityRenderer;
+            android.util.Log.i("ValleCernego","PLAYER_SHADER_PLAN primary="
+                +(shaderPlan.promoteSilhouette?"promoted-fallback":(rendererReady?"ready":"unavailable"))
+                +" roundedFallback="+silhouetteReady
+                +" compatibility="+compatibilityRenderer);
 
             float[] cube={
                 -.5f,-.5f,-.5f, .5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,-.5f,-.5f, .5f,.5f,-.5f, -.5f,.5f,-.5f,
