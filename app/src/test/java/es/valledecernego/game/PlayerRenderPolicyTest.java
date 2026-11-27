@@ -55,11 +55,13 @@ public class PlayerRenderPolicyTest {
         assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(680f,99f,720f,0f));
     }
 
-    @Test public void compatibilityModeToggleAlternatesWithoutChangingItsInitialChoice() {
-        assertTrue(PlayerRenderPolicy.toggleCompatibilityMode(false));
-        assertFalse(PlayerRenderPolicy.toggleCompatibilityMode(true));
-        assertTrue(PlayerRenderPolicy.toggleCompatibilityMode(
-            PlayerRenderPolicy.toggleCompatibilityMode(false)));
+    @Test public void compatibilityModeToggleAlternatesBetweenTheTwoModes() {
+        boolean compatibility=PlayerRenderPolicy.toggleCompatibilityMode(false);
+        assertTrue(compatibility);
+        compatibility=PlayerRenderPolicy.toggleCompatibilityMode(compatibility);
+        assertFalse(compatibility);
+        compatibility=PlayerRenderPolicy.toggleCompatibilityMode(compatibility);
+        assertTrue(compatibility);
     }
 
     @Test public void invalidExpectedPartCountIsRejected() {

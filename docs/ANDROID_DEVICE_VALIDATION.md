@@ -318,3 +318,8 @@ Se añaden pruebas de la zona táctil, de su separación respecto al joystick y 
 ### Comprobación física pendiente para 0.28.0
 
 En el Poco X6 Pro, abrir expresamente la aplicación `Valle de Cernego · Prueba` y comprobar que el HUD indica `0.28.0`. Primero observar el personaje con `3D`; después tocar `ALT` y verificar que se distinguen cabeza, torso, ambos brazos, ambas piernas, gorra y mochila; finalmente volver a `3D` y caminar en varias direcciones. Si solo uno de los modos se ve correctamente, anotar cuál aparece en el HUD. La captura CI de SwiftShader no demuestra compatibilidad con la GPU física ni descarta que se esté abriendo otra instalación del paquete principal.
+
+
+### Corrección de regresión de prueba en CI 250 (27-11-2026)
+
+El run [45947279885](https://github.com/patryvn/valleverde/actions/runs/45947279885) compiló el código Java principal y de pruebas, pero `testDebugUnitTest` terminó con 159/160 pruebas correctas. La única aserción fallida estaba en el test nuevo de alternancia: la expresión anidada aplicaba el conmutador dos veces y esperaba el estado contrario. Se reescribe como tres transiciones explícitas (detallado → compatibilidad → detallado → compatibilidad). No se generaron APK en ese run porque el workflow detiene las compilaciones tras el fallo de pruebas. La nueva ejecución debe volver a validar las 160 pruebas y después generar Debug/Release y ejecutar el smoke test.
