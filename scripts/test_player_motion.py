@@ -42,6 +42,21 @@ class PlayerMotionVerificationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unexpected player/silhouette"):
             verify_motion(telemetry(0.00), telemetry(0.36, parts=7, fallback=7))
 
+    def test_cube_humanoid_fallback_can_move_and_keep_camera_following(self):
+        result = verify_motion(
+            telemetry(0.00, parts=11, fallback=11),
+            telemetry(0.36, parts=11, fallback=11),
+        )
+        self.assertEqual(11, result["parts"])
+        self.assertEqual(11, result["fallback"])
+        self.assertAlmostEqual(0.00, result["camera_error"], places=2)
+
+    def test_renderer_must_not_switch_geometry_mid_movement(self):
+        initial = telemetry(0.00, parts=60, fallback=0)
+        moving = telemetry(0.36, parts=11, fallback=11)
+        with self.assertRaisesRegex(ValueError, "renderer path changed during movement"):
+            verify_motion(initial, moving)
+
 
 if __name__ == "__main__":
     unittest.main()
