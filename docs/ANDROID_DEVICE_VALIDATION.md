@@ -271,3 +271,32 @@ La ejecución de GitHub Actions terminó en verde el 26-11-2026: validación de 
 La versión release-test usa el identificador es.valledecernego.game.preview y la etiqueta «Valle de Cernego · Prueba». Se instala al lado de la aplicación anterior, sin pedir desinstalarla ni borrar su partida. La versión de desarrollo conserva el identificador principal; el paquete preview tiene su propio almacenamiento y empieza con una partida separada.
 
 El terreno recibe variación procedural de baja frecuencia y grano fino en el shader OpenGL ES 2.0; el cielo usa una cúpula con degradado vertical derivado del color meteorológico actual. No se descargan texturas ni recursos externos. La prueba de captura exige ahora variedad de tonos verdes en el terreno además de la silueta humana, para detectar regresiones a un plano completamente uniforme. La validación física de rendimiento, temperatura, legibilidad del HUD y control táctil sigue pendiente.
+
+## 0.27.9: detectar fallos GLES por pieza y cambiar a un humanoide completo (27-11-2026)
+
+La revisión del código encontró un defecto verificable en la selección del respaldo: `drawMesh()` devolvía `true` inmediatamente después de `glDrawArrays()`, sin comprobar el error de esa llamada. `drawPlayer()` podía contabilizar las 60 piezas como enviadas y comprobar `glGetError()` solo al final; aunque el controlador rechazase una esfera o cápsula, el recuento completo impedía activar la silueta de compatibilidad. Este comportamiento no demuestra que sea la causa concreta del rectángulo visto en el Poco X6 Pro, pero sí era una ruta de fallo que el código no cubría.
+
+En 0.27.9:
+- Se consume y comprueba el error GLES después de la sombra y de cada pieza detallada.
+- Si una pieza devuelve error o no se puede enviar, se abandona el lote detallado y se activa el modelo humanoide de compatibilidad de 11 piezas.
+- Cuando está disponible, ese respaldo usa el shader GLES mínimo y el búfer de cubo ya empleado por el terreno y las construcciones.
+- La selección se mantiene durante el contexto OpenGL actual para evitar alternar entre geometrías en cada fotograma.
+- El registro `PLAYER_COMPATIBILITY` identifica el cambio y conserva el código de error que motivó el respaldo.
+- Se añaden pruebas unitarias para lote completo, error GLES aunque se hayan intentado todas las llamadas, lote incompleto y persistencia del modo compatible.
+
+La versión de prueba es 0.27.9 (versionCode 40). El flujo de CI comprueba la versión del paquete y ejecuta las pruebas Java/Python, `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, verificación de firma y captura de la escena antes y después del movimiento.
+
+### Incidencia de CI 0.27.8 (run 45926698911)
+
+Las pruebas unitarias, las compilaciones Debug/Release, la verificación de firma y la subida de las dos APK terminaron correctamente. El paso de emulador falló durante el arranque del AVD: después de un arranque prolongado, las órdenes ADB de configuración devolvieron `Broken pipe` y el runner terminó con código 224. No se llegó a instalar/abrir la aplicación ni se produjo una captura del personaje. Por tanto, ese run no valida visualmente 0.27.8 y no se usa como evidencia de que el problema esté resuelto.
+
+### Validación física pendiente para 0.27.9
+
+La ruta de respaldo reduce la dependencia de esferas/cápsulas si el controlador informa un error, pero su silueta es deliberadamente más geométrica que el modelo de 60 piezas. Hay que comprobar en el Poco X6 Pro:
+- que se vea cabeza, cuello, torso, ambos brazos, ambas piernas, botas, gorra y mochila;
+- que la animación de reposo/caminar/giro no separe ni deforme las piezas;
+- que la cámara siga al personaje sin saltos;
+- que no haya parpadeo, errores GL repetidos, caídas graves de FPS ni calentamiento anómalo;
+- qué ruta muestra el HUD: `modelo detallado` o `11 piezas humanoides`.
+
+Una ejecución verde de SwiftShader valida únicamente el emulador. No sustituye la comprobación del controlador EGL/GPU del teléfono. La APK release-test sigue firmada con la clave de pruebas y no es una firma de distribución de Google Play.
