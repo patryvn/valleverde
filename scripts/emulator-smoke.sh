@@ -283,6 +283,18 @@ fi
 detailed_initial_telemetry="$(printf '%s\n' "$detailed_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
 capture_humanoid_frame "default detailed 3D scene" emulator-output/valle-cernego-detailed.png emulator-output/windows-before-detailed-capture.txt
 
+detailed_visual_line=""
+for attempt in $(seq 1 20); do
+  detailed_visual_line="$(grep -F 'PLAYER_VISUAL_WATCHDOG state=humanoid ' emulator-output/renderer-live.log | tail -n 1 || true)"
+  if [[ -n "$detailed_visual_line" ]]; then break; fi
+  sleep 1
+done
+if [[ -z "$detailed_visual_line" ]]; then
+  echo "Release APK did not pass the on-device pixel watchdog for the detailed humanoid."
+  grep -E 'PLAYER_VISUAL_WATCHDOG|PLAYER_STATE|PLAYER_COMPATIBILITY' emulator-output/renderer-live.log | tail -n 80 || true
+  exit 1
+fi
+
 layout_line=""
 for attempt in $(seq 1 30); do
   layout_line="$(grep -E 'HUD_LAYOUT width=[0-9]+ height=[0-9]+' emulator-output/renderer-live.log | tail -n 1 || true)"
@@ -402,10 +414,11 @@ for attempt in $(seq 1 45); do
   manual_box_geometry_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0' | tail -n 1 || true)"
   manual_box_initial_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
   manual_box_texture_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_BOX_MATERIALS frame=textured parts=60' | tail -n 1 || true)"
-  if [[ -n "$manual_box_mode_line" && -n "$manual_box_geometry_line" && -n "$manual_box_initial_line" && -n "$manual_box_texture_line" ]]; then break; fi
+  manual_box_visual_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_VISUAL_WATCHDOG state=humanoid ' | tail -n 1 || true)"
+  if [[ -n "$manual_box_mode_line" && -n "$manual_box_geometry_line" && -n "$manual_box_initial_line" && -n "$manual_box_texture_line" && -n "$manual_box_visual_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$manual_box_mode_line" || -z "$manual_box_geometry_line" || -z "$manual_box_initial_line" || -z "$manual_box_texture_line" ]]; then
+if [[ -z "$manual_box_mode_line" || -z "$manual_box_geometry_line" || -z "$manual_box_initial_line" || -z "$manual_box_texture_line" || -z "$manual_box_visual_line" ]]; then
   echo "The manual textured BOX60 humanoid did not complete all 60 parts with GL_NO_ERROR."
   fresh_log_lines "$manual_box_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
   exit 1
@@ -442,10 +455,11 @@ for attempt in $(seq 1 60); do
   box_geometry_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0' | tail -n 1 || true)"
   box_initial_line="$(printf '%s\n' "$fresh_box_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
   box_texture_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_BOX_MATERIALS frame=textured parts=60' | tail -n 1 || true)"
-  if [[ -n "$box_mode_line" && -n "$box_geometry_line" && -n "$box_initial_line" && -n "$box_texture_line" ]]; then break; fi
+  box_visual_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_VISUAL_WATCHDOG state=humanoid ' | tail -n 1 || true)"
+  if [[ -n "$box_mode_line" && -n "$box_geometry_line" && -n "$box_initial_line" && -n "$box_texture_line" && -n "$box_visual_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$box_mode_line" || -z "$box_geometry_line" || -z "$box_initial_line" || -z "$box_texture_line" ]]; then
+if [[ -z "$box_mode_line" || -z "$box_geometry_line" || -z "$box_initial_line" || -z "$box_texture_line" || -z "$box_visual_line" ]]; then
   echo "The textured cube-only 60-part humanoid did not complete with GL_NO_ERROR."
   fresh_log_lines "$box_restart_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|PLAYER_BOX_COMPATIBILITY_TEST' | tail -n 80 || true
   exit 1

@@ -549,6 +549,14 @@ public class MainActivity extends Activity {
         volatile boolean debugTelemetry=false;
         volatile boolean smokeTestMode=false;
         volatile boolean forceBoxCompatibilityForTest=false;
+        // Pixel watchdog detects a rendered rectangle even when GLES reports no error.
+        volatile boolean forceEmergencySilhouette=false;
+        volatile String visualProbeLabel="VISUAL CHECK";
+        volatile boolean visualProbeComplete=false;
+        volatile boolean visualProbeAvailable=true;
+        int visualProbeAttempts=0;
+        int surfaceWidth=0,surfaceHeight=0;
+        ByteBuffer visualProbeBuffer;
         long lastTelemetryNanos=0L;
         FloatBuffer sphereBuffer,capsuleBuffer,shadowBuffer,boxTextureBuffer;
         int sphereVertexCount,capsuleVertexCount,shadowVertexCount;
@@ -599,6 +607,12 @@ public class MainActivity extends Activity {
             // physical GPU name is not recognized by the automatic policy.
             forceBoxCompatibilityPlayerModel=forceCompatibilityPlayerModel;
             playerModePinned=true;
+            forceEmergencySilhouette=false;
+            visualProbeComplete=false;
+            visualProbeAvailable=true;
+            visualProbeAttempts=0;
+            visualProbeBuffer=null;
+            visualProbeLabel="VISUAL CHECK";
             compatibilityGeometryLogged=false;
             String selectedMode=!forceCompatibilityPlayerModel?"detailed-60":"box-only-shader-60";
             android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="+selectedMode);
@@ -629,6 +643,11 @@ public class MainActivity extends Activity {
             boxMaterialReady=false;
             boxMaterialFrameTextured=false;
             boxMaterialFrameLogged=false;
+            visualProbeComplete=false;
+            visualProbeAvailable=true;
+            visualProbeAttempts=0;
+            visualProbeBuffer=null;
+            visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
             boxMaterialTexture=0;
             boxTextureBuffer=null;
             // Preserve a manual/runtime choice; otherwise choose a conservative path
@@ -920,6 +939,12 @@ public class MainActivity extends Activity {
         }
 
         public void onSurfaceChanged(GL10 gl,int w,int h){
+            surfaceWidth=w; surfaceHeight=h;
+            visualProbeComplete=false;
+            visualProbeAvailable=true;
+            visualProbeAttempts=0;
+            visualProbeBuffer=null;
+            visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
             GLES20.glViewport(0,0,w,h);
             Matrix.perspectiveM(proj,0,62,(float)w/h,.1f,120f);
         }
@@ -972,6 +997,7 @@ public class MainActivity extends Activity {
             if(smokeTestMode){
                 drawSmokeTestEnvironment();
                 drawPlayer();
+                probePlayerVisuals();
                 logPlayerState(now);
                 return;
             }
@@ -1107,7 +1133,72 @@ public class MainActivity extends Activity {
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
             draw(7,1.75f,-7,4,.7f,3.4f,.35f,.18f,.14f);
             drawPlayer();
+            probePlayerVisuals();
             logPlayerState(now);
+        }
+
+        void probePlayerVisuals(){
+            if(visualProbeComplete || !visualProbeAvailable || !silhouetteReady
+                    || surfaceWidth<64 || surfaceHeight<64) return;
+            int probeWidth=Math.min(surfaceWidth,480);
+            int probeHeight=Math.min(surfaceHeight,320);
+            int probeX=(surfaceWidth-probeWidth)/2;
+            int probeY=(surfaceHeight-probeHeight)/2;
+            int byteCount=probeWidth*probeHeight*4;
+            if(visualProbeBuffer==null || visualProbeBuffer.capacity()<byteCount){
+                visualProbeBuffer=ByteBuffer.allocateDirect(byteCount).order(ByteOrder.nativeOrder());
+            }
+            clearPlayerGlErrors();
+            visualProbeBuffer.clear();
+            visualProbeBuffer.limit(byteCount);
+            GLES20.glReadPixels(probeX,probeY,probeWidth,probeHeight,
+                GLES20.GL_RGBA,GLES20.GL_UNSIGNED_BYTE,visualProbeBuffer);
+            int readError=GLES20.glGetError();
+            if(readError!=GLES20.GL_NO_ERROR){
+                visualProbeAvailable=false;
+                visualProbeComplete=true;
+                visualProbeLabel="VISUAL N/D";
+                android.util.Log.w("ValleCernego","PLAYER_VISUAL_WATCHDOG state=unavailable GL=0x"
+                    +Integer.toHexString(readError));
+                clearPlayerGlErrors();
+                return;
+            }
+            byte[] pixels=new byte[byteCount];
+            visualProbeBuffer.position(0);
+            visualProbeBuffer.get(pixels);
+            PlayerPixelWatchdog.Result result=PlayerPixelWatchdog.inspect(pixels,probeWidth,probeHeight);
+            visualProbeAttempts++;
+            if(result.humanoid){
+                visualProbeComplete=true;
+                visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK OK":"VISUAL OK";
+                android.util.Log.i("ValleCernego","PLAYER_VISUAL_WATCHDOG state="
+                    +(forceEmergencySilhouette?"fallback-humanoid":"humanoid")
+                    +" skin="+result.skin+" jacket="+result.jacket+" boots="+result.boots
+                    +" dark="+result.dark+" attempts="+visualProbeAttempts);
+                return;
+            }
+            if(!forceEmergencySilhouette && visualProbeAttempts>=3){
+                forceEmergencySilhouette=true;
+                forceCompatibilityPlayerModel=true;
+                forceBoxCompatibilityPlayerModel=false;
+                playerModePinned=true;
+                compatibilityGeometryLogged=false;
+                visualProbeAttempts=0;
+                visualProbeLabel="VISUAL FALLBACK";
+                android.util.Log.w("ValleCernego","PLAYER_VISUAL_WATCHDOG fallback=flat-humanoid-11"
+                    +" skin="+result.skin+" jacket="+result.jacket+" boots="+result.boots
+                    +" dark="+result.dark);
+                return;
+            }
+            if(forceEmergencySilhouette && visualProbeAttempts>=3){
+                visualProbeComplete=true;
+                visualProbeLabel="VISUAL FAILED";
+                android.util.Log.e("ValleCernego","PLAYER_VISUAL_WATCHDOG state=failed-after-flat-fallback"
+                    +" skin="+result.skin+" jacket="+result.jacket+" boots="+result.boots
+                    +" dark="+result.dark);
+                return;
+            }
+            visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
         }
 
         void logPlayerState(long now){
@@ -1211,7 +1302,8 @@ public class MainActivity extends Activity {
             String label=PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,
                 PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
                     forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest));
-            return boxMaterialFrameTextured?label+" · TEX":label;
+            String materialLabel=boxMaterialFrameTextured?label+" · TEX":label;
+            return materialLabel+" · "+visualProbeLabel;
         }
 
         // The full 60-part humanoid can run through the lit material shader, a simple
@@ -1232,6 +1324,18 @@ public class MainActivity extends Activity {
         void drawPlayer(){
             // Clear the per-frame material indicator before any render path is selected.
             boxMaterialFrameTextured=false;
+            if(forceEmergencySilhouette){
+                int emergencyParts=drawPlayerEmergencySilhouette();
+                int emergencyGlError=lastSilhouetteGlError;
+                playerDrawCalls=0;
+                silhouetteDrawCalls=emergencyParts;
+                playerGlError=emergencyGlError;
+                playerFrameRendered=emergencyParts>=silhouetteParts.length
+                    && emergencyGlError==GLES20.GL_NO_ERROR;
+                renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,true,
+                    0,emergencyParts,emergencyGlError,playerFrameRendered,false);
+                return;
+            }
             if(!rendererReady && !silhouetteReady){
                 renderSnapshot=PlayerRenderSnapshot.initial();
                 return;
@@ -1521,6 +1625,23 @@ public class MainActivity extends Activity {
                 return VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
             }
             return 0f;
+        }
+
+        int drawPlayerEmergencySilhouette(){
+            if(!silhouetteReady || vb==null || shadowBuffer==null){
+                lastSilhouetteGlError=GLES20.GL_INVALID_OPERATION;
+                return 0;
+            }
+            clearPlayerGlErrors();
+            GLES20.glEnable(GLES20.GL_BLEND);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            GLES20.glDepthMask(false);
+            drawSilhouetteMesh(shadowBuffer,shadowVertexCount,px,
+                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.01f,.34f,
+                .035f,.045f,.03f,.26f,playerFacing,0f,0f);
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+            return drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,true);
         }
 
         int drawPlayerSilhouette(float alpha,boolean preferFlatShader){
