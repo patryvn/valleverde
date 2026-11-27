@@ -27,7 +27,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.29.2"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.3"', manifest.read_text(encoding="utf-8"))
 
     def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
         root = Path(__file__).parents[1]
@@ -124,6 +124,24 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('PLAYER_BOX_MATERIALS frame=textured parts=60', SCRIPT)
         self.assertIn('manual_box_texture_line', SCRIPT)
         self.assertIn('box_texture_line', SCRIPT)
+
+    def test_pixel_watchdog_checks_rendered_humanoid_and_emergency_fallback(self):
+        root = Path(__file__).parents[1]
+        watchdog = (root / "app/src/main/java/es/valledecernego/game/PlayerPixelWatchdog.java").read_text(encoding="utf-8")
+        watchdog_test = (root / "app/src/test/java/es/valledecernego/game/PlayerPixelWatchdogTest.java").read_text(encoding="utf-8")
+        activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
+        self.assertIn("MIN_SKIN_PIXELS", watchdog)
+        self.assertIn("MIN_JACKET_PIXELS", watchdog)
+        self.assertIn("MIN_BOOT_PIXELS", watchdog)
+        self.assertIn("rejectsTheSingleBlueRectangleReportedOnThePhone", watchdog_test)
+        self.assertIn("PLAYER_VISUAL_WATCHDOG fallback=flat-humanoid-11", activity)
+        self.assertIn("VISUAL FALLBACK OK", activity)
+
+    def test_smoke_requires_pixel_confirmation_for_all_three_player_paths(self):
+        self.assertIn("detailed_visual_line", SCRIPT)
+        self.assertIn("manual_box_visual_line", SCRIPT)
+        self.assertIn("box_visual_line", SCRIPT)
+        self.assertIn("PLAYER_VISUAL_WATCHDOG state=humanoid", SCRIPT)
 
     def test_smoke_captures_and_moves_detailed_default_then_manual_box60_model(self):
         self.assertIn("PLAYER_STATE .*PARTS=60 FALLBACK=0", SCRIPT)
