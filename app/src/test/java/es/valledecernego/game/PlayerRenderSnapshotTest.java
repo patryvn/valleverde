@@ -47,6 +47,13 @@ public class PlayerRenderSnapshotTest {
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
+    @Test public void runtimeGeometryFallbackReportsTheVisibleElevenPartModelNotAttemptedDrawCalls() {
+        PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
+            true, true, false, 0, FALLBACK_PARTS, 0, true);
+        assertEquals("3D COMPATIBLE · 11 piezas humanoides · GL OK",
+            snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
+    }
+
     @Test public void glErrorIsReportedBeforeACompletePartCount() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
             true, true, false, DETAILED_PARTS, FALLBACK_PARTS, 0x0502, true);
