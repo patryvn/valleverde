@@ -65,6 +65,9 @@ public class PlayerModelSpecTest {
         assertNotNull(rightStrap);
         assertNotNull(flap);
         assertTrue("backpack must protrude from the rear of the torso",backpack.z < -.16f);
+        assertEquals("backpack must be centred behind the torso",0f,backpack.x,0.0001f);
+        assertTrue("left strap must align left of the backpack centre",leftStrap.x<0f);
+        assertTrue("right strap must align right of the backpack centre",rightStrap.x>0f);
         assertTrue("straps must sit on the camera-facing rear surface",leftStrap.z < backpack.z);
         assertTrue(rightStrap.z < backpack.z);
         assertTrue(flap.z < backpack.z);
@@ -124,8 +127,12 @@ public class PlayerModelSpecTest {
         assertEquals(1.92f,PlayerModelSpec.nominalHeight(),0.0001f);
         assertTrue(boot.y-boot.sy*.5f>0f);
         assertTrue(PlayerModelSpec.find("head").sy>PlayerModelSpec.find("neck").sy);
-        assertEquals(.25f,PlayerModelSpec.find("head").sy,0.0001f);
-        assertEquals(.23f,PlayerModelSpec.find("head").sz,0.0001f);
+        assertEquals(.22f,PlayerModelSpec.find("head").sy,0.0001f);
+        assertEquals(.18f,PlayerModelSpec.find("head").sz,0.0001f);
+        assertTrue("head must be visibly narrower than the jacket torso",
+            PlayerModelSpec.find("head").sx < PlayerModelSpec.find("torso").sx);
+        assertTrue("cap should sit over, not engulf, the head",
+            PlayerModelSpec.find("cap").sx < PlayerModelSpec.find("head").sx * 1.4f);
         assertTrue("eyes must sit on the front surface",
             PlayerModelSpec.find("left-eye-white").z+PlayerModelSpec.find("left-eye-white").sz
                 > PlayerModelSpec.find("head").z+PlayerModelSpec.find("head").sz);
@@ -151,6 +158,15 @@ public class PlayerModelSpecTest {
     private static PlayerModelSpec.Part findRounded(PlayerModelSpec.Part[] parts,String id) {
         for(PlayerModelSpec.Part part:parts) if(id.equals(part.id)) return part;
         return null;
+    }
+
+    @Test public void armsAreSeparatedFromTheTorsoForAReadableSilhouette() {
+        PlayerModelSpec.Part torso=PlayerModelSpec.find("torso");
+        PlayerModelSpec.Part left=PlayerModelSpec.find("left-arm");
+        PlayerModelSpec.Part right=PlayerModelSpec.find("right-arm");
+        assertTrue(Math.abs(left.x)-left.sx > torso.sx-.03f);
+        assertTrue(Math.abs(right.x)-right.sx > torso.sx-.03f);
+        assertEquals(-left.x,right.x,.0001f);
     }
 
     @Test public void compatibilitySilhouetteContainsAllEssentialHumanParts() {
@@ -181,7 +197,8 @@ public class PlayerModelSpecTest {
 
     @Test public void explorerJacketContrastsWithTheGreenWorldAndKeepsItsShirtAccent() {
         PlayerModelSpec.Part torso=PlayerModelSpec.find("torso");
-        assertTrue("blue component must distinguish jacket from green grass",torso.b>torso.g+.08f);
+        assertTrue("rust jacket must be distinct from green grass",torso.r>torso.g+.08f);
+        assertTrue("rust jacket must keep a warm red-brown hue",torso.r>torso.b+.08f);
         assertNotNull(PlayerModelSpec.find("shirt-front"));
         assertNotNull(PlayerModelSpec.find("shirt-orange-stripe"));
     }
