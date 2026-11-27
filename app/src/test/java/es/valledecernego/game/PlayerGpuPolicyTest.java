@@ -4,7 +4,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class PlayerGpuPolicyTest {
-    @Test public void pocoX6ProMaliG615SelectsTheSimpleShaderWithoutDroppingModelParts() {
+    @Test public void pocoX6ProMaliG615SelectsBoxOnlyGeometryWithoutDroppingModelParts() {
         assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("Mali-G615 MC6"));
         assertTrue(PlayerGpuPolicy.shouldUseBoxOnlyGeometry("ARM Mali-G615 MC6"));
         assertEquals("mali-g615-box-only-60",
