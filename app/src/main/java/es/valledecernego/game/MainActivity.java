@@ -1119,8 +1119,9 @@ public class MainActivity extends Activity {
             silhouetteDrawCalls=fallbackSubmitted;
             playerGlError=glError;
             playerFrameRendered=publishedDrawCalls>0 && glError==GLES20.GL_NO_ERROR;
+            int reportedDetailedParts=detailedComplete?submittedParts:0;
             renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,
-                compatibilityRenderer,submittedParts,fallbackSubmitted,glError,playerFrameRendered);
+                compatibilityRenderer,reportedDetailedParts,fallbackSubmitted,glError,playerFrameRendered);
         }
 
         float playerPartAngle(PlayerModelSpec.Part part){
