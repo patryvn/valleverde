@@ -1095,7 +1095,7 @@ public class MainActivity extends Activity {
                     // If the lit shader itself rejects the cube fallback, retry once
                     // with the independent position-only GLES shader.
                     int flatFallback=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,true);
-                    fallbackSubmitted=Math.max(fallbackSubmitted,flatFallback);
+                    fallbackSubmitted=flatFallback;
                     fallbackGlError=lastSilhouetteGlError;
                 }
             }
