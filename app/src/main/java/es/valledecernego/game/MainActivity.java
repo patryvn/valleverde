@@ -512,7 +512,7 @@ public class MainActivity extends Activity {
         int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform,modelMatrixUniform;
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
-        volatile boolean forceCompatibilityPlayerModel=false;
+        volatile boolean forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE;
         int lastSilhouetteGlError=GLES20.GL_NO_ERROR;
         volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
@@ -574,7 +574,11 @@ public class MainActivity extends Activity {
             rendererReady=false;
             compatibilityRenderer=false;
             silhouetteReady=false;
-            forceCompatibilityPlayerModel=false;
+            // Preserve the selected path when Android recreates the EGL context.
+            // New sessions prefer the rounded 11-part humanoid; detailed 60-part mode
+            // remains available from the visible 3D/ALT toggle.
+            android.util.Log.i("ValleCernego","PLAYER_MODE context-created="
+                +(forceCompatibilityPlayerModel?"compatibility-11":"detailed-60"));
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
             compatibilityGeometryLogged=false;
             GLES20.glClearColor(.56f,.72f,.83f,1);
