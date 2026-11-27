@@ -370,3 +370,11 @@ En 0.28.3:
 - Se añade una prueba unitaria de la política de modo inicial y pruebas de scripts para evitar repetir la secuencia que causó el fallo de CI.
 
 La APK preview pasa a 0.28.3 (versionCode 44). La validación de SwiftShader sigue siendo evidencia solo del emulador. En el Poco X6 Pro aún hay que comprobar que el modo inicial `ALT` muestra cabeza, torso, brazos, piernas, botas y mochila; caminar en varias direcciones; girar la cámara; confirmar que la silueta no se convierte en un rectángulo ni desaparece; y comprobar que el botón `3D` cambia al modelo detallado sin deformaciones. Si el móvil sigue mostrando un rectángulo azul, se necesita una captura del HUD donde aparezca el texto de estado del renderizador para distinguir si se está viendo el modo ALT redondeado, el respaldo cúbico o una instalación anterior. La APK CI sigue firmada con clave de depuración y no es una firma de distribución.
+
+## 0.28.4 — Estado explícito de la geometría del personaje (27-11-2026)
+
+- El HUD ya no agrupa el humanoide redondeado y el último respaldo de cubos bajo el mismo texto. Si se dibujan esferas y cápsulas, muestra `humanoide redondeado`; si el controlador obliga a usar las cajas de emergencia, muestra `respaldo cúbico`.
+- `PlayerRenderSnapshot` recibe el resultado real de `drawPlayerRoundedCompatibility()`; no deduce la geometría a partir del número de llamadas ni de que el shader haya compilado.
+- El verificador de capturas exige píxeles independientes de ambos brazos y ambas piernas, además de cabeza, torso y botas. Así evita aceptar una captura que solo contenga un bloque azul central.
+- La versión de prueba pasa a 0.28.4 (versionCode 45). La comprobación automática en SwiftShader sigue siendo una prueba de emulador; el Poco X6 Pro requiere validación física para confirmar su controlador gráfico.
+- La versión 0.28.3 no tuvo una ejecución CI válida asociada al commit de documentación. El smoke test de 0.28.2 verificó el modo detallado, pero no el ALT inicial. Por ello, no se atribuye a 0.28.3 una validación visual que todavía no se ha obtenido.
