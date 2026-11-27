@@ -2,8 +2,8 @@
 """Validate player displacement and third-person camera follow from renderer telemetry.
 
 SwiftShader/TCG can deliver far fewer frames than a physical phone. The 0.25 m
-floor is based on the 0.36 m measured in the 0.23.0 CI run; camera tracking and
-visible-humanoid checks remain strict and independent.
+floor is based on the 0.36 m measured in the 0.23.0 CI run. Both the lit 60-part
+path and the simple-shader 60-part compatibility path must retain stable counts.
 """
 import math
 import re
@@ -24,10 +24,12 @@ def parse_telemetry(value):
         raise ValueError("Malformed renderer telemetry: " + value)
     x, z, camera_x, camera_z, parts, fallback, gl_error = match.groups()
     parts, fallback, gl_error = int(parts), int(fallback), int(gl_error, 16)
-    if parts not in (11, 60) or fallback not in (0, 11):
+    if parts not in (11, 60) or fallback not in (0, 11, 60):
         raise ValueError("Unexpected player/silhouette draw counts: " + value)
     if parts == 11 and fallback != 11:
         raise ValueError("Compatibility renderer did not submit all humanoid parts: " + value)
+    if parts == 60 and fallback not in (0, 60):
+        raise ValueError("60-part renderer reported an inconsistent fallback count: " + value)
     if gl_error != 0:
         raise ValueError("Player batch reported OpenGL error: " + value)
     return tuple(map(float, (x, z, camera_x, camera_z))) + (parts, fallback)
