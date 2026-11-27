@@ -74,6 +74,20 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
+      - name: Grant the runner access to KVM
+        run: |
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::warning::/dev/kvm is unavailable; the Android emulator will use software acceleration."
+            exit 0
+          fi
+          sudo chmod 666 /dev/kvm
+          if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+            echo "::error::The runner still cannot read and write /dev/kvm."
+            exit 1
+          fi
+          echo "KVM is accessible to $(id -un)."
+          ls -l /dev/kvm
+
       - name: Smoke-test the 3D scene on an Android emulator
         id: emulator-smoke
         uses: reactivecircus/android-emulator-runner@v2
@@ -85,7 +99,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 4096 -cores 4
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 3072 -cores 2
           disable-animations: true
           script: bash scripts/emulator-smoke.sh
 
