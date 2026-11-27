@@ -995,9 +995,9 @@ public class MainActivity extends Activity {
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
-        // Draw the opaque compatibility body first. A successful glDrawArrays call and
-        // GL_NO_ERROR do not prove that every mobile GPU displayed every detailed part.
-        // The detailed 60-part model then overlays this guaranteed 11-part humanoid base.
+        // The detailed 60-part model is the normal path. The box-only 11-part silhouette
+        // is reserved for shader fallback or an incomplete detailed batch, never drawn
+        // underneath a healthy model where it would flatten the rounded head and torso.
         void drawPlayer(){
             if(!rendererReady && !silhouetteReady){
                 renderSnapshot=PlayerRenderSnapshot.initial();
@@ -1047,6 +1047,10 @@ public class MainActivity extends Activity {
             }
 
             boolean detailedComplete=rendererReady && submittedParts>=PlayerModelSpec.size();
+            if(rendererReady && !detailedComplete && fallbackSubmitted==0){
+                // Emergency silhouette is drawn last so it cannot occlude the detailed parts.
+                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA);
+            }
             int publishedDrawCalls=detailedComplete?submittedParts:fallbackSubmitted;
             int glError=GLES20.glGetError();
             if(glError!=GLES20.GL_NO_ERROR){
