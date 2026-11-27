@@ -85,15 +85,26 @@ def verify(path):
                 counts["skin"] += 1
                 skin_y.append(y)
                 xs.append(x); ys.append(y)
-            if jacket_top <= y < jacket_bottom and b > r * 1.20 and b > g * 1.12 and r < 150 and g < 175 and b < 210:
+            jacket_pixel = b > r * 1.20 and b > g * 1.12 and r < 150 and g < 175 and b < 210
+            if jacket_top <= y < jacket_bottom and jacket_pixel:
                 counts["jacket"] += 1
                 xs.append(x); ys.append(y)
+            if int(height * .42) <= y < int(height * .64) and jacket_pixel:
+                if int(width * .42) <= x < int(width * .49):
+                    counts["left_arm"] += 1
+                if int(width * .51) <= x < int(width * .58):
+                    counts["right_arm"] += 1
             if boots_top <= y < boots_bottom and 90 <= r <= 235 and 25 <= g <= 155 and b < 105 and r > g * 1.18:
                 counts["boots"] += 1
                 boots_y.append(y)
                 xs.append(x); ys.append(y)
             if legs_top <= y < legs_bottom and max(r, g, b) < 58:
                 counts["dark"] += 1
+                if int(height * .55) <= y < int(height * .72):
+                    if int(width * .46) <= x < int(width * .50):
+                        counts["left_leg"] += 1
+                    if int(width * .50) <= x < int(width * .54):
+                        counts["right_leg"] += 1
                 xs.append(x); ys.append(y)
     # A single blue rectangle can satisfy the old torso-colour check. Require
     # independent left/right arm and leg pixels as well as the head and boots.
