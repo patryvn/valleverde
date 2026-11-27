@@ -416,9 +416,46 @@ run_motion_for_mode "simple-shader ALT" 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=
   "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
   emulator-output/windows-before-alt-moving-capture.txt
 
+# Re-launch with a test-only override to exercise the cube-only 60-part route
+# selected automatically on Mali-G615. The override is ignored in normal play.
+wait_for_clear_windows "before box-only compatibility restart" emulator-output/windows-before-box60-restart.txt || exit 1
+adb shell am force-stop "$APP_ID" || true
+box_restart_log_start="$(wc -l < emulator-output/renderer-live.log)"
+adb shell am start -n "$APP_ID/$ACTIVITY_CLASS" --ez debug_telemetry true --ez smoke_test_mode true --ez force_box_compatibility true
+box_app_ready=0
+for attempt in $(seq 1 30); do
+  resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -E 'mResumedActivity|topResumedActivity' | tail -n 1 || true)"
+  app_pid="$(adb shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' || true)"
+  if [[ -n "$app_pid" ]] && printf '%s\n' "$resumed" | grep -Fq "$APP_ID"; then box_app_ready=1; break; fi
+  sleep 2
+done
+if [[ "$box_app_ready" != "1" ]]; then echo "Box-only smoke activity did not resume."; exit 1; fi
+wait_for_clear_windows "box-only smoke post-launch" emulator-output/windows-box60-after-launch.txt || exit 1
+box_mode_line=""
+box_geometry_line=""
+box_initial_line=""
+for attempt in $(seq 1 60); do
+  fresh_box_lines="$(fresh_log_lines "$box_restart_log_start")"
+  box_mode_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_MODE context-created=box-only-shader-60' | tail -n 1 || true)"
+  box_geometry_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0' | tail -n 1 || true)"
+  box_initial_line="$(printf '%s\n' "$fresh_box_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
+  if [[ -n "$box_mode_line" && -n "$box_geometry_line" && -n "$box_initial_line" ]]; then break; fi
+  sleep 1
+done
+if [[ -z "$box_mode_line" || -z "$box_geometry_line" || -z "$box_initial_line" ]]; then
+  echo "The cube-only 60-part humanoid did not complete with GL_NO_ERROR."
+  fresh_log_lines "$box_restart_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|PLAYER_BOX_COMPATIBILITY_TEST' | tail -n 80 || true
+  exit 1
+fi
+box_initial_telemetry="$(printf '%s\n' "$box_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "cube-only 60-part scene" emulator-output/valle-cernego-box60.png emulator-output/windows-before-box60-capture.txt
+run_motion_for_mode "cube-only 60-part" 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' \
+  "$box_initial_telemetry" emulator-output/valle-cernego-box60-moving.png \
+  emulator-output/windows-before-box60-moving-capture.txt
+
 adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
   echo "Fatal app or player OpenGL error detected."
   exit 1
 fi
-echo "Emulator smoke test completed: detailed 60-part and simple-shader 60-part humanoids both rendered, moved and kept camera follow with GL_NO_ERROR."
+echo "Emulator smoke test completed: detailed, simple-shader and cube-only 60-part humanoids all rendered, moved and kept camera follow with GL_NO_ERROR."
