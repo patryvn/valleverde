@@ -68,7 +68,10 @@ def verify(path):
     jacket_top, jacket_bottom = int(height * .42), int(height * .66)
     boots_top, boots_bottom = int(height * .63), int(height * .76)
     legs_top, legs_bottom = int(height * .55), int(height * .72)
-    counts = {"skin": 0, "jacket": 0, "boots": 0, "dark": 0}
+    counts = {
+        "skin": 0, "jacket": 0, "boots": 0, "dark": 0,
+        "left_arm": 0, "right_arm": 0, "left_leg": 0, "right_leg": 0,
+    }
     skin_y = []
     boots_y = []
     xs = []
@@ -92,7 +95,12 @@ def verify(path):
             if legs_top <= y < legs_bottom and max(r, g, b) < 58:
                 counts["dark"] += 1
                 xs.append(x); ys.append(y)
-    limits = {"skin": 80, "jacket": 180, "boots": 70, "dark": 120}
+    # A single blue rectangle can satisfy the old torso-colour check. Require
+    # independent left/right arm and leg pixels as well as the head and boots.
+    limits = {
+        "skin": 80, "jacket": 180, "boots": 70, "dark": 120,
+        "left_arm": 80, "right_arm": 80, "left_leg": 80, "right_leg": 80,
+    }
     failures = ["%s=%d<%d" % (name, counts[name], limit)
                 for name, limit in limits.items() if counts[name] < limit]
     if skin_y and boots_y:
@@ -126,9 +134,11 @@ def verify(path):
     if failures:
         raise SystemExit("Humanoid/world screenshot check failed: %s; counts=%s; bounds=%s; terrain=%d pixels/%d colours"
                          % (", ".join(failures), counts, bounds, terrain_pixels, len(terrain_colors)))
-    print("Visible humanoid/world verified (%dx%d): skin=%d jacket=%d boots=%d dark-limbs=%d head-feet=%.1fpx bounds=%s terrain=%d pixels/%d colours"
-          % (width, height, counts["skin"], counts["jacket"], counts["boots"],
-             counts["dark"], separation, bounds, terrain_pixels, len(terrain_colors)))
+    print("Visible humanoid/world verified (%dx%d): skin=%d jacket=%d arms=%d/%d legs=%d/%d boots=%d dark-limbs=%d head-feet=%.1fpx bounds=%s terrain=%d pixels/%d colours"
+          % (width, height, counts["skin"], counts["jacket"], counts["left_arm"],
+             counts["right_arm"], counts["left_leg"], counts["right_leg"],
+             counts["boots"], counts["dark"], separation, bounds,
+             terrain_pixels, len(terrain_colors)))
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
