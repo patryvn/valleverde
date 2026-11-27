@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
         renderer.loadVillagerWorld(preferences.getString("villager_world", ""));
         renderer.loadSeason(preferences.getString("season", ""));
         renderer.loadSurvival(preferences.getString("survival", ""));
+        renderer.loadFirePrevention(preferences.getString("fire_prevention", ""));
         surface.setRenderer(renderer);
         surface.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         root.addView(surface);
@@ -98,7 +99,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + "  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getSurvivalSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + "  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getSurvivalSummary() + "  •  " + renderer.getFirePreventionSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
@@ -117,6 +118,7 @@ public class MainActivity extends Activity {
             .putString("villager_world", renderer.saveVillagerWorld())
             .putString("season", renderer.saveSeason())
             .putString("survival", renderer.saveSurvival())
+            .putString("fire_prevention", renderer.saveFirePrevention())
             .apply();
     }
 
@@ -199,6 +201,7 @@ public class MainActivity extends Activity {
                 if(renderer.drinkWater()) toast("Has bebido agua del manantial. Sed recuperada.");
                 else toast("No tienes sed ahora.");
             }
+            else if(k==WorldLayout.FIRE_PREVENTION_BOARD){showFirePrevention();}
             else if(k==9){
                 if(renderer.isHouseBuilt()){
                     new AlertDialog.Builder(this).setTitle("Mi casa de Cernego")
@@ -229,6 +232,41 @@ public class MainActivity extends Activity {
         else toast("No tienes comida. Cultiva y recoge una cosecha para comer.");
         saveProgress();
         if(status!=null) status.setText(statusText());
+    }
+
+    void showFirePrevention(){
+        final int sections=renderer.getFirebreakSections();
+        String message=renderer.getFirePreventionSummary()
+            +"\n\nCada tramo representa una franja despejada y señalizada del monte."
+            +"\nCoste por tramo: "+FirePreventionSystem.WOOD_PER_SECTION+" madera y "
+            +FirePreventionSystem.STONE_PER_SECTION+" piedra."
+            +"\nEl índice es una mecánica orientativa del juego; no es una predicción real de incendios.";
+        AlertDialog.Builder dialog=new AlertDialog.Builder(this)
+            .setTitle("Plan de prevención de incendios")
+            .setMessage(message)
+            .setNegativeButton("Cerrar",null);
+        if(sections<FirePreventionSystem.MAX_SECTIONS){
+            dialog.setPositiveButton("Construir tramo",new DialogInterface.OnClickListener(){
+                @Override public void onClick(DialogInterface ignored,int which){
+                    int result=renderer.buildFirebreakSection(wood,stone);
+                    if(result==FirePreventionSystem.BUILT){
+                        wood-=FirePreventionSystem.WOOD_PER_SECTION;
+                        stone-=FirePreventionSystem.STONE_PER_SECTION;
+                        toast("Tramo de cortafuegos despejado y señalizado.");
+                    }else if(result==FirePreventionSystem.INSUFFICIENT_MATERIALS){
+                        toast("Necesitas 2 de madera y 1 de piedra para este tramo.");
+                    }else{
+                        toast("El plan de cortafuegos ya está completo.");
+                    }
+                    saveProgress();
+                    if(status!=null)status.setText(statusText());
+                    showFirePrevention();
+                }
+            });
+        }else{
+            dialog.setPositiveButton("Plan completo",null);
+        }
+        dialog.show();
     }
 
     void showStable(){
@@ -492,6 +530,7 @@ public class MainActivity extends Activity {
         final VillagerWorldSystem villagerWorld=new VillagerWorldSystem();
         final SeasonSystem seasons=new SeasonSystem();
         final SurvivalSystem survival=new SurvivalSystem();
+        final FirePreventionSystem firePrevention=new FirePreventionSystem();
         final QuestSystem quests=new QuestSystem();
         int lastQuestSeedReward=0;
         final float[] modelViewMatrix=new float[16];
@@ -750,6 +789,7 @@ public class MainActivity extends Activity {
             drawMesh(vb,36,0,PlayerModelSpec.GROUND_LEVEL-.25f,0,100,.5f,100,
                 .25f,.42f,.23f,1f,0f,0f,0f,WorldMaterialSpec.TERRAIN);
             drawRuralLandmarks();
+            drawFirebreakSections();
             draw(-10,-.12f,-4,2,.12f,32,.18f,.48f,.62f);
             draw(0,-.08f,6,2,.12f,28,.55f,.42f,.25f);
             for(int i=0;i<8;i++)draw(-23+i*7,-1,-24,8,5,5,.25f,.43f,.28f);
@@ -759,6 +799,7 @@ public class MainActivity extends Activity {
                 int t=(int)o[2];
                 if(!WorldVisibility.isVisible(px,pz,yaw,o[0],o[1],WorldVisibility.radiusForType(t),42f))continue;
                 if(t==WorldLayout.WATER_SOURCE) drawWaterSource(o[0],o[1]);
+                if(t==WorldLayout.FIRE_PREVENTION_BOARD) drawFirePreventionBoard(o[0],o[1]);
                 if(t==WorldLayout.TREE){
                     drawTree(o[0],o[1]);
                 }
@@ -902,6 +943,33 @@ public class MainActivity extends Activity {
                     draw(-7.2f,.72f,z+2f,.12f,.12f,4f,.43f,.29f,.16f);
                     draw(-7.2f,.36f,z+2f,.12f,.12f,4f,.43f,.29f,.16f);
                 }
+            }
+        }
+
+        void drawFirebreakSections(){
+            int completed=firePrevention.getSectionsBuilt();
+            for(int i=0;i<completed;i++){
+                float x=WorldLayout.FIREBREAK_START_X+i*2.08f;
+                float z=WorldLayout.FIREBREAK_CENTER_Z;
+                // A shallow exposed-soil strip makes completed work visible without
+                // replacing the terrain mesh or adding expensive per-blade geometry.
+                draw(x,PlayerModelSpec.GROUND_LEVEL+.018f,z,1.98f,.026f,1.08f,.43f,.34f,.23f);
+                draw(x-.82f,.27f,z-.43f,.065f,.42f,.065f,.31f,.20f,.11f);
+                draw(x+.82f,.27f,z+.43f,.065f,.42f,.065f,.31f,.20f,.11f);
+            }
+        }
+
+        void drawFirePreventionBoard(float x,float z){
+            draw(x-.43f,.52f,z,.10f,1.00f,.10f,.32f,.21f,.12f);
+            draw(x+.43f,.52f,z,.10f,1.00f,.10f,.32f,.21f,.12f);
+            draw(x,.98f,z,1.12f,.58f,.13f,.27f,.17f,.10f);
+            draw(x,1.00f,z-.085f,.94f,.40f,.035f,.18f,.31f,.16f);
+            int completed=firePrevention.getSectionsBuilt();
+            for(int i=0;i<FirePreventionSystem.MAX_SECTIONS;i++){
+                boolean built=i<completed;
+                float segmentX=x-.31f+i*.205f;
+                draw(segmentX,1.00f,z-.112f,.15f,.13f,.025f,
+                    built?.28f:.40f,built?.62f:.39f,built?.24f:.20f);
             }
         }
 
@@ -1371,6 +1439,7 @@ public class MainActivity extends Activity {
             if(kind==8)return "TABLÓN · HACER: OFICIOS";
             if(kind==9)return "CASA · HACER: CONSTRUIR/VER";
             if(kind==WorldLayout.WATER_SOURCE)return "MANANTIAL · HACER: BEBER";
+            if(kind==WorldLayout.FIRE_PREVENTION_BOARD)return "PREVENCIÓN · HACER: CORTAFUEGOS";
             return "HACER · INTERACTUAR";
         }
 
@@ -1425,6 +1494,11 @@ public class MainActivity extends Activity {
         void loadSeason(String state){seasons.loadState(state);}
         String saveSurvival(){return survival.saveState();}
         void loadSurvival(String state){survival.loadState(state);}
+        String saveFirePrevention(){return firePrevention.saveState();}
+        void loadFirePrevention(String state){firePrevention.loadState(state);}
+        int getFirebreakSections(){return firePrevention.getSectionsBuilt();}
+        String getFirePreventionSummary(){return firePrevention.getSummary(seasons.getSeason(),seasons.getWeather());}
+        int buildFirebreakSection(int availableWood,int availableStone){return firePrevention.buildSection(availableWood,availableStone);}
         String getSurvivalSummary(){return survival.getSummary();}
         int eatFood(){
             if(survival.hunger()>=95f)return SurvivalSystem.NOT_HUNGRY;

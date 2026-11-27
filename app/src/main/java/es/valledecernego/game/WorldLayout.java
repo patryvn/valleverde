@@ -14,6 +14,12 @@ public final class WorldLayout {
     public static final int HOUSE = 9;
     public static final int WATER_SOURCE = 10;
     public static final int BULL = 11;
+    public static final int FIRE_PREVENTION_BOARD = 12;
+
+    public static final float FIREBREAK_START_X = 14f;
+    public static final float FIREBREAK_CENTER_Z = 12.5f;
+    public static final float FIRE_PREVENTION_BOARD_X = 14f;
+    public static final float FIRE_PREVENTION_BOARD_Z = 9.6f;
 
     // Shared world coordinates keep feeding, rendering and interaction aligned.
     public static final float COW_X = 4f;
@@ -42,7 +48,8 @@ public final class WorldLayout {
         {10f,25f,MARKET,1f},
         {-6f,14f,VILLAGE_BOARD,1f},
         {0f,36f,HOUSE,1f},
-        {-10f,12f,WATER_SOURCE,1f}
+        {-10f,12f,WATER_SOURCE,1f},
+        {FIRE_PREVENTION_BOARD_X,FIRE_PREVENTION_BOARD_Z,FIRE_PREVENTION_BOARD,1f}
     };
 
     private WorldLayout() { }

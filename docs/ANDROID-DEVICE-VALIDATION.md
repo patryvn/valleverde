@@ -59,3 +59,20 @@ Si aparece otra vez el rectángulo azul, anotar el estado completo del HUD: `3D 
 ## Instalación y firma de prueba
 
 El APK release de CI se firma con la clave debug temporal de GitHub Actions para permitir la instalación directa. No es una firma apta para Google Play. Como cada ejecución puede generar una clave debug distinta, Android puede exigir desinstalar la versión anterior antes de instalar una APK nueva; desinstalar borra los datos locales de la partida. Para actualizaciones sin pérdida de progreso hará falta configurar una clave de pruebas persistente como secreto de GitHub.
+
+
+## Prevención de incendios en 0.27.7
+
+La primera versión del sistema incorpora un tablón de prevención en la zona inicial y cuatro tramos de cortafuegos construibles. Cada tramo cuesta 2 unidades de madera y 1 de piedra, se guarda en la partida y se representa con una franja de suelo expuesto y postes. El índice del juego varía según estación y meteorología y disminuye al completar tramos.
+
+El índice es una abstracción de jugabilidad: no es una predicción meteorológica, no modela combustibles reales y todavía no simula ignición, propagación ni extinción de incendios. No debe utilizarse para tomar decisiones de prevención reales.
+
+Validación física pendiente en Android:
+1. Localizar el tablón de prevención al este de la zona inicial y abrirlo con HACER.
+2. Comprobar que el coste se descuenta solo cuando se construye un tramo.
+3. Confirmar que cada tramo aparece como una franja de tierra y que el contador del HUD cambia.
+4. Cerrar y volver a abrir la aplicación para comprobar que los tramos construidos persisten.
+5. Probar el índice en distintas estaciones y condiciones meteorológicas y comprobar que lluvia reduce el valor frente a verano despejado.
+6. Confirmar que la nueva geometría no produce parpadeo, errores GL ni pérdida de rendimiento en el dispositivo.
+
+La prueba de emulador valida compilación, lógica unitaria, escena y movimiento; no sustituye la comprobación de visibilidad, rendimiento y guardado en el Poco X6 Pro.

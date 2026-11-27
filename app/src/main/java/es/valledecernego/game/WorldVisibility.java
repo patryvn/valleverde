@@ -49,6 +49,7 @@ public final class WorldVisibility {
             case WorldLayout.STABLE:
             case WorldLayout.MARKET: return 3.0f;
             case WorldLayout.VILLAGE_BOARD: return 1.8f;
+            case WorldLayout.FIRE_PREVENTION_BOARD: return 2.4f;
             case WorldLayout.HOUSE: return 4.2f;
             default: return 1.5f;
         }
