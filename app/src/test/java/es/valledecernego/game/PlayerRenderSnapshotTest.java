@@ -36,14 +36,14 @@ public class PlayerRenderSnapshotTest {
     @Test public void plainGlesRendererIsReportedAsCompatible() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
             true, false, true, DETAILED_PARTS, 0, 0, true);
-        assertEquals("3D COMPATIBLE · 60 piezas · shader GLES plano · GL OK",
+        assertEquals("3D COMPATIBLE · 60 piezas · shader GLES compatible · GL OK",
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
     @Test public void simpleShaderCompatibilityCanReportAllSixtyDetailedParts() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
             true, true, true, DETAILED_PARTS, DETAILED_PARTS, 0, true, false);
-        assertEquals("3D COMPATIBLE · 60 piezas · shader GLES plano · GL OK",
+        assertEquals("3D COMPATIBLE · 60 piezas · shader GLES compatible · GL OK",
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
