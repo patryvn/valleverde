@@ -526,6 +526,9 @@ public class MainActivity extends Activity {
         volatile PlayerRenderSnapshot renderSnapshot=PlayerRenderSnapshot.initial();
         final PlayerModelSpec.Part[] silhouetteParts=PlayerModelSpec.fallbackParts();
         final PlayerModelSpec.Part[] roundedCompatibilityParts=PlayerModelSpec.roundedFallbackParts();
+        // Parts are immutable; cache the full array so the compatibility path allocates
+        // nothing per frame while drawing all 60 components on mobile GPUs.
+        final PlayerModelSpec.Part[] simpleShaderParts=PlayerModelSpec.parts();
         volatile boolean compatibilityGeometryLogged=false;
         volatile boolean debugTelemetry=false;
         volatile boolean smokeTestMode=false;
@@ -1237,7 +1240,7 @@ public class MainActivity extends Activity {
             GLES20.glDisable(GLES20.GL_BLEND);
 
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
-            for(PlayerModelSpec.Part part:PlayerModelSpec.parts()){
+            for(PlayerModelSpec.Part part:simpleShaderParts){
                 PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
                     px,py,pz,playerFacing,bob,part,playerPartAngle(part));
                 FloatBuffer mesh=vb;
