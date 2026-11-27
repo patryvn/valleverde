@@ -502,6 +502,8 @@ public class MainActivity extends Activity {
         int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform,modelMatrixUniform;
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
+        volatile boolean forceCompatibilityPlayerModel=false;
+        int lastSilhouetteGlError=GLES20.GL_NO_ERROR;
         volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
         // Publish a whole immutable frame result so the UI never observes the counters
@@ -550,6 +552,8 @@ public class MainActivity extends Activity {
             rendererReady=false;
             compatibilityRenderer=false;
             silhouetteReady=false;
+            forceCompatibilityPlayerModel=false;
+            lastSilhouetteGlError=GLES20.GL_NO_ERROR;
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
@@ -998,74 +1002,119 @@ public class MainActivity extends Activity {
         // The detailed 60-part model is the normal path. The box-only 11-part silhouette
         // is reserved for shader fallback or an incomplete detailed batch, never drawn
         // underneath a healthy model where it would flatten the rounded head and torso.
+        // The detailed model is preferred, but runtime GLES errors switch this context
+        // to a complete cube-only humanoid instead of reporting 60 submitted calls for
+        // geometry that the device driver did not actually accept.
+        void clearPlayerGlErrors(){
+            for(int i=0;i<8;i++){
+                if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
+            }
+        }
+
+        int consumePlayerGlError(){
+            int error=GLES20.glGetError();
+            if(error!=GLES20.GL_NO_ERROR)clearPlayerGlErrors();
+            return error;
+        }
+
         void drawPlayer(){
             if(!rendererReady && !silhouetteReady){
                 renderSnapshot=PlayerRenderSnapshot.initial();
                 return;
             }
+            clearPlayerGlErrors();
             int submittedParts=0;
             int fallbackSubmitted=0;
-            for(int i=0;i<8;i++){
-                if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
-            }
+            int detailGlError=GLES20.GL_NO_ERROR;
+            int fallbackGlError=GLES20.GL_NO_ERROR;
+            boolean compatibility=PlayerRenderPolicy.shouldUseCompatibilityModel(
+                forceCompatibilityPlayerModel,rendererReady,silhouetteReady);
+            boolean detailedComplete=false;
 
-            if(PlayerRenderPolicy.shouldDrawOpaqueBase(rendererReady,silhouetteReady)){
-                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA);
-            }
-
-            if(rendererReady){
-                // The shadow is translucent and never writes depth, so it cannot hide boots.
+            if(PlayerRenderPolicy.shouldDrawDetailedModel(rendererReady,forceCompatibilityPlayerModel)){
+                // The shadow belongs to the detailed path. A failure here is also a
+                // useful signal that this driver's sphere mesh path is not reliable.
                 GLES20.glEnable(GLES20.GL_BLEND);
                 GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
                 GLES20.glDepthMask(false);
-                drawMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
-                    .045f,.055f,.045f,.28f,playerFacing,0f);
+                drawMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,
+                    .52f,.035f,.34f,.045f,.055f,.045f,.28f,playerFacing,0f);
                 GLES20.glDepthMask(true);
                 GLES20.glDisable(GLES20.GL_BLEND);
+                detailGlError=consumePlayerGlError();
 
-                float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
-                for(int i=0;i<PlayerModelSpec.size();i++){
-                    PlayerModelSpec.Part part=PlayerModelSpec.partAt(i);
-                    float angle=playerPartAngle(part);
-                    PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
-                        px,py,pz,playerFacing,bob,part,angle);
-                    boolean submitted;
-                    if(part.shape==PlayerModelSpec.Shape.LIMB){
-                        submitted=drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
-                            pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
-                            pose.yaw,pose.pitch,pose.roll,part.materialStyle);
-                    }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
-                        submitted=drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
-                            pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
-                            pose.yaw,pose.pitch,pose.roll,part.materialStyle);
-                    }else{
-                        submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
-                            part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                if(detailGlError==GLES20.GL_NO_ERROR){
+                    float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+                    for(int i=0;i<PlayerModelSpec.size();i++){
+                        PlayerModelSpec.Part part=PlayerModelSpec.partAt(i);
+                        float angle=playerPartAngle(part);
+                        PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                            px,py,pz,playerFacing,bob,part,angle);
+                        boolean submitted;
+                        if(part.shape==PlayerModelSpec.Shape.LIMB){
+                            submitted=drawMesh(capsuleBuffer,capsuleVertexCount,pose.x,pose.y,pose.z,
+                                pose.sx,pose.sy*.5f,pose.sz,part.r,part.g,part.b,part.alpha,
+                                pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                        }else if(part.shape==PlayerModelSpec.Shape.SPHERE){
+                            submitted=drawMesh(sphereBuffer,sphereVertexCount,pose.x,pose.y,pose.z,
+                                pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
+                                pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                        }else{
+                            submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
+                                part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
+                        }
+                        int partError=consumePlayerGlError();
+                        if(partError!=GLES20.GL_NO_ERROR){
+                            detailGlError=partError;
+                            break;
+                        }
+                        if(!submitted)break;
+                        submittedParts++;
                     }
-                    if(submitted)submittedParts++;
+                }
+
+                detailedComplete=detailGlError==GLES20.GL_NO_ERROR
+                    && submittedParts>=PlayerModelSpec.size();
+                if(!detailedComplete && PlayerRenderPolicy.shouldSwitchToCompatibility(
+                        rendererReady,submittedParts,PlayerModelSpec.size(),detailGlError)){
+                    if(!forceCompatibilityPlayerModel){
+                        forceCompatibilityPlayerModel=true;
+                        android.util.Log.w("ValleCernego",
+                            "PLAYER_COMPATIBILITY switching to cube humanoid; detailedParts="
+                            +submittedParts+" GL=0x"+Integer.toHexString(detailGlError));
+                    }
+                    compatibility=true;
                 }
             }
 
-            boolean detailedComplete=rendererReady && submittedParts>=PlayerModelSpec.size();
-            if(rendererReady && !detailedComplete && fallbackSubmitted==0){
-                // Emergency silhouette is drawn last so it cannot occlude the detailed parts.
-                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA);
+            if(compatibility){
+                // Use the minimal shader when it is available. The fallback uses only
+                // the cube buffer already proven by terrain/building draws on GLES 2.0.
+                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,true);
+                fallbackGlError=lastSilhouetteGlError;
             }
+
             int publishedDrawCalls=detailedComplete?submittedParts:fallbackSubmitted;
-            int glError=GLES20.glGetError();
-            if(glError!=GLES20.GL_NO_ERROR){
-                android.util.Log.w("ValleCernego","OpenGL 0x"+Integer.toHexString(glError)
-                    +" al terminar el lote del personaje.");
-                for(int i=0;i<8;i++){
-                    if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
+            int glError;
+            if(detailedComplete){
+                glError=consumePlayerGlError();
+            }else if(fallbackSubmitted>=silhouetteParts.length && fallbackGlError==GLES20.GL_NO_ERROR){
+                // A successful fallback is a valid frame even though the detailed
+                // sphere/capsule path failed; keep the HUD status useful and explicit.
+                glError=GLES20.GL_NO_ERROR;
+            }else{
+                glError=fallbackGlError!=GLES20.GL_NO_ERROR?fallbackGlError:detailGlError;
+                if(glError==GLES20.GL_NO_ERROR && publishedDrawCalls==0){
+                    glError=GLES20.GL_INVALID_OPERATION;
                 }
             }
+
             playerDrawCalls=publishedDrawCalls;
             silhouetteDrawCalls=fallbackSubmitted;
             playerGlError=glError;
-            playerFrameRendered=publishedDrawCalls>0;
-            renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,compatibilityRenderer,
-                submittedParts,fallbackSubmitted,glError,playerFrameRendered);
+            playerFrameRendered=publishedDrawCalls>0 && glError==GLES20.GL_NO_ERROR;
+            renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,
+                compatibilityRenderer,submittedParts,fallbackSubmitted,glError,playerFrameRendered);
         }
 
         float playerPartAngle(PlayerModelSpec.Part part){
@@ -1084,19 +1133,11 @@ public class MainActivity extends Activity {
             return 0f;
         }
 
-        int drawPlayerSilhouette(float alpha){
+        int drawPlayerSilhouette(float alpha,boolean preferFlatShader){
             int submitted=0;
+            lastSilhouetteGlError=GLES20.GL_NO_ERROR;
             boolean opaque=alpha>=0.999f;
-            if(!rendererReady){
-                // Keep the fallback shadow blended even when the humanoid base is opaque.
-                GLES20.glEnable(GLES20.GL_BLEND);
-                GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
-                GLES20.glDepthMask(false);
-                drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,
-                    .52f,.035f,.34f,.045f,.055f,.045f,.28f,playerFacing,0f,0f);
-                GLES20.glDepthMask(true);
-                GLES20.glDisable(GLES20.GL_BLEND);
-            }
+            boolean useFlatShader=!rendererReady || (preferFlatShader && silhouetteReady);
             if(opaque){
                 GLES20.glDisable(GLES20.GL_BLEND);
                 GLES20.glDepthMask(true);
@@ -1109,18 +1150,22 @@ public class MainActivity extends Activity {
             for(PlayerModelSpec.Part part:silhouetteParts){
                 PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
                     px,py,pz,playerFacing,bob,part,playerPartAngle(part));
-                // fallbackParts() is cube-only. Prefer the main renderer when it is
-                // ready, so the opaque humanoid base survives even if a separate
-                // compatibility shader fails to link on a particular mobile driver.
                 boolean partDrawn;
-                if(rendererReady){
+                if(useFlatShader){
+                    partDrawn=drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,
+                        pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,alpha,
+                        pose.yaw,pose.pitch,pose.roll);
+                }else{
                     partDrawn=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
                         part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
-                }else{
-                    partDrawn=drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
-                        part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll);
                 }
-                if(partDrawn)submitted++;
+                int partError=consumePlayerGlError();
+                if(partError!=GLES20.GL_NO_ERROR){
+                    lastSilhouetteGlError=partError;
+                    break;
+                }
+                if(!partDrawn)break;
+                submitted++;
             }
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
