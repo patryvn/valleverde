@@ -282,6 +282,7 @@ En 0.27.9:
 - Si el shader principal sigue disponible, el respaldo usa ese shader iluminado y el búfer de cubo ya empleado por el terreno y las construcciones; si el propio respaldo falla, se reintenta una vez con el shader GLES mínimo independiente.
 - La selección se mantiene durante el contexto OpenGL actual para evitar alternar entre geometrías en cada fotograma.
 - El registro `PLAYER_COMPATIBILITY` identifica el cambio y conserva el código de error que motivó el respaldo.
+- El HUD y la telemetría cuentan el modelo que realmente quedó visible: 11 piezas de respaldo, no las 60 llamadas detalladas que se intentaron antes del error.
 - Se añaden pruebas unitarias para lote completo, error GLES aunque se hayan intentado todas las llamadas, lote incompleto y persistencia del modo compatible.
 
 La versión de prueba es 0.27.9 (versionCode 40). El flujo de CI comprueba la versión del paquete y ejecuta las pruebas Java/Python, `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, verificación de firma y captura de la escena antes y después del movimiento.
