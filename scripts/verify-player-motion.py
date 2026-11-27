@@ -36,6 +36,11 @@ def parse_telemetry(value):
 def verify_motion(initial, moving):
     before = parse_telemetry(initial)
     after = parse_telemetry(moving)
+    if before[4:] != after[4:]:
+        raise ValueError(
+            "Player renderer path changed during movement (parts/fallback %d/%d -> %d/%d)"
+            % (before[4], before[5], after[4], after[5])
+        )
     dx, dz = after[0] - before[0], after[1] - before[1]
     camera_dx, camera_dz = after[2] - before[2], after[3] - before[3]
     distance = math.hypot(dx, dz)
