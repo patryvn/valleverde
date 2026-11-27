@@ -133,19 +133,26 @@ public class PlayerModelSpecTest {
     @Test public void compatibilitySilhouetteContainsAllEssentialHumanParts() {
         PlayerModelSpec.Part[] fallback=PlayerModelSpec.fallbackParts();
         assertEquals(11,fallback.length);
-        assertEquals(PlayerModelSpec.Shape.BOX,PlayerModelSpec.find("torso").shape);
+
+        // The full model keeps rounded geometry; only the emergency silhouette is box-only.
+        assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("torso").shape);
         assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("head").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("left-arm").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("right-arm").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("left-leg").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("right-leg").shape);
-        assertNotNull(PlayerModelSpec.find("left-boot"));
-        assertNotNull(PlayerModelSpec.find("right-boot"));
-        assertNotNull(PlayerModelSpec.find("neck"));
-        assertNotNull(PlayerModelSpec.find("cap"));
-        assertNotNull(PlayerModelSpec.find("backpack"));
-        for(PlayerModelSpec.Part part:fallback){
-            assertTrue(part.sx>0f && part.sy>0f && part.sz>0f);
+
+        String[] essential={"left-boot","right-boot","left-leg","right-leg","torso",
+            "left-arm","right-arm","neck","head","cap","backpack"};
+        for(String id:essential) {
+            PlayerModelSpec.Part fallbackPart=null;
+            for(PlayerModelSpec.Part part:fallback) {
+                if(id.equals(part.id)) fallbackPart=part;
+            }
+            assertNotNull("fallback must include "+id,fallbackPart);
+            assertEquals("fallback mesh must be box-only for GLES compatibility",
+                PlayerModelSpec.Shape.BOX,fallbackPart.shape);
+            assertTrue(fallbackPart.sx>0f && fallbackPart.sy>0f && fallbackPart.sz>0f);
         }
     }
 
