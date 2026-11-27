@@ -473,7 +473,7 @@ public class MainActivity extends Activity {
                 if(PlayerRenderPolicy.isRenderModeButtonHit(x,y,w,h)){
                     touchMode=5;
                     boolean compatibility=renderer.togglePlayerRenderMode();
-                    toast(compatibility?"Modelo 3D alternativo · 11 piezas":"Modelo 3D detallado · 60 piezas");
+                    toast(compatibility?"Modelo 3D compatible · 60 piezas":"Modelo 3D detallado · 60 piezas");
                     logTouch("RENDER_MODE",x,y);invalidate();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);logTouch("LOOK_DOWN",x,y);return true;
@@ -515,6 +515,9 @@ public class MainActivity extends Activity {
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
         volatile boolean forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE;
+        // A manual choice or a runtime fallback is preserved across EGL context recreation.
+        volatile boolean playerModePinned=false;
+        volatile String playerGpuRenderer="unknown";
         int lastSilhouetteGlError=GLES20.GL_NO_ERROR;
         volatile int playerDrawCalls=0,silhouetteDrawCalls=0,playerGlError=0;
         volatile boolean playerFrameRendered=false;
@@ -564,9 +567,10 @@ public class MainActivity extends Activity {
 
         boolean togglePlayerRenderMode(){
             forceCompatibilityPlayerModel=!forceCompatibilityPlayerModel;
+            playerModePinned=true;
             compatibilityGeometryLogged=false;
             android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="
-                +(forceCompatibilityPlayerModel?"compatibility-11":"detailed-60"));
+                +(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
             return forceCompatibilityPlayerModel;
         }
 
@@ -581,17 +585,23 @@ public class MainActivity extends Activity {
             rendererReady=false;
             compatibilityRenderer=false;
             silhouetteReady=false;
-            // Preserve the selected path when Android recreates the EGL context.
-            // New sessions prefer the detailed 60-part humanoid. The rounded 11-part
-            // path is the user-selectable compatibility mode and runtime fallback.
-            android.util.Log.i("ValleCernego","PLAYER_MODE context-created="
-                +(forceCompatibilityPlayerModel?"compatibility-11":"detailed-60"));
+            // Preserve a manual/runtime choice; otherwise choose a conservative path
+            // for the Mali-G615 family used by the Poco X6 Pro.
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
             compatibilityGeometryLogged=false;
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
             GLES20.glDisable(GLES20.GL_CULL_FACE);
+            playerGpuRenderer=String.valueOf(GLES20.glGetString(GLES20.GL_RENDERER));
+            if(!playerModePinned){
+                forceCompatibilityPlayerModel=PlayerGpuPolicy.shouldPreferSimpleShader(playerGpuRenderer);
+            }
+            android.util.Log.i("ValleCernego","PLAYER_GPU_PROFILE renderer="+playerGpuRenderer
+                +" policy="+PlayerGpuPolicy.profileName(playerGpuRenderer)
+                +" selected="+(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
+            android.util.Log.i("ValleCernego","PLAYER_MODE context-created="
+                +(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
             if(debugTelemetry){
                 int[] depthBits=new int[1];
                 GLES20.glGetIntegerv(GLES20.GL_DEPTH_BITS,depthBits,0);
@@ -1063,13 +1073,9 @@ public class MainActivity extends Activity {
             return snapshot.summary(PlayerModelSpec.size(),silhouetteParts.length);
         }
 
-        // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
-        // New sessions use the rounded 11-part humanoid and its minimal GLES shader.
-        // The detailed 60-part model remains selectable from the HUD. A cube-only
-        // silhouette is reserved for the final emergency fallback, never drawn under
-        // a healthy model where it would flatten the rounded head and torso.
-        // Runtime GLES errors keep the rounded compatibility path active for this
-        // context instead of trusting submitted draw-call counts.
+        // The full 60-part humanoid can run through either the lit material shader or
+        // a deliberately small GLES shader. Mali-G615 devices start on the latter;
+        // the rounded 11-part model and cube-only silhouette remain last-resort paths.
         void clearPlayerGlErrors(){
             for(int i=0;i<8;i++){
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
@@ -1095,6 +1101,7 @@ public class MainActivity extends Activity {
             boolean compatibility=PlayerRenderPolicy.shouldUseCompatibilityModel(
                 forceCompatibilityPlayerModel,rendererReady,silhouetteReady);
             boolean detailedComplete=false;
+            boolean simpleShaderModelRendered=false;
             boolean roundedFallbackRendered=false;
 
             if(PlayerRenderPolicy.shouldDrawDetailedModel(rendererReady,forceCompatibilityPlayerModel)){
@@ -1137,9 +1144,10 @@ public class MainActivity extends Activity {
                         rendererReady,submittedParts,PlayerModelSpec.size(),detailGlError)){
                     if(!forceCompatibilityPlayerModel){
                         forceCompatibilityPlayerModel=true;
+                        playerModePinned=true;
                         compatibilityGeometryLogged=false;
                         android.util.Log.w("ValleCernego",
-                            "PLAYER_COMPATIBILITY switching to rounded humanoid; detailedParts="
+                            "PLAYER_COMPATIBILITY locking simple-shader full humanoid; detailedParts="
                             +submittedParts+" GL=0x"+Integer.toHexString(detailGlError));
                     }
                     compatibility=true;
@@ -1147,17 +1155,27 @@ public class MainActivity extends Activity {
             }
 
             if(compatibility){
-                // Rounded head, torso and capsule limbs are attempted before the
-                // emergency cube silhouette, using the independent minimal GLES shader.
+                // First retry all 60 parts with the independent minimal shader. It keeps
+                // the face, jacket, accessories and articulated limbs without the
+                // complex lighting/material shader that may misbehave on mobile drivers.
                 if(silhouetteReady){
-                    fallbackSubmitted=drawPlayerRoundedCompatibility();
+                    fallbackSubmitted=drawPlayerSimpleShaderCompatibility();
                     fallbackGlError=lastSilhouetteGlError;
-                    roundedFallbackRendered=fallbackSubmitted>=roundedCompatibilityParts.length
+                    simpleShaderModelRendered=fallbackSubmitted>=PlayerModelSpec.size()
                         && fallbackGlError==GLES20.GL_NO_ERROR;
                 }else{
                     fallbackGlError=GLES20.GL_INVALID_OPERATION;
                 }
-                if(!roundedFallbackRendered){
+
+                // Only if the full simple-shader model fails do we reduce to rounded
+                // core geometry, then to the final cube-only silhouette.
+                if(!simpleShaderModelRendered){
+                    fallbackSubmitted=drawPlayerRoundedCompatibility();
+                    fallbackGlError=lastSilhouetteGlError;
+                    roundedFallbackRendered=fallbackSubmitted>=roundedCompatibilityParts.length
+                        && fallbackGlError==GLES20.GL_NO_ERROR;
+                }
+                if(!simpleShaderModelRendered && !roundedFallbackRendered){
                     fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,false);
                     fallbackGlError=lastSilhouetteGlError;
                     if((fallbackSubmitted<silhouetteParts.length
@@ -1168,33 +1186,80 @@ public class MainActivity extends Activity {
                         fallbackGlError=lastSilhouetteGlError;
                     }
                 }
-                if(!compatibilityGeometryLogged
-                        && fallbackSubmitted>=silhouetteParts.length
-                        && fallbackGlError==GLES20.GL_NO_ERROR){
+                if(!compatibilityGeometryLogged && fallbackGlError==GLES20.GL_NO_ERROR
+                        && (simpleShaderModelRendered || fallbackSubmitted>=silhouetteParts.length)){
+                    String geometry=simpleShaderModelRendered?"simple-shader-detailed-60"
+                        :(roundedFallbackRendered?"rounded-11":"cube-11");
                     android.util.Log.i("ValleCernego","PLAYER_COMPATIBILITY geometry="
-                        +(roundedFallbackRendered?"rounded-11":"cube-11")+" GL=0x0");
+                        +geometry+" GL=0x0");
                     compatibilityGeometryLogged=true;
                 }
             }
 
             int publishedDrawCalls=detailedComplete?submittedParts:fallbackSubmitted;
+            int expectedFallbackCount=simpleShaderModelRendered
+                ?PlayerModelSpec.size():silhouetteParts.length;
             int glError;
             if(detailedComplete){
                 glError=consumePlayerGlError();
-            }else if(fallbackSubmitted>=silhouetteParts.length && fallbackGlError==GLES20.GL_NO_ERROR){
+            }else if(fallbackSubmitted>=expectedFallbackCount && fallbackGlError==GLES20.GL_NO_ERROR){
                 glError=GLES20.GL_NO_ERROR;
             }else{
                 glError=fallbackGlError!=GLES20.GL_NO_ERROR?fallbackGlError:detailGlError;
                 if(glError==GLES20.GL_NO_ERROR)glError=GLES20.GL_INVALID_OPERATION;
             }
             playerDrawCalls=publishedDrawCalls;
-            silhouetteDrawCalls=fallbackSubmitted;
+            silhouetteDrawCalls=compatibility?fallbackSubmitted:0;
             playerGlError=glError;
             playerFrameRendered=publishedDrawCalls>0 && glError==GLES20.GL_NO_ERROR;
-            int reportedDetailedParts=detailedComplete?submittedParts:0;
+            int reportedDetailedParts=detailedComplete?submittedParts
+                :(simpleShaderModelRendered?fallbackSubmitted:0);
             renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,
-                compatibilityRenderer,reportedDetailedParts,fallbackSubmitted,glError,
-                playerFrameRendered,roundedFallbackRendered);
+                compatibilityRenderer||simpleShaderModelRendered,reportedDetailedParts,
+                silhouetteDrawCalls,glError,playerFrameRendered,roundedFallbackRendered);
+        }
+
+        int drawPlayerSimpleShaderCompatibility(){
+            int submitted=0;
+            lastSilhouetteGlError=GLES20.GL_NO_ERROR;
+            if(!silhouetteReady || sphereBuffer==null || capsuleBuffer==null || vb==null){
+                lastSilhouetteGlError=GLES20.GL_INVALID_OPERATION;
+                return 0;
+            }
+            clearPlayerGlErrors();
+            GLES20.glEnable(GLES20.GL_BLEND);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            GLES20.glDepthMask(false);
+            drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,
+                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
+                .035f,.045f,.03f,.26f,playerFacing,0f,0f);
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+
+            float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            for(PlayerModelSpec.Part part:PlayerModelSpec.parts()){
+                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                    px,py,pz,playerFacing,bob,part,playerPartAngle(part));
+                FloatBuffer mesh=vb;
+                int vertexCount=36;
+                float sy=pose.sy;
+                if(part.shape==PlayerModelSpec.Shape.SPHERE){
+                    mesh=sphereBuffer;
+                    vertexCount=sphereVertexCount;
+                }else if(part.shape==PlayerModelSpec.Shape.LIMB){
+                    mesh=capsuleBuffer;
+                    vertexCount=capsuleVertexCount;
+                    sy*=.5f;
+                }
+                if(!drawSilhouetteMesh(mesh,vertexCount,pose.x,pose.y,pose.z,
+                        pose.sx,sy,pose.sz,part.r,part.g,part.b,part.alpha,
+                        pose.yaw,pose.pitch,pose.roll))break;
+                submitted++;
+            }
+            lastSilhouetteGlError=consumePlayerGlError();
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+            return submitted;
         }
 
         int drawPlayerRoundedCompatibility(){
