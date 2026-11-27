@@ -4,12 +4,19 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class PlayerRenderPolicyTest {
-    @Test public void newSessionsPreferRoundedCompatibilityHumanoid() {
-        assertTrue(PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE);
-        assertTrue(PlayerRenderPolicy.shouldUseCompatibilityModel(
+    @Test public void newSessionsPreferDetailedHumanoidWhenPrimaryRendererIsReady() {
+        assertFalse(PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE);
+        assertFalse(PlayerRenderPolicy.shouldUseCompatibilityModel(
             PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE,true,true));
-        assertFalse(PlayerRenderPolicy.shouldDrawDetailedModel(
+        assertTrue(PlayerRenderPolicy.shouldDrawDetailedModel(
             true,PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE));
+    }
+
+    @Test public void newSessionsStillUseRoundedFallbackWhenPrimaryRendererIsUnavailable() {
+        assertTrue(PlayerRenderPolicy.shouldUseCompatibilityModel(
+            PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE,false,true));
+        assertFalse(PlayerRenderPolicy.shouldDrawDetailedModel(
+            false,PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE));
     }
 
     @Test public void detailedRendererDoesNotDrawOpaqueCubeUnderlay() {

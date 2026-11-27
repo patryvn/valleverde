@@ -135,3 +135,27 @@ En 0.28.6, `PlayerShaderPlan` conserva los dos roles del programa mínimo al pro
 Pruebas unitarias nuevas: promoción del shader, disponibilidad simultánea del humanoide redondeado, conservación del modo plano y ausencia de renderizador cuando fallan ambos programas.
 
 Límite: el shader mínimo no aporta iluminación por normales ni texturas; conserva geometría y color plano para priorizar la silueta. La ruta principal mantiene sus materiales e iluminación. Sigue siendo obligatoria la validación física en el Poco X6 Pro para confirmar que el controlador Adreno dibuja la silueta completa, que la cámara la sigue y que no desaparece al moverse.
+
+
+## Ajuste de modelo inicial y recuperación del emulador en 0.28.7
+
+La captura limpia de 0.28.1 mostró que el modelo detallado de 60 piezas sí ofrece una silueta humana reconocible en SwiftShader: cabeza con pelo y gorra, cuello, chaqueta abierta, camiseta, brazos, manos, piernas, botas, mochila y bandolera. En 0.28.5/0.28.6 se había elegido por defecto el modo de compatibilidad de 11 piezas para reducir riesgos de controladores; aunque es útil como respaldo, sacrifica detalles de cara, ropa y accesorios y puede parecer demasiado simple en pantallas pequeñas.
+
+En 0.28.7:
+
+- Las sesiones nuevas comienzan con el modelo detallado de 60 piezas cuando el shader principal está disponible.
+- Si el lote detallado registra un error GL o no envía las 60 piezas, el renderizador cambia automáticamente al humanoide redondeado de 11 piezas.
+- El botón superior permite seleccionar el modo redondeado y volver al detallado.
+- La preferencia de modo continúa conservándose durante la recreación del contexto EGL.
+- Se amplía el AVD de CI a 4 núcleos y 4 GB para reducir los ANR de servicios del sistema durante SwiftShader.
+- Si el único bloqueo visible es el diálogo ANR de SystemUI, el smoke test intenta cerrarlo únicamente después de volver a comprobar que esa ventana sigue siendo la única superposición reintentable. No toca diálogos de ANR de la propia aplicación ni confirmaciones inmersivas.
+
+La ejecución 294 de 0.28.6 confirmó que `testDebugUnitTest`, `assembleDebug`, `assembleRelease` y la verificación de firmas/versiones terminaron correctamente. La prueba de escena falló antes de la captura porque el emulador API 35 mantuvo un diálogo visible de ANR de SystemUI desde el arranque. El log mostró que el proceso del juego seguía vivo, el shader se inicializó, se dibujaron 11 piezas redondeadas y no hubo error GL, pero no hubo movimiento ni captura visual válida. Por tanto, esa ejecución no demuestra visibilidad ni seguimiento de cámara.
+
+### Validación pendiente de 0.28.7
+
+- GitHub Actions debe capturar el personaje detallado por defecto, verificar los grupos de píxeles de cabeza, chaqueta, ambos brazos, ambas piernas y botas, moverlo y medir el seguimiento de cámara.
+- El smoke test debe cambiar después a ALT, capturar el humanoide redondeado y repetir el movimiento.
+- El emulador usa SwiftShader por CPU; no sustituye una GPU Adreno real.
+- En el Poco X6 Pro hay que comprobar que el modelo detallado se vea completo, que ALT siga siendo legible, que el cambio de modo no provoque desaparición, y que caminar, reposo, salto, giro de cámara y reanudación mantengan la geometría.
+- Los materiales siguen siendo procedurales por color e iluminación; no hay mapas UV ni texturas fotográficas. La APK de CI usa firma debug temporal, no una clave persistente de distribución.

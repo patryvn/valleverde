@@ -16,7 +16,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.6"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.7"', manifest.read_text(encoding="utf-8"))
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
         self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
@@ -52,10 +52,10 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("$mode_label movement or camera-follow verification failed after eight fresh gestures.", SCRIPT)
         self.assertIn('exit 1', SCRIPT)
 
-    def test_new_session_defaults_to_rounded_alt_and_preserves_choice_across_egl_recreation(self):
+    def test_new_session_defaults_to_detailed_model_and_preserves_choice_across_egl_recreation(self):
         policy = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/PlayerRenderPolicy.java"
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
-        self.assertIn("DEFAULT_COMPATIBILITY_MODE = true", policy.read_text(encoding="utf-8"))
+        self.assertIn("DEFAULT_COMPATIBILITY_MODE = false", policy.read_text(encoding="utf-8"))
         source = activity.read_text(encoding="utf-8")
         self.assertIn("forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE", source)
         self.assertNotIn("forceCompatibilityPlayerModel=false;", source)
@@ -73,19 +73,24 @@ class EmulatorSmokeInputTest(unittest.TestCase):
             self.assertIn('"{}": 80'.format(limb), verifier)
         self.assertIn("A single blue rectangle can satisfy the old torso-colour check", verifier)
 
-    def test_smoke_captures_and_moves_both_default_alt_and_detailed_3d_models(self):
+    def test_smoke_captures_and_moves_detailed_default_then_rounded_alt_models(self):
+        self.assertIn("PLAYER_STATE .*PARTS=60 FALLBACK=0", SCRIPT)
+        self.assertIn('valle-cernego-detailed.png', SCRIPT)
+        self.assertIn('valle-cernego-detailed-moving.png', SCRIPT)
+        self.assertIn('PLAYER_MODE user-selected=compatibility-11', SCRIPT)
         self.assertIn('PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0', SCRIPT)
         self.assertIn('valle-cernego-alt.png', SCRIPT)
         self.assertIn('valle-cernego-alt-moving.png', SCRIPT)
-        self.assertIn('PLAYER_MODE user-selected=detailed-60', SCRIPT)
-        self.assertIn('valle-cernego-detailed.png', SCRIPT)
-        self.assertIn('valle-cernego-detailed-moving.png', SCRIPT)
         self.assertIn('verify-player-motion.py "$initial_telemetry" "$moving_telemetry"', SCRIPT)
 
     def test_smoke_waits_for_systemui_recovery_before_tapping_render_mode(self):
-        wait = SCRIPT.index('wait_for_clear_windows "before detailed mode toggle"')
+        wait = SCRIPT.index('wait_for_clear_windows "before rounded ALT mode toggle"')
         tap = SCRIPT.index('adb shell input -d 0 tap "$render_x" "$render_y"')
         self.assertLess(wait, tap)
+
+    def test_systemui_anr_recovery_uses_only_a_verified_close_point(self):
+        self.assertIn('--dismiss-point "$dump_path" "$screen_w" "$screen_h"', SCRIPT)
+        self.assertIn('adb shell input tap "$close_x" "$close_y"', SCRIPT)
 
     def test_cpu_only_emulator_uses_a_longer_swipe_without_lowering_motion_floor(self):
         self.assertIn('swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000', SCRIPT)

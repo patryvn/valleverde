@@ -120,6 +120,25 @@ class WindowStateTests(unittest.TestCase):
         self.assertEqual([], MODULE.visible_blocking_windows(dump))
         self.assertFalse(MODULE.is_retryable_systemui_anr(dump))
 
+    def test_systemui_anr_dismiss_point_targets_close_button_on_ci_display(self):
+        dump = """  Window #3 Window{abc u0 Application Not Responding: com.android.systemui}:
+    Surface: shown=true      mDrawState=HAS_DRAWN
+"""
+        self.assertEqual((454, 182), MODULE.systemui_anr_dismiss_point(dump, 720, 405))
+
+    def test_systemui_anr_dismiss_point_is_not_returned_for_game_anr(self):
+        dump = """  Window #3 Window{abc u0 Application Not Responding: es.valledecernego.game}:
+    Surface: shown=true
+"""
+        self.assertIsNone(MODULE.systemui_anr_dismiss_point(dump, 720, 405))
+
+    def test_systemui_anr_dismiss_point_rejects_invalid_display_size(self):
+        dump = """  Window #3 Window{abc u0 Application Not Responding: com.android.systemui}:
+    Surface: shown=true
+"""
+        self.assertIsNone(MODULE.systemui_anr_dismiss_point(dump, 0, 405))
+        self.assertIsNone(MODULE.systemui_anr_dismiss_point(dump, 720, -1))
+
 
 if __name__ == "__main__":
     unittest.main()

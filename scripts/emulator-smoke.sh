@@ -43,7 +43,17 @@ wait_for_clear_windows() {
       echo "SystemUI ANR overlay during $stage; waiting for Android UI recovery ($attempt/20)."
       assert_game_alive "$stage while waiting for SystemUI recovery" || return 1
       if [[ "$attempt" == "4" ]]; then
-        adb shell input keyevent 4 >/dev/null 2>&1 || true
+        # The AVD sometimes leaves a visible SystemUI ANR dialog from boot.
+        # Dismiss it only when a fresh dump proves it is the sole retryable overlay.
+        adb shell dumpsys window windows > "$dump_path" 2>&1 || true
+        local dismiss_point=""
+        if dismiss_point="$(python3 scripts/verify-window-state.py --dismiss-point "$dump_path" "$screen_w" "$screen_h" 2>/dev/null)"; then
+          local close_x close_y
+          read -r close_x close_y <<< "$dismiss_point"
+          echo "Dismissing the verified SystemUI ANR dialog at $close_x,$close_y."
+          adb shell input tap "$close_x" "$close_y" >/dev/null 2>&1 || true
+          sleep 3
+        fi
       fi
       sleep 2
       continue
@@ -210,9 +220,9 @@ if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed 
 wait_for_clear_windows "post-launch" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
-# The rounded 11-part humanoid is the default path for new sessions. Require the
-# explicit geometry marker as well as a complete draw snapshot before accepting pixels.
-wait_for_clear_windows "post-launch before initial ALT capture" emulator-output/windows-after-launch.txt
+# New sessions use the full 60-part character. The rounded 11-part humanoid
+# remains selectable and is also the automatic fallback after a runtime GL error.
+wait_for_clear_windows "post-launch before initial detailed capture" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
 shader_plan_line=""
@@ -222,26 +232,24 @@ for attempt in $(seq 1 30); do
   sleep 1
 done
 if [[ -z "$shader_plan_line" ]]; then
-  echo "Renderer did not retain a usable rounded-player shader after GLES initialization."
+  echo "Renderer did not retain a usable rounded-player fallback after GLES initialization."
   grep -E 'PLAYER_SHADER_PLAN|PLAYER_MODE|PLAYER_COMPATIBILITY' emulator-output/renderer-live.log | tail -n 60 || true
   exit 1
 fi
 
-alt_geometry_line=""
-initial_line=""
+detailed_initial_line=""
 for attempt in $(seq 1 60); do
-  alt_geometry_line="$(grep -F 'PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0' emulator-output/renderer-live.log | tail -n 1 || true)"
-  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
-  if [[ -n "$alt_geometry_line" && -n "$initial_line" ]]; then break; fi
+  detailed_initial_line="$(grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  if [[ -n "$detailed_initial_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$alt_geometry_line" || -z "$initial_line" ]]; then
-  echo "Default rounded ALT humanoid did not complete all 11 parts with GL_NO_ERROR."
-  grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 80 || true
+if [[ -z "$detailed_initial_line" ]]; then
+  echo "Default detailed 60-part humanoid did not complete with GL_NO_ERROR."
+  grep -E 'PLAYER_MODE|PLAYER_SHADER_PLAN|PLAYER_COMPATIBILITY|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 80 || true
   exit 1
 fi
-alt_initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-capture_humanoid_frame "default rounded ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
+detailed_initial_telemetry="$(printf '%s\n' "$detailed_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "default detailed 3D scene" emulator-output/valle-cernego-detailed.png emulator-output/windows-before-detailed-capture.txt
 
 layout_line=""
 for attempt in $(seq 1 30); do
@@ -342,40 +350,39 @@ run_motion_for_mode() {
   capture_moving_humanoid_frame "$mode_label moving scene" "$moving_image" "$windows_path"
 }
 
-# Validate movement and camera tracking while the default rounded model is active.
-run_motion_for_mode "rounded ALT" 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' \
-  "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
-  emulator-output/windows-before-alt-moving-capture.txt
-
-# The previous CI run left a visible SystemUI ANR over the game after the swipe.
-# Wait for the overlay to disappear (the helper can send BACK) before touching
-# the in-game toggle; otherwise the tap is consumed by SystemUI and no mode event
-# reaches Hud.onTouchEvent.
-wait_for_clear_windows "before detailed mode toggle" emulator-output/windows-before-detailed-toggle.txt
-assert_game_alive "before detailed mode toggle" || exit 1
-detailed_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
-adb shell input -d 0 tap "$render_x" "$render_y"
-detailed_mode_line=""
-detailed_initial_line=""
-for attempt in $(seq 1 45); do
-  fresh_detailed_lines="$(fresh_log_lines "$detailed_toggle_log_start")"
-  detailed_mode_line="$(printf '%s\n' "$fresh_detailed_lines" | grep -F 'PLAYER_MODE user-selected=detailed-60' | tail -n 1 || true)"
-  detailed_initial_line="$(printf '%s\n' "$fresh_detailed_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' | tail -n 1 || true)"
-  if [[ -n "$detailed_mode_line" && -n "$detailed_initial_line" ]]; then break; fi
-  sleep 1
-done
-if [[ -z "$detailed_mode_line" || -z "$detailed_initial_line" ]]; then
-  echo "The 3D toggle did not activate the detailed 60-part model after SystemUI recovery."
-  fresh_log_lines "$detailed_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
-  exit 1
-fi
-detailed_initial_telemetry="$(printf '%s\n' "$detailed_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-capture_humanoid_frame "detailed 3D scene" emulator-output/valle-cernego-detailed.png emulator-output/windows-before-detailed-capture.txt
-
-# Exercise movement and camera follow on the detailed 60-part path as well.
+# Prove that the detailed model is visible and stable while moving.
 run_motion_for_mode "detailed 3D" 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' \
   "$detailed_initial_telemetry" emulator-output/valle-cernego-detailed-moving.png \
   emulator-output/windows-before-detailed-moving-capture.txt
+
+# Switch to the rounded 11-part humanoid and validate it independently.
+wait_for_clear_windows "before rounded ALT mode toggle" emulator-output/windows-before-alt-toggle.txt
+assert_game_alive "before rounded ALT mode toggle" || exit 1
+alt_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
+adb shell input -d 0 tap "$render_x" "$render_y"
+alt_mode_line=""
+alt_geometry_line=""
+alt_initial_line=""
+for attempt in $(seq 1 45); do
+  fresh_alt_lines="$(fresh_log_lines "$alt_toggle_log_start")"
+  alt_mode_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_MODE user-selected=compatibility-11' | tail -n 1 || true)"
+  alt_geometry_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0' | tail -n 1 || true)"
+  alt_initial_line="$(printf '%s\n' "$fresh_alt_lines" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
+  if [[ -n "$alt_mode_line" && -n "$alt_geometry_line" && -n "$alt_initial_line" ]]; then break; fi
+  sleep 1
+done
+if [[ -z "$alt_mode_line" || -z "$alt_geometry_line" || -z "$alt_initial_line" ]]; then
+  echo "The rounded ALT humanoid did not complete all 11 parts with GL_NO_ERROR."
+  fresh_log_lines "$alt_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
+  exit 1
+fi
+alt_initial_telemetry="$(printf '%s\n' "$alt_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "rounded ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
+
+# Exercise movement and camera follow on the rounded fallback path as well.
+run_motion_for_mode "rounded ALT" 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' \
+  "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
+  emulator-output/windows-before-alt-moving-capture.txt
 
 adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then

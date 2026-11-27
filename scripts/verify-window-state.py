@@ -49,7 +49,28 @@ def capture_decision(dump: str, screenshot_valid: bool) -> str:
     return "accept" if screenshot_valid else "retry"
 
 
+def systemui_anr_dismiss_point(dump: str, width: int, height: int) -> tuple[int, int] | None:
+    """Return the AVD's SystemUI ANR 'Close' tap point only for that visible overlay."""
+    if width <= 0 or height <= 0 or not is_retryable_systemui_anr(dump):
+        return None
+    return round(width * 0.63), round(height * 0.45)
+
+
 def main() -> int:
+    if len(sys.argv) == 5 and sys.argv[1] == "--dismiss-point":
+        dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
+        try:
+            width, height = int(sys.argv[3]), int(sys.argv[4])
+        except ValueError:
+            print("Display width and height must be integers.", file=sys.stderr)
+            return 2
+        point = systemui_anr_dismiss_point(dump, width, height)
+        if point is None:
+            print("No safe SystemUI ANR dismiss point.", file=sys.stderr)
+            return 1
+        print(f"{point[0]} {point[1]}")
+        return 0
+
     if len(sys.argv) == 4 and sys.argv[1] == "--capture-decision":
         dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
         screenshot_valid = sys.argv[3] == "1"
@@ -69,7 +90,8 @@ def main() -> int:
         print(
             "Usage: verify-window-state.py WINDOWS_DUMP | "
             "verify-window-state.py --retryable-systemui-anr WINDOWS_DUMP | "
-            "verify-window-state.py --capture-decision WINDOWS_DUMP PIXELS_VALID(0|1)",
+            "verify-window-state.py --capture-decision WINDOWS_DUMP PIXELS_VALID(0|1) | "
+            "verify-window-state.py --dismiss-point WINDOWS_DUMP WIDTH HEIGHT",
             file=sys.stderr,
         )
         return 2
