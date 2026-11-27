@@ -1104,7 +1104,7 @@ public class MainActivity extends Activity {
                 glError=GLES20.GL_NO_ERROR;
             }else{
                 glError=fallbackGlError!=GLES20.GL_NO_ERROR?fallbackGlError:detailGlError;
-                if(glError==GLES20.GL_NO_ERROR && publishedDrawCalls==0){
+                if(glError==GLES20.GL_NO_ERROR){
                     glError=GLES20.GL_INVALID_OPERATION;
                 }
             }
