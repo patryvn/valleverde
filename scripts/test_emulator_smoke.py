@@ -86,14 +86,24 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("PlayerGpuPolicy.shouldPreferSimpleShader(playerGpuRenderer)", source)
         self.assertNotIn("forceCompatibilityPlayerModel=false;", source)
 
-    def test_poco_mali_g615_selects_full_simple_shader_humanoid(self):
+    def test_poco_mali_g615_selects_full_box_only_humanoid(self):
         root = Path(__file__).parents[1]
         policy = (root / "app/src/main/java/es/valledecernego/game/PlayerGpuPolicy.java").read_text(encoding="utf-8")
         activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
         self.assertIn("mali-g615", policy)
         self.assertIn("drawPlayerBoxCompatibility()", activity)
-        self.assertIn("PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer)", activity)
+        self.assertIn("PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,", activity)
+        self.assertIn("forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest", activity)
         self.assertIn("boxCompatibilityParts=PlayerModelSpec.boxCompatibilityParts()", activity)
+
+    def test_manual_box60_override_does_not_depend_on_gpu_renderer_name(self):
+        root = Path(__file__).parents[1]
+        policy = (root / "app/src/main/java/es/valledecernego/game/PlayerGpuPolicy.java").read_text(encoding="utf-8")
+        activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
+        self.assertIn("shouldUseBoxOnlyGeometry(String glRenderer, boolean forceBoxOnly)", policy)
+        self.assertIn("forceBoxCompatibilityPlayerModel=forceCompatibilityPlayerModel", activity)
+        self.assertIn('return isBoxCompatibilityActive()?"BOX"', activity)
+        self.assertIn('PLAYER_MODE user-selected="+selectedMode', activity)
 
     def test_promoted_fallback_shader_keeps_rounded_humanoid_available(self):
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
@@ -108,23 +118,22 @@ class EmulatorSmokeInputTest(unittest.TestCase):
             self.assertIn('"{}": 80'.format(limb), verifier)
         self.assertIn("A single blue rectangle can satisfy the old torso-colour check", verifier)
 
-    def test_smoke_captures_and_moves_detailed_default_then_simple_shader_60_part_model(self):
+    def test_smoke_captures_and_moves_detailed_default_then_manual_box60_model(self):
         self.assertIn("PLAYER_STATE .*PARTS=60 FALLBACK=0", SCRIPT)
         self.assertIn('valle-cernego-detailed.png', SCRIPT)
         self.assertIn('valle-cernego-detailed-moving.png', SCRIPT)
-        self.assertIn('PLAYER_MODE user-selected=simple-shader-60', SCRIPT)
-        self.assertIn('PLAYER_MODE context-created=box-only-shader-60', SCRIPT)
+        self.assertIn('PLAYER_MODE user-selected=box-only-shader-60', SCRIPT)
         self.assertIn('PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0', SCRIPT)
+        self.assertIn('valle-cernego-box60-manual.png', SCRIPT)
+        self.assertIn('valle-cernego-box60-manual-moving.png', SCRIPT)
+        self.assertIn('PLAYER_MODE context-created=box-only-shader-60', SCRIPT)
         self.assertIn('valle-cernego-box60.png', SCRIPT)
         self.assertIn('valle-cernego-box60-moving.png', SCRIPT)
-        self.assertIn('PLAYER_COMPATIBILITY geometry=simple-shader-detailed-60 GL=0x0', SCRIPT)
         self.assertIn('PLAYER_STATE .*PARTS=60 FALLBACK=60', SCRIPT)
-        self.assertIn('valle-cernego-alt.png', SCRIPT)
-        self.assertIn('valle-cernego-alt-moving.png', SCRIPT)
         self.assertIn('verify-player-motion.py "$initial_telemetry" "$moving_telemetry"', SCRIPT)
 
     def test_smoke_waits_for_systemui_recovery_before_tapping_render_mode(self):
-        wait = SCRIPT.index('wait_for_clear_windows "before simple-shader ALT mode toggle"')
+        wait = SCRIPT.index('wait_for_clear_windows "before manual BOX60 mode toggle"')
         tap = SCRIPT.index('adb shell input -d 0 tap "$render_x" "$render_y"')
         self.assertLess(wait, tap)
 

@@ -387,33 +387,34 @@ run_motion_for_mode "detailed 3D" 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' 
   "$detailed_initial_telemetry" emulator-output/valle-cernego-detailed-moving.png \
   emulator-output/windows-before-detailed-moving-capture.txt
 
-# Switch to the full 60-part humanoid on the independent simple GLES shader.
-wait_for_clear_windows "before simple-shader ALT mode toggle" emulator-output/windows-before-alt-toggle.txt
-assert_game_alive "before simple-shader ALT mode toggle" || exit 1
-alt_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
+# Explicitly select BOX60 from the visible HUD button. This also proves that
+# the fallback can be requested on a generic SwiftShader renderer string.
+wait_for_clear_windows "before manual BOX60 mode toggle" emulator-output/windows-before-alt-toggle.txt
+assert_game_alive "before manual BOX60 mode toggle" || exit 1
+manual_box_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
 adb shell input -d 0 tap "$render_x" "$render_y"
-alt_mode_line=""
-alt_geometry_line=""
-alt_initial_line=""
+manual_box_mode_line=""
+manual_box_geometry_line=""
+manual_box_initial_line=""
 for attempt in $(seq 1 45); do
-  fresh_alt_lines="$(fresh_log_lines "$alt_toggle_log_start")"
-  alt_mode_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_MODE user-selected=simple-shader-60' | tail -n 1 || true)"
-  alt_geometry_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=simple-shader-detailed-60 GL=0x0' | tail -n 1 || true)"
-  alt_initial_line="$(printf '%s\n' "$fresh_alt_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
-  if [[ -n "$alt_mode_line" && -n "$alt_geometry_line" && -n "$alt_initial_line" ]]; then break; fi
+  fresh_manual_box_lines="$(fresh_log_lines "$manual_box_toggle_log_start")"
+  manual_box_mode_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_MODE user-selected=box-only-shader-60' | tail -n 1 || true)"
+  manual_box_geometry_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0' | tail -n 1 || true)"
+  manual_box_initial_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
+  if [[ -n "$manual_box_mode_line" && -n "$manual_box_geometry_line" && -n "$manual_box_initial_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$alt_mode_line" || -z "$alt_geometry_line" || -z "$alt_initial_line" ]]; then
-  echo "The simple-shader ALT humanoid did not complete all 60 parts with GL_NO_ERROR."
-  fresh_log_lines "$alt_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
+if [[ -z "$manual_box_mode_line" || -z "$manual_box_geometry_line" || -z "$manual_box_initial_line" ]]; then
+  echo "The manual BOX60 humanoid did not complete all 60 parts with GL_NO_ERROR."
+  fresh_log_lines "$manual_box_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
   exit 1
 fi
-alt_initial_telemetry="$(printf '%s\n' "$alt_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-capture_humanoid_frame "simple-shader ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
+manual_box_initial_telemetry="$(printf '%s\n' "$manual_box_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "manual BOX60 scene" emulator-output/valle-cernego-box60-manual.png emulator-output/windows-before-alt-capture.txt
 
-# Exercise movement and camera follow on the full simple-shader model as well.
-run_motion_for_mode "simple-shader ALT" 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' \
-  "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
+# Exercise movement and camera follow on the manually selected cube-only model.
+run_motion_for_mode "manual BOX60" 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' \
+  "$manual_box_initial_telemetry" emulator-output/valle-cernego-box60-manual-moving.png \
   emulator-output/windows-before-alt-moving-capture.txt
 
 # Re-launch with a test-only override to exercise the cube-only 60-part route
@@ -458,4 +459,4 @@ if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego
   echo "Fatal app or player OpenGL error detected."
   exit 1
 fi
-echo "Emulator smoke test completed: detailed, simple-shader and cube-only 60-part humanoids all rendered, moved and kept camera follow with GL_NO_ERROR."
+echo "Emulator smoke test completed: detailed, manually selected BOX60 and test-forced BOX60 60-part humanoids all rendered, moved and kept camera follow with GL_NO_ERROR."
