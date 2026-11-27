@@ -140,6 +140,13 @@ public final class PlayerModelSpec {
     public static int size() { return PARTS.length; }
     public static Part partAt(int index) { return PARTS[index]; }
     public static Part[] parts() { return PARTS.clone(); }
+
+    /** Full character converted to the cube mesh only; preserves all part IDs, colours and motion channels. */
+    public static Part[] boxCompatibilityParts() {
+        Part[] boxes = new Part[PARTS.length];
+        for (int i=0;i<PARTS.length;i++) boxes[i] = asCompatibilityBox(PARTS[i]);
+        return boxes;
+    }
     public static float nominalHeight() { return 1.92f; }
 
     /**
