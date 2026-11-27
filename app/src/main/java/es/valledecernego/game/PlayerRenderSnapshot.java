@@ -13,10 +13,20 @@ public final class PlayerRenderSnapshot {
     public final int fallbackParts;
     public final int glError;
     public final boolean frameRendered;
+    /** True only when spheres and capsules, not emergency boxes, formed the fallback humanoid. */
+    public final boolean roundedFallback;
 
     public PlayerRenderSnapshot(boolean rendererReady, boolean silhouetteReady,
                                 boolean compatibilityRenderer, int detailedParts,
                                 int fallbackParts, int glError, boolean frameRendered) {
+        this(rendererReady, silhouetteReady, compatibilityRenderer, detailedParts,
+            fallbackParts, glError, frameRendered, false);
+    }
+
+    public PlayerRenderSnapshot(boolean rendererReady, boolean silhouetteReady,
+                                boolean compatibilityRenderer, int detailedParts,
+                                int fallbackParts, int glError, boolean frameRendered,
+                                boolean roundedFallback) {
         this.rendererReady = rendererReady;
         this.silhouetteReady = silhouetteReady;
         this.compatibilityRenderer = compatibilityRenderer;
@@ -24,6 +34,7 @@ public final class PlayerRenderSnapshot {
         this.fallbackParts = Math.max(0, fallbackParts);
         this.glError = glError;
         this.frameRendered = frameRendered;
+        this.roundedFallback = roundedFallback;
     }
 
     public static PlayerRenderSnapshot initial() {
@@ -47,12 +58,13 @@ public final class PlayerRenderSnapshot {
         }
         if (rendererReady && detailedParts >= expectedDetailedParts) {
             String modelPath = fallbackParts >= expectedFallbackParts
-                ? "respaldo humanoide " + fallbackParts
+                ? (roundedFallback ? "humanoide redondeado " : "respaldo cúbico ") + fallbackParts
                 : "modelo detallado";
             return "3D OK · " + detailedParts + " piezas · " + modelPath + " · GL OK";
         }
         if (fallbackParts >= expectedFallbackParts) {
-            return "3D COMPATIBLE · " + fallbackParts + " piezas humanoides · GL OK";
+            String geometry = roundedFallback ? "humanoide redondeado" : "respaldo cúbico";
+            return "3D COMPATIBLE · " + fallbackParts + " piezas · " + geometry + " · GL OK";
         }
         if (silhouetteReady) {
             return "3D INCOMPLETO · " + fallbackParts + "/" + expectedFallbackParts + " piezas";
