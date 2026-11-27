@@ -155,6 +155,33 @@ public class PlayerModelSpecTest {
         assertEquals(PlayerModelSpec.Shape.BOX,findRounded(rounded,"backpack").shape);
     }
 
+    @Test public void fullBoxCompatibilityModelRetainsAllSixtyHumanPartsAndWalkChannels() {
+        PlayerModelSpec.Part[] boxes=PlayerModelSpec.boxCompatibilityParts();
+        assertEquals(PlayerModelSpec.size(),boxes.length);
+        assertEquals(60,boxes.length);
+        for(PlayerModelSpec.Part part:boxes) {
+            assertEquals(PlayerModelSpec.Shape.BOX,part.shape);
+            assertTrue(part.sx>0f && part.sy>0f && part.sz>0f);
+            assertTrue(Float.isFinite(part.x) && Float.isFinite(part.y) && Float.isFinite(part.z));
+        }
+        assertEquals(PlayerModelSpec.Motion.LEFT_ARM,findBoxPart(boxes,"left-arm").motion);
+        assertEquals(PlayerModelSpec.Motion.RIGHT_ARM,findBoxPart(boxes,"right-arm").motion);
+        assertEquals(PlayerModelSpec.Motion.LEFT_LEG,findBoxPart(boxes,"left-leg").motion);
+        assertEquals(PlayerModelSpec.Motion.RIGHT_LEG,findBoxPart(boxes,"right-leg").motion);
+        assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("head").shape);
+        assertEquals(PlayerModelSpec.Shape.BOX,findBoxPart(boxes,"head").shape);
+        assertEquals(PlayerModelSpec.find("head").sx*2f,findBoxPart(boxes,"head").sx,.0001f);
+        assertEquals(PlayerModelSpec.find("torso").sy*2f,findBoxPart(boxes,"torso").sy,.0001f);
+        assertNotNull(findBoxPart(boxes,"shirt-front"));
+        assertNotNull(findBoxPart(boxes,"backpack"));
+        assertNotNull(findBoxPart(boxes,"left-boot"));
+    }
+
+    private static PlayerModelSpec.Part findBoxPart(PlayerModelSpec.Part[] parts,String id) {
+        for(PlayerModelSpec.Part part:parts) if(id.equals(part.id)) return part;
+        return null;
+    }
+
     private static PlayerModelSpec.Part findRounded(PlayerModelSpec.Part[] parts,String id) {
         for(PlayerModelSpec.Part part:parts) if(id.equals(part.id)) return part;
         return null;
