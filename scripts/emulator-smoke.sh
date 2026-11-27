@@ -389,7 +389,7 @@ run_motion_for_mode "detailed 3D" 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' 
 
 # Switch to the full 60-part humanoid on the independent simple GLES shader.
 wait_for_clear_windows "before simple-shader ALT mode toggle" emulator-output/windows-before-alt-toggle.txt
-assert_game_alive "before rounded ALT mode toggle" || exit 1
+assert_game_alive "before simple-shader ALT mode toggle" || exit 1
 alt_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
 adb shell input -d 0 tap "$render_x" "$render_y"
 alt_mode_line=""
