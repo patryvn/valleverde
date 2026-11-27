@@ -16,19 +16,19 @@ public final class PlayerRenderPolicy {
         return !rendererReady && silhouetteShaderReady;
     }
 
-    /** Use the cube-only model after a runtime geometry failure, or if only the fallback shader exists. */
+    /** Use the rounded humanoid path by default or after a runtime geometry failure; cubes are the emergency last resort. */
     public static boolean shouldUseCompatibilityModel(boolean forceCompatibility,
                                                        boolean rendererReady,
                                                        boolean silhouetteShaderReady) {
         return forceCompatibility || shouldDrawOpaqueBase(rendererReady, silhouetteShaderReady);
     }
 
-    /** The detailed mesh batch is attempted only until a runtime failure is detected. */
+    /** The detailed mesh batch is used only when the user selects 3D and the renderer is ready. */
     public static boolean shouldDrawDetailedModel(boolean rendererReady, boolean forceCompatibility) {
         return rendererReady && !forceCompatibility;
     }
 
-    /** Toggle between the detailed 60-part model and the cube-only compatibility humanoid. */
+    /** Toggle between the detailed 60-part model and the rounded 11-part compatibility humanoid. */
     public static boolean toggleCompatibilityMode(boolean current) {
         return !current;
     }
