@@ -22,4 +22,16 @@ public final class PlayerGpuPolicy {
             ? "mali-g615-simple-shader-60"
             : "default-lit-shader-60";
     }
+    
+    /**
+     * Compact on-screen diagnostic for the actual GLES renderer and selected player path.
+     * This lets device testers report the GPU without ADB or logcat.
+     */
+    public static String diagnosticLabel(String glRenderer, boolean simpleShaderSelected) {
+        String renderer = glRenderer == null ? "" : glRenderer.trim().replaceAll("\\s+", " ");
+        if (renderer.isEmpty() || "null".equalsIgnoreCase(renderer)
+                || "unknown".equalsIgnoreCase(renderer)) renderer = "desconocida";
+        if (renderer.length() > 22) renderer = renderer.substring(0, 22);
+        return "GPU " + renderer + " · " + (simpleShaderSelected ? "SIMPLE60" : "LIT60");
+    }
 }

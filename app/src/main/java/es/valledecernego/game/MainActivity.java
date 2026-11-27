@@ -473,7 +473,8 @@ public class MainActivity extends Activity {
                 if(PlayerRenderPolicy.isRenderModeButtonHit(x,y,w,h)){
                     touchMode=5;
                     boolean compatibility=renderer.togglePlayerRenderMode();
-                    toast(compatibility?"Modelo 3D compatible · 60 piezas":"Modelo 3D detallado · 60 piezas");
+                    toast((compatibility?"Modelo 3D compatible · 60 piezas":"Modelo 3D detallado · 60 piezas")
+                        +" · "+renderer.getPlayerGpuDiagnostic());
                     logTouch("RENDER_MODE",x,y);invalidate();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);logTouch("LOOK_DOWN",x,y);return true;
@@ -1073,7 +1074,13 @@ public class MainActivity extends Activity {
 
         String getRenderStatus(){
             PlayerRenderSnapshot snapshot=renderSnapshot;
-            return snapshot.summary(PlayerModelSpec.size(),silhouetteParts.length);
+            return snapshot.summary(PlayerModelSpec.size(),silhouetteParts.length)
+                + " · " + getPlayerGpuDiagnostic();
+        }
+
+        String getPlayerGpuDiagnostic(){
+            return PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel);
+        }
         }
 
         // The full 60-part humanoid can run through either the lit material shader or

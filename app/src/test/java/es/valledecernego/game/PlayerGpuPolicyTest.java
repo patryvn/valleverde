@@ -29,4 +29,18 @@ public class PlayerGpuPolicyTest {
         assertFalse(PlayerGpuPolicy.shouldPreferSimpleShader(null));
         assertEquals("default-lit-shader-60",PlayerGpuPolicy.profileName(null));
     }
+
+    @Test public void diagnosticLabelShowsActualGpuAndSelectedShaderPath() {
+        assertEquals("GPU Mali-G615 MC6 · SIMPLE60",
+            PlayerGpuPolicy.diagnosticLabel("Mali-G615 MC6", true));
+        assertEquals("GPU Google SwiftShader · LIT60",
+            PlayerGpuPolicy.diagnosticLabel("Google SwiftShader", false));
+    }
+
+    @Test public void diagnosticLabelHandlesMissingAndLongRendererNames() {
+        assertEquals("GPU desconocida · LIT60",
+            PlayerGpuPolicy.diagnosticLabel(null, false));
+        assertEquals("GPU 1234567890123456789012 · SIMPLE60",
+            PlayerGpuPolicy.diagnosticLabel("123456789012345678901234567890", true));
+    }
 }

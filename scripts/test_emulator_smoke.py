@@ -27,7 +27,16 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.8"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.9"', manifest.read_text(encoding="utf-8"))
+
+    def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
+        root = Path(__file__).parents[1]
+        policy = (root / "app/src/main/java/es/valledecernego/game/PlayerGpuPolicy.java").read_text(encoding="utf-8")
+        activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
+        self.assertIn("diagnosticLabel(String glRenderer, boolean simpleShaderSelected)", policy)
+        self.assertIn("getPlayerGpuDiagnostic()", activity)
+        self.assertIn("PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel)", activity)
+        self.assertIn("PLAYER_GPU_PROFILE renderer=", activity)
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
         self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
