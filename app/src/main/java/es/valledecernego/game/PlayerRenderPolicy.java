@@ -6,6 +6,8 @@ package es.valledecernego.game;
  */
 public final class PlayerRenderPolicy {
     public static final float OPAQUE_BASE_ALPHA = 1f;
+    /** New sessions start on the rounded 11-part path to avoid driver-specific detailed-mesh failures. */
+    public static final boolean DEFAULT_COMPATIBILITY_MODE = true;
 
     private PlayerRenderPolicy() { }
 
