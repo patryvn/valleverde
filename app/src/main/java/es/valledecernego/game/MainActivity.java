@@ -582,8 +582,8 @@ public class MainActivity extends Activity {
             compatibilityRenderer=false;
             silhouetteReady=false;
             // Preserve the selected path when Android recreates the EGL context.
-            // New sessions prefer the rounded 11-part humanoid; detailed 60-part mode
-            // remains available from the visible 3D/ALT toggle.
+            // New sessions prefer the detailed 60-part humanoid. The rounded 11-part
+            // path is the user-selectable compatibility mode and runtime fallback.
             android.util.Log.i("ValleCernego","PLAYER_MODE context-created="
                 +(forceCompatibilityPlayerModel?"compatibility-11":"detailed-60"));
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
