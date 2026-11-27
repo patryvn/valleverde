@@ -124,3 +124,14 @@ Se ha añadido un modo de escena aislada activado únicamente por el extra de la
 - El emulador no representa la GPU Adreno del Poco X6 Pro; la prueba física debe confirmar que la chaqueta no vuelve a aparecer como un bloque, que se distinguen cabeza, hombros, brazos, cintura y piernas, y que mochila y correas quedan centradas.
 - Verificar en el Poco el giro de cámara, caminar en cuatro direcciones, salto, reposo, reanudación desde segundo plano, rendimiento térmico y persistencia.
 - Las texturas continúan siendo materiales procedurales por color e iluminación; no hay mapas UV ni texturas fotográficas. La APK de CI es de prueba y no usa firma persistente de distribución.
+
+
+## Corrección de promoción del shader de respaldo en 0.28.6
+
+La revisión del camino de compatibilidad encontró un defecto lógico: si el shader principal no enlazaba pero sí lo hacía el shader GLES mínimo, el juego lo promovía a renderizador principal y después marcaba `silhouetteReady=false`. Eso desactivaba también el mismo shader que debía dibujar el humanoide redondeado, obligando a usar el último respaldo cúbico.
+
+En 0.28.6, `PlayerShaderPlan` conserva los dos roles del programa mínimo al promoverlo. Así, cuando el shader principal falla, la escena puede seguir usando el programa plano y el jugador todavía intenta cabeza/torso esféricos y brazos/piernas en cápsula. Se registra `PLAYER_SHADER_PLAN ... roundedFallback=true` y el smoke test lo exige antes de aceptar la captura.
+
+Pruebas unitarias nuevas: promoción del shader, disponibilidad simultánea del humanoide redondeado, conservación del modo plano y ausencia de renderizador cuando fallan ambos programas.
+
+Límite: el shader mínimo no aporta iluminación por normales ni texturas; conserva geometría y color plano para priorizar la silueta. La ruta principal mantiene sus materiales e iluminación. Sigue siendo obligatoria la validación física en el Poco X6 Pro para confirmar que el controlador Adreno dibuja la silueta completa, que la cámara la sigue y que no desaparece al moverse.
