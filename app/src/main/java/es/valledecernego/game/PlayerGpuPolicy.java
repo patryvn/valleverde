@@ -3,11 +3,11 @@ package es.valledecernego.game;
 import java.util.Locale;
 
 /**
- * Selects a conservative player shader for the Mali-G615 family.
+ * Selects a cube-only 60-part player path for the Mali-G615 family.
  *
- * The Poco X6 Pro uses a Mali-G615 MC6 GPU. The policy avoids the more complex
- * procedural lighting/material shader on that renderer while retaining all
- * 60 humanoid parts, their colours and the same animation transforms.
+ * The Poco X6 Pro uses a Mali-G615 MC6 GPU. BOX60 avoids both the complex
+ * material shader and sphere/capsule mesh buffers while retaining the full
+ * character, its colours and the same articulated animation transforms.
  */
 public final class PlayerGpuPolicy {
     private PlayerGpuPolicy() { }
