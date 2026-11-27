@@ -427,6 +427,10 @@ public class MainActivity extends Activity {
             float jumpX=w-unit*.355f, jumpY=h-unit*.15f, jumpR=unit*.098f;
             button(c,actionX,actionY,actionR,"HACER",0xff6d8c55);
             button(c,jumpX,jumpY,jumpR,"SALTAR",0xff6b7e9b);
+            boolean compatibilityMode=renderer!=null && renderer.isCompatibilityModeForced();
+            float renderModeX=w-unit*.10f, renderModeY=unit*.25f, renderModeR=unit*.07f;
+            button(c,renderModeX,renderModeY,renderModeR,compatibilityMode?"ALT":"3D",
+                compatibilityMode?0xffad7b43:0xff527b91);
             String hint=renderer==null?"":renderer.getInteractionHint();
             if(!hint.isEmpty()){
                 p.setColor(0xdd172018);p.setTextAlign(Paint.Align.CENTER);
@@ -463,6 +467,12 @@ public class MainActivity extends Activity {
                 }
                 if(insideCircle(x,y,w-unit*.355f,h-unit*.15f,unit*.115f)){
                     touchMode=4;if(jump!=null)jump.run();logTouch("JUMP",x,y);return true;
+                }
+                if(PlayerRenderPolicy.isRenderModeButtonHit(x,y,w,h)){
+                    touchMode=5;
+                    boolean compatibility=renderer.togglePlayerRenderMode();
+                    toast(compatibility?"Modelo 3D alternativo · 11 piezas":"Modelo 3D detallado · 60 piezas");
+                    logTouch("RENDER_MODE",x,y);invalidate();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);logTouch("LOOK_DOWN",x,y);return true;
             }
@@ -542,6 +552,15 @@ public class MainActivity extends Activity {
         }
 
         void setDebugTelemetry(boolean enabled){debugTelemetry=enabled;}
+
+        boolean togglePlayerRenderMode(){
+            forceCompatibilityPlayerModel=!forceCompatibilityPlayerModel;
+            android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="
+                +(forceCompatibilityPlayerModel?"compatibility-11":"detailed-60"));
+            return forceCompatibilityPlayerModel;
+        }
+
+        boolean isCompatibilityModeForced(){return forceCompatibilityPlayerModel;}
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
             renderSnapshot=PlayerRenderSnapshot.initial();

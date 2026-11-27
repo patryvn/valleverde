@@ -305,3 +305,16 @@ Una ejecución verde de SwiftShader valida únicamente el emulador. No sustituye
 ### Comprobación aislada previa a CI
 
 El verificador de movimiento y sus siete pruebas de regresión se ejecutaron localmente en un entorno aislado: 7/7 pasaron, incluyendo el modo humanoide de 11 piezas y el rechazo de cambios de geometría durante el desplazamiento. Esto no sustituye `testDebugUnitTest`, `assembleDebug`, `assembleRelease` ni el smoke test Android; esos resultados deben confirmarse en la ejecución de GitHub Actions de la versión 0.27.9 antes de publicar la APK.
+
+
+## 0.28.0: selector visible de modelo 3D para diagnóstico en GPU física (27-11-2026)
+
+La ejecución 45933413101 de la versión 0.27.9 terminó en verde. La captura inicial de Android 35/SwiftShader (720×405) muestra un personaje humanoide reconocible desde atrás: cabeza y gorra, torso, brazos, piernas, botas y mochila. El analizador encontró piel=799 px, chaqueta=2829 px, botas=619 px, extremidades oscuras=1944 px y separación cabeza-pies=95,1 px. Los registros del mismo proceso informan 60 piezas detalladas, 0 piezas de compatibilidad, `GL_NO_ERROR`, movimiento de 0,29 m y error de seguimiento de cámara de 0,00 m. La comprobación de píxeles durante el movimiento se omitió por una ventana ANR visible de SystemUI; la telemetría de movimiento y cámara sí pasó. Esto confirma el emulador, no el Poco X6 Pro.
+
+Para que la prueba en un móvil con controlador distinto no dependa de una actualización de código a ciegas, 0.28.0 incorpora un botón visible `3D`/`ALT` en la esquina superior derecha del HUD. Tocar `3D` fuerza el modelo detallado de 60 piezas; tocar `ALT` fuerza el humanoide de compatibilidad de 11 piezas, construido solo con el búfer de cubo. El botón muestra un aviso breve con el modo elegido y registra `PLAYER_MODE` en Logcat. Si la ruta detallada falla con un error GLES o un lote incompleto, el cambio automático al modelo alternativo sigue funcionando. El modo manual se restablece al recrear el contexto OpenGL.
+
+Se añaden pruebas de la zona táctil, de su separación respecto al joystick y los botones de acción/salto, del rechazo de coordenadas inválidas y de la alternancia de modo. La versión de prueba pasa a 0.28.0 (versionCode 41); GitHub Actions verifica el paquete, ejecuta `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, las pruebas de scripts y el smoke test de escena.
+
+### Comprobación física pendiente para 0.28.0
+
+En el Poco X6 Pro, abrir expresamente la aplicación `Valle de Cernego · Prueba` y comprobar que el HUD indica `0.28.0`. Primero observar el personaje con `3D`; después tocar `ALT` y verificar que se distinguen cabeza, torso, ambos brazos, ambas piernas, gorra y mochila; finalmente volver a `3D` y caminar en varias direcciones. Si solo uno de los modos se ve correctamente, anotar cuál aparece en el HUD. La captura CI de SwiftShader no demuestra compatibilidad con la GPU física ni descarta que se esté abriendo otra instalación del paquete principal.

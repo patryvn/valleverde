@@ -26,6 +26,25 @@ public final class PlayerRenderPolicy {
         return rendererReady && !forceCompatibility;
     }
 
+    /** Toggle between the detailed 60-part model and the cube-only compatibility humanoid. */
+    public static boolean toggleCompatibilityMode(boolean current) {
+        return !current;
+    }
+
+    /** Hit-test for the small 3D/ALT button at the upper-right of the HUD. */
+    public static boolean isRenderModeButtonHit(float x, float y, float width, float height) {
+        if (!(width > 0f) || !(height > 0f)
+                || !Float.isFinite(x) || !Float.isFinite(y)
+                || !Float.isFinite(width) || !Float.isFinite(height)) return false;
+        float unit = Math.min(height, width * .55f);
+        float centerX = width - unit * .10f;
+        float centerY = unit * .25f;
+        float radius = unit * .07f;
+        float dx = x - centerX;
+        float dy = y - centerY;
+        return dx * dx + dy * dy <= radius * radius;
+    }
+
     /**
      * A successful shader link is not proof that every mesh draw reached the GPU.
      * Switch to the cube-only humanoid when a draw reports an error or a part is

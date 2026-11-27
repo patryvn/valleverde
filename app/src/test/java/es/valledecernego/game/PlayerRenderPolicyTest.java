@@ -41,6 +41,27 @@ public class PlayerRenderPolicyTest {
         assertFalse(PlayerRenderPolicy.shouldDrawDetailedModel(true, true));
     }
 
+    @Test public void renderModeButtonIsVisibleAndDoesNotOverlapGameplayControls() {
+        assertTrue(PlayerRenderPolicy.isRenderModeButtonHit(680f,99f,720f,405f));
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(79f,318f,720f,405f));
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(662f,334f,720f,405f));
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(579f,346f,720f,405f));
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(680f,180f,720f,405f));
+    }
+
+    @Test public void renderModeButtonRejectsInvalidCoordinatesAndSizes() {
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(Float.NaN,99f,720f,405f));
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(680f,99f,0f,405f));
+        assertFalse(PlayerRenderPolicy.isRenderModeButtonHit(680f,99f,720f,0f));
+    }
+
+    @Test public void compatibilityModeToggleAlternatesWithoutChangingItsInitialChoice() {
+        assertTrue(PlayerRenderPolicy.toggleCompatibilityMode(false));
+        assertFalse(PlayerRenderPolicy.toggleCompatibilityMode(true));
+        assertTrue(PlayerRenderPolicy.toggleCompatibilityMode(
+            PlayerRenderPolicy.toggleCompatibilityMode(false)));
+    }
+
     @Test public void invalidExpectedPartCountIsRejected() {
         try {
             PlayerRenderPolicy.shouldSwitchToCompatibility(true, 0, 0, 0);
