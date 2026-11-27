@@ -279,7 +279,7 @@ La revisión del código encontró un defecto verificable en la selección del r
 En 0.27.9:
 - Se consume y comprueba el error GLES después de la sombra y de cada pieza detallada.
 - Si una pieza devuelve error o no se puede enviar, se abandona el lote detallado y se activa el modelo humanoide de compatibilidad de 11 piezas.
-- Cuando está disponible, ese respaldo usa el shader GLES mínimo y el búfer de cubo ya empleado por el terreno y las construcciones.
+- Si el shader principal sigue disponible, el respaldo usa ese shader iluminado y el búfer de cubo ya empleado por el terreno y las construcciones; solo recurre al shader GLES mínimo cuando el principal no pudo inicializarse.
 - La selección se mantiene durante el contexto OpenGL actual para evitar alternar entre geometrías en cada fotograma.
 - El registro `PLAYER_COMPATIBILITY` identifica el cambio y conserva el código de error que motivó el respaldo.
 - Se añaden pruebas unitarias para lote completo, error GLES aunque se hayan intentado todas las llamadas, lote incompleto y persistencia del modo compatible.
