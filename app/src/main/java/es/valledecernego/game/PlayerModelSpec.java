@@ -65,7 +65,8 @@ public final class PlayerModelSpec {
         part("right-boot",Shape.BOX,Motion.NONE,.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
         part("left-leg",Shape.LIMB,Motion.LEFT_LEG,-.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
         part("right-leg",Shape.LIMB,Motion.RIGHT_LEG,.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
-        part("torso",Shape.BOX,Motion.NONE,0f,.99f,0f,.52f,.64f,.32f,.10f,.22f,.34f,true),
+        // Rounded ellipsoid keeps the jacket's original 0.52 x 0.64 x 0.32 m bounds.
+        part("torso",Shape.SPHERE,Motion.NONE,0f,.99f,0f,.26f,.32f,.16f,.10f,.22f,.34f,true),
         part("jacket-hem",Shape.BOX,Motion.NONE,0f,.72f,.012f,.53f,.12f,.33f,.08f,.17f,.26f,true),
         part("collar",Shape.BOX,Motion.NONE,0f,1.31f,.015f,.19f,.14f,.20f,.72f,.69f,.55f,true),
         part("zipper",Shape.BOX,Motion.NONE,0f,1.00f,.166f,.025f,.45f,.014f,.76f,.70f,.52f,true),
