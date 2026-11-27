@@ -1085,8 +1085,8 @@ public class MainActivity extends Activity {
             }
 
             if(compatibility){
-                // Use the minimal shader when it is available. The fallback uses only
-                // the cube buffer already proven by terrain/building draws on GLES 2.0.
+                // Prefer the lit primary shader for the cube fallback. If that batch
+                // also fails, retry once with the independent minimal GLES shader.
                 fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,false);
                 fallbackGlError=lastSilhouetteGlError;
                 if((fallbackSubmitted<silhouetteParts.length
