@@ -6,7 +6,8 @@ import static org.junit.Assert.*;
 public class PlayerGpuPolicyTest {
     @Test public void pocoX6ProMaliG615SelectsTheSimpleShaderWithoutDroppingModelParts() {
         assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("Mali-G615 MC6"));
-        assertEquals("mali-g615-simple-shader-60",
+        assertTrue(PlayerGpuPolicy.shouldUseBoxOnlyGeometry("ARM Mali-G615 MC6"));
+        assertEquals("mali-g615-box-only-60",
             PlayerGpuPolicy.profileName("ARM Mali-G615 MC6"));
     }
 
@@ -16,6 +17,7 @@ public class PlayerGpuPolicyTest {
 
     @Test public void swiftshaderKeepsTheDetailedLitRendererForCi() {
         assertFalse(PlayerGpuPolicy.shouldPreferSimpleShader("Google SwiftShader"));
+        assertFalse(PlayerGpuPolicy.shouldUseBoxOnlyGeometry("Google SwiftShader"));
         assertEquals("default-lit-shader-60",PlayerGpuPolicy.profileName("Google SwiftShader"));
     }
 
@@ -31,8 +33,10 @@ public class PlayerGpuPolicyTest {
     }
 
     @Test public void diagnosticLabelShowsActualGpuAndSelectedShaderPath() {
-        assertEquals("GPU Mali-G615 MC6 · SIMPLE60",
+        assertEquals("GPU Mali-G615 MC6 · BOX60",
             PlayerGpuPolicy.diagnosticLabel("Mali-G615 MC6", true));
+        assertEquals("GPU Google SwiftShader · SIMPLE60",
+            PlayerGpuPolicy.diagnosticLabel("Google SwiftShader", true, false));
         assertEquals("GPU Google SwiftShader · LIT60",
             PlayerGpuPolicy.diagnosticLabel("Google SwiftShader", false));
     }
@@ -41,6 +45,6 @@ public class PlayerGpuPolicyTest {
         assertEquals("GPU desconocida · LIT60",
             PlayerGpuPolicy.diagnosticLabel(null, false));
         assertEquals("GPU 1234567890123456789012 · SIMPLE60",
-            PlayerGpuPolicy.diagnosticLabel("123456789012345678901234567890", true));
+            PlayerGpuPolicy.diagnosticLabel("123456789012345678901234567890", true, false));
     }
 }
