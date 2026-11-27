@@ -46,10 +46,12 @@ public final class PlayerRenderSnapshot {
             return "3D COMPATIBLE · " + detailedParts + " piezas · shader GLES plano · GL OK";
         }
         if (rendererReady && detailedParts >= expectedDetailedParts) {
-            return "3D OK · " + detailedParts + " piezas · respaldo humanoide "
-                + fallbackParts + " · GL OK";
+            String modelPath = fallbackParts >= expectedFallbackParts
+                ? "respaldo humanoide " + fallbackParts
+                : "modelo detallado";
+            return "3D OK · " + detailedParts + " piezas · " + modelPath + " · GL OK";
         }
-        if (silhouetteReady && fallbackParts >= expectedFallbackParts) {
+        if (fallbackParts >= expectedFallbackParts) {
             return "3D COMPATIBLE · " + fallbackParts + " piezas humanoides · GL OK";
         }
         if (silhouetteReady) {
