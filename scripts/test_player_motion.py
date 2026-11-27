@@ -9,7 +9,7 @@ SPEC.loader.exec_module(MODULE)
 verify_motion = MODULE.verify_motion
 
 
-def telemetry(x, camera_x=None, parts=60, fallback=11, gl="0000", z=5.0, camera_z=0.96):
+def telemetry(x, camera_x=None, parts=60, fallback=0, gl="0000", z=5.0, camera_z=0.96):
     if camera_x is None:
         camera_x = x
     return (
@@ -24,7 +24,7 @@ class PlayerMotionVerificationTest(unittest.TestCase):
         self.assertAlmostEqual(0.36, result["distance"], places=2)
         self.assertAlmostEqual(0.00, result["camera_error"], places=2)
         self.assertEqual(60, result["parts"])
-        self.assertEqual(11, result["fallback"])
+        self.assertEqual(0, result["fallback"])
 
     def test_stationary_player_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "only 0.00 m"):
@@ -58,6 +58,15 @@ class PlayerMotionVerificationTest(unittest.TestCase):
         )
         self.assertEqual(11, result["parts"])
         self.assertEqual(11, result["fallback"])
+        self.assertAlmostEqual(0.00, result["camera_error"], places=2)
+
+    def test_simple_shader_keeps_all_sixty_parts_and_camera_following(self):
+        result = verify_motion(
+            telemetry(0.00, parts=60, fallback=60),
+            telemetry(0.36, parts=60, fallback=60),
+        )
+        self.assertEqual(60, result["parts"])
+        self.assertEqual(60, result["fallback"])
         self.assertAlmostEqual(0.00, result["camera_error"], places=2)
 
     def test_renderer_must_not_switch_geometry_mid_movement(self):
