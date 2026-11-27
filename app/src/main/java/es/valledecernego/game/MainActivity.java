@@ -1090,7 +1090,7 @@ public class MainActivity extends Activity {
             if(compatibility){
                 // Use the minimal shader when it is available. The fallback uses only
                 // the cube buffer already proven by terrain/building draws on GLES 2.0.
-                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,true);
+                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA);
                 fallbackGlError=lastSilhouetteGlError;
             }
 
@@ -1133,11 +1133,11 @@ public class MainActivity extends Activity {
             return 0f;
         }
 
-        int drawPlayerSilhouette(float alpha,boolean preferFlatShader){
+        int drawPlayerSilhouette(float alpha){
             int submitted=0;
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
             boolean opaque=alpha>=0.999f;
-            boolean useFlatShader=!rendererReady || (preferFlatShader && silhouetteReady);
+            boolean useFlatShader=!rendererReady;
             if(opaque){
                 GLES20.glDisable(GLES20.GL_BLEND);
                 GLES20.glDepthMask(true);
