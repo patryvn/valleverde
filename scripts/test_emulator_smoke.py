@@ -27,7 +27,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.3"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.4"', manifest.read_text(encoding="utf-8"))
 
     def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
         root = Path(__file__).parents[1]
@@ -124,6 +124,24 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('PLAYER_BOX_MATERIALS frame=textured parts=60', SCRIPT)
         self.assertIn('manual_box_texture_line', SCRIPT)
         self.assertIn('box_texture_line', SCRIPT)
+
+    def test_emergency_humanoid_is_not_mislabeled_as_box60(self):
+        activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
+        source = activity.read_text(encoding="utf-8")
+        self.assertIn('if(forceEmergencySilhouette) return "HUM11";', source)
+        self.assertIn('label.substring(0,modeSeparator)+" · HUM11"', source)
+        self.assertIn('return !forceEmergencySilhouette && forceCompatibilityPlayerModel', source)
+
+    def test_pixel_watchdog_scales_its_sample_for_high_resolution_screens(self):
+        root = Path(__file__).parents[1]
+        watchdog = (root / "app/src/main/java/es/valledecernego/game/PlayerPixelWatchdog.java").read_text(encoding="utf-8")
+        tests = (root / "app/src/test/java/es/valledecernego/game/PlayerPixelWatchdogTest.java").read_text(encoding="utf-8")
+        activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
+        self.assertIn("sampleWidth(int surfaceWidth)", watchdog)
+        self.assertIn("sampleHeight(int surfaceHeight)", watchdog)
+        self.assertIn("sampleRegionScalesForHighResolutionLandscapePhonesAndSmallEmulators", tests)
+        self.assertIn("PlayerPixelWatchdog.sampleWidth(surfaceWidth)", activity)
+        self.assertIn("PlayerPixelWatchdog.sampleHeight(surfaceHeight)", activity)
 
     def test_pixel_watchdog_checks_rendered_humanoid_and_emergency_fallback(self):
         root = Path(__file__).parents[1]

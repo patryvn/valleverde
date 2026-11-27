@@ -36,6 +36,17 @@ public class PlayerPixelWatchdogTest {
         assertEquals(0, result.boots);
     }
 
+    @Test public void sampleRegionScalesForHighResolutionLandscapePhonesAndSmallEmulators() {
+        assertEquals(480, PlayerPixelWatchdog.sampleWidth(720));
+        assertEquals(324, PlayerPixelWatchdog.sampleHeight(405));
+        assertEquals(720, PlayerPixelWatchdog.sampleWidth(2712));
+        assertEquals(640, PlayerPixelWatchdog.sampleHeight(1220));
+        assertEquals(240, PlayerPixelWatchdog.sampleWidth(360));
+        assertEquals(162, PlayerPixelWatchdog.sampleHeight(203));
+        assertEquals(0, PlayerPixelWatchdog.sampleWidth(0));
+        assertEquals(0, PlayerPixelWatchdog.sampleHeight(-1));
+    }
+
     @Test public void rejectsNullMalformedAndEmptyReadbacksWithoutThrowing() {
         assertFalse(PlayerPixelWatchdog.inspect(null, 100, 100).humanoid);
         assertFalse(PlayerPixelWatchdog.inspect(new byte[0], 100, 100).humanoid);

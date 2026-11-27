@@ -13,6 +13,17 @@ public final class PlayerPixelWatchdog {
 
     private PlayerPixelWatchdog() { }
 
+    /** Keep the probe centred on the avatar while scaling its area with display resolution. */
+    public static int sampleWidth(int surfaceWidth) {
+        if (surfaceWidth <= 0) return 0;
+        return Math.min(surfaceWidth, Math.min(720, Math.max(160, surfaceWidth * 2 / 3)));
+    }
+
+    public static int sampleHeight(int surfaceHeight) {
+        if (surfaceHeight <= 0) return 0;
+        return Math.min(surfaceHeight, Math.min(640, Math.max(120, surfaceHeight * 4 / 5)));
+    }
+
     public static final class Result {
         public final int skin;
         public final int jacket;

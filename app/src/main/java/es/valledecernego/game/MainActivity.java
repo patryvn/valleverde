@@ -622,12 +622,13 @@ public class MainActivity extends Activity {
         boolean isCompatibilityModeForced(){return forceCompatibilityPlayerModel;}
 
         boolean isBoxCompatibilityActive(){
-            return forceCompatibilityPlayerModel
+            return !forceEmergencySilhouette && forceCompatibilityPlayerModel
                 && PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
                     forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest);
         }
 
         String getPlayerRenderModeButtonLabel(){
+            if(forceEmergencySilhouette) return "HUM11";
             return isBoxCompatibilityActive()?"BOX":(forceCompatibilityPlayerModel?"ALT":"3D");
         }
 
@@ -1140,8 +1141,8 @@ public class MainActivity extends Activity {
         void probePlayerVisuals(){
             if(visualProbeComplete || !visualProbeAvailable || !silhouetteReady
                     || surfaceWidth<64 || surfaceHeight<64) return;
-            int probeWidth=Math.min(surfaceWidth,480);
-            int probeHeight=Math.min(surfaceHeight,320);
+            int probeWidth=PlayerPixelWatchdog.sampleWidth(surfaceWidth);
+            int probeHeight=PlayerPixelWatchdog.sampleHeight(surfaceHeight);
             int probeX=(surfaceWidth-probeWidth)/2;
             int probeY=(surfaceHeight-probeHeight)/2;
             int byteCount=probeWidth*probeHeight*4;
@@ -1302,6 +1303,10 @@ public class MainActivity extends Activity {
             String label=PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,
                 PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
                     forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest));
+            if(forceEmergencySilhouette){
+                int modeSeparator=label.lastIndexOf(" · ");
+                if(modeSeparator>=0) label=label.substring(0,modeSeparator)+" · HUM11";
+            }
             String materialLabel=boxMaterialFrameTextured?label+" · TEX":label;
             return materialLabel+" · "+visualProbeLabel;
         }
