@@ -20,6 +20,20 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("HUD_TOUCH DOWN .*mode=1", SCRIPT)
         self.assertIn("HUD_TOUCH MOVE .*mode=1", SCRIPT)
 
+    def test_each_retry_requires_fresh_touch_events_not_stale_log_lines(self):
+        self.assertIn("fresh_log_lines()", SCRIPT)
+        self.assertIn('gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"', SCRIPT)
+        self.assertIn('new_log_lines="$(fresh_log_lines "$gesture_log_start")"', SCRIPT)
+
+    def test_motion_telemetry_must_be_newer_than_the_gesture(self):
+        self.assertIn('state_log_start="$gesture_log_start"', SCRIPT)
+        self.assertIn('fresh_log_lines "$state_log_start"', SCRIPT)
+
+    def test_cpu_only_emulator_uses_a_longer_swipe_without_lowering_motion_floor(self):
+        self.assertIn('swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000', SCRIPT)
+        motion_script = Path(__file__).with_name("verify-player-motion.py").read_text(encoding="utf-8")
+        self.assertIn("MIN_MOVEMENT_METERS = 0.25", motion_script)
+
 
 if __name__ == "__main__":
     unittest.main()

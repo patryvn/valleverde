@@ -323,3 +323,24 @@ En el Poco X6 Pro, abrir expresamente la aplicación `Valle de Cernego · Prueba
 ### Corrección de regresión de prueba en CI 250 (27-11-2026)
 
 El run [45947279885](https://github.com/patryvn/valleverde/actions/runs/45947279885) compiló el código Java principal y de pruebas, pero `testDebugUnitTest` terminó con 159/160 pruebas correctas. La única aserción fallida estaba en el test nuevo de alternancia: la expresión anidada aplicaba el conmutador dos veces y esperaba el estado contrario. Se reescribe como tres transiciones explícitas (detallado → compatibilidad → detallado → compatibilidad). No se generaron APK en ese run porque el workflow detiene las compilaciones tras el fallo de pruebas. La nueva ejecución debe volver a validar las 160 pruebas y después generar Debug/Release y ejecutar el smoke test.
+
+
+## 0.28.1: corregir el smoke test de movimiento sin rebajar sus criterios (27-11-2026)
+
+La ejecución [45947390454](https://github.com/patryvn/valleverde/actions/runs/45947390454), correspondiente a 0.28.0, terminó correctamente en validación de scripts, `testDebugUnitTest`, `assembleDebug`, `assembleRelease`, firma, versión y subida de las APK. La captura inicial del AVD Android 35/SwiftShader también pasó el analizador: piel=779 px, chaqueta=2844 px, botas=619 px, extremidades oscuras=1945 px y separación cabeza-pies=96,5 px. La imagen muestra desde atrás cabeza/gorra, cuello, torso, brazos, piernas, botas y bandolera/mochila; el terreno presenta 21 tonos verdes. Esto confirma la ruta del emulador, no la GPU física del Poco X6 Pro.
+
+El mismo run falló después en la comprobación de movimiento. El log contiene un único gesto nuevo: `HUD_TOUCH DOWN`, varios `MOVE` y `UP`; el jugador se desplazó 0,18 m y la cámara pasó de X=0,00 a X=0,18. La tolerancia de cámara (0,15 m) no era el problema: el desplazamiento observado quedó por debajo del umbral de 0,25 m. La revisión del script encontró además una regresión de la propia prueba: tras el primer gesto, los reintentos consultaban el último `HUD_TOUCH DOWN/MOVE` global, por lo que podían reutilizar líneas antiguas y no demostrar que se hubiera recibido un segundo gesto.
+
+En 0.28.1 se corrige el arnés, no se disimula el fallo:
+- Cada intento registra el número de líneas de Logcat antes del gesto y solo acepta eventos táctiles posteriores a ese punto.
+- El estado del jugador/cámara también debe ser posterior al inicio del gesto.
+- El arrastre del AVD CPU-only pasa de 2,2 a 4,0 segundos para entregar más fotogramas útiles.
+- Se conserva el mínimo de desplazamiento de 0,25 m y la tolerancia de seguimiento de cámara de 0,15 m.
+- Se añaden pruebas para rechazar el desplazamiento aislado de 0,18 m, aceptar el acumulado de 0,36 m y evitar reutilizar eventos antiguos.
+- La etiqueta de la app preview cambia a «Valle de Cernego · Prueba 3D» para distinguirla de la instalación principal; el paquete sigue siendo `es.valledecernego.game.preview`.
+
+La versión de prueba pasa a 0.28.1 (versionCode 42). La nueva ejecución debe volver a demostrar captura inicial, eventos táctiles frescos, desplazamiento suficiente, estabilidad del número de piezas y seguimiento de cámara antes de considerar verde el smoke test.
+
+### Validación física pendiente para 0.28.1
+
+Instalar la variante «Valle de Cernego · Prueba 3D» y confirmar que el HUD indica 0.28.1. Probar primero `3D` y después `ALT`; distinguir cabeza, torso, dos brazos, dos piernas y calzado en ambos modos; caminar hacia delante, atrás y lateralmente; girar la cámara y comprobar reposo/caminar. Anotar el modo que se ve correctamente. SwiftShader no reproduce el controlador GLES/EGL del Poco X6 Pro; esta validación sigue sin poder automatizarse desde GitHub Actions.

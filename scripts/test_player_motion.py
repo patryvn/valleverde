@@ -30,6 +30,15 @@ class PlayerMotionVerificationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "only 0.00 m"):
             verify_motion(telemetry(0.00), telemetry(0.00))
 
+    def test_single_slow_cpu_swipe_below_motion_floor_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "only 0.18 m"):
+            verify_motion(telemetry(0.00), telemetry(0.18))
+
+    def test_two_slow_swipes_accumulating_more_than_motion_floor_are_accepted(self):
+        result = verify_motion(telemetry(0.00), telemetry(0.36))
+        self.assertAlmostEqual(0.36, result["distance"], places=2)
+        self.assertAlmostEqual(0.00, result["camera_error"], places=2)
+
     def test_camera_must_follow_the_same_translation(self):
         with self.assertRaisesRegex(ValueError, "camera follow error"):
             verify_motion(telemetry(0.00), telemetry(0.36, camera_x=0.10))
