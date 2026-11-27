@@ -3,7 +3,7 @@
 
 SwiftShader/TCG can deliver far fewer frames than a physical phone. The 0.25 m
 floor is based on the 0.36 m measured in the 0.23.0 CI run. Both the lit 60-part
-path and the simple-shader 60-part compatibility path must retain stable counts.
+path, the simple-shader 60-part path and the cube-only 60-part Mali path must retain stable counts.
 """
 import math
 import re
