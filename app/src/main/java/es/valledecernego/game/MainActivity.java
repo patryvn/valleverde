@@ -620,7 +620,10 @@ public class MainActivity extends Activity {
             }
             android.util.Log.i("ValleCernego","PLAYER_GPU_PROFILE renderer="+playerGpuRenderer
                 +" policy="+PlayerGpuPolicy.profileName(playerGpuRenderer)
-                +" selected="+(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
+                +" selected="+(forceCompatibilityPlayerModel
+                    ?((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
+                        ?"box-only-shader-60":"simple-shader-60")
+                    :"detailed-60"));
             String contextMode=!forceCompatibilityPlayerModel?"detailed-60"
                 :((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
                     ?"box-only-shader-60":"simple-shader-60");
@@ -1113,9 +1116,9 @@ public class MainActivity extends Activity {
                 forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer));
         }
 
-        // The full 60-part humanoid can run through either the lit material shader or
-        // a deliberately small GLES shader. Mali-G615 devices start on the latter;
-        // the rounded 11-part model and cube-only silhouette remain last-resort paths.
+        // The full 60-part humanoid can run through the lit material shader, a simple
+        // sphere/capsule shader, or the Mali cube-only BOX60 path. Rounded and
+        // 11-part cube silhouettes remain last-resort paths.
         void clearPlayerGlErrors(){
             for(int i=0;i<8;i++){
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
@@ -1188,7 +1191,7 @@ public class MainActivity extends Activity {
                         playerModePinned=true;
                         compatibilityGeometryLogged=false;
                         android.util.Log.w("ValleCernego",
-                            "PLAYER_COMPATIBILITY locking simple-shader full humanoid; detailedParts="
+                            "PLAYER_COMPATIBILITY locking compatibility full humanoid; detailedParts="
                             +submittedParts+" GL=0x"+Integer.toHexString(detailGlError));
                     }
                     compatibility=true;
