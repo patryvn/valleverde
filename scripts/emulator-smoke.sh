@@ -411,7 +411,7 @@ fi
 alt_initial_telemetry="$(printf '%s\n' "$alt_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
 capture_humanoid_frame "simple-shader ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
 
-# Exercise movement and camera follow on the rounded fallback path as well.
+# Exercise movement and camera follow on the full simple-shader model as well.
 run_motion_for_mode "simple-shader ALT" 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' \
   "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
   emulator-output/windows-before-alt-moving-capture.txt
