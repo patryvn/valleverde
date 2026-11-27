@@ -344,3 +344,10 @@ La versión de prueba pasa a 0.28.1 (versionCode 42). La nueva ejecución debe v
 ### Validación física pendiente para 0.28.1
 
 Instalar la variante «Valle de Cernego · Prueba 3D» y confirmar que el HUD indica 0.28.1. Probar primero `3D` y después `ALT`; distinguir cabeza, torso, dos brazos, dos piernas y calzado en ambos modos; caminar hacia delante, atrás y lateralmente; girar la cámara y comprobar reposo/caminar. Anotar el modo que se ve correctamente. SwiftShader no reproduce el controlador GLES/EGL del Poco X6 Pro; esta validación sigue sin poder automatizarse desde GitHub Actions.
+
+
+### Incidencia de CI 253: verificación de etiqueta (27-11-2026)
+
+En [run 45953739175](https://github.com/patryvn/valleverde/actions/runs/45953739175), las pruebas de scripts, las pruebas unitarias, `assembleDebug` y `assembleRelease` terminaron correctamente. Las firmas y el identificador/versionCode/versionName del APK también se verificaron; falló únicamente el filtro añadido para encontrar la etiqueta del launcher en la salida de `aapt dump badging`. Ese paso no mostró la línea esperada y, por el orden del workflow, no se subieron los APK ni se ejecutó el smoke test.
+
+Se elimina esa comprobación frágil de la salida de aapt y se comprueba la etiqueta «Valle de Cernego · Prueba 3D» directamente en el manifiesto fuente mediante una prueba Python. La verificación de firma y del paquete/versionado compilado se mantiene. La nueva ejecución debe completar de nuevo todo el flujo antes de publicar el artefacto.

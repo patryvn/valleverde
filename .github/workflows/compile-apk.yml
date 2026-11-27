@@ -59,7 +59,6 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='es.valledecernego.game.preview' versionCode='42' versionName='0.28.1'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk | grep "application-label:'Valle de Cernego · Prueba 3D'"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

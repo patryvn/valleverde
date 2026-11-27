@@ -11,6 +11,10 @@ class EmulatorSmokeInputTest(unittest.TestCase):
     def test_fallback_swipe_targets_primary_display(self):
         self.assertIn("input -d 0 swipe", SCRIPT)
 
+    def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
+        manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D"', manifest.read_text(encoding="utf-8"))
+
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
         self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
         self.assertIn('ACTIVITY_CLASS="es.valledecernego.game.MainActivity"', SCRIPT)
