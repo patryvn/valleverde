@@ -49,6 +49,12 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE", source)
         self.assertNotIn("forceCompatibilityPlayerModel=false;", source)
 
+    def test_pixel_verifier_requires_both_arms_and_both_legs_not_only_a_blue_torso(self):
+        verifier = Path(__file__).with_name("verify-player-screenshot.py").read_text(encoding="utf-8")
+        for limb in ("left_arm", "right_arm", "left_leg", "right_leg"):
+            self.assertIn('"{}": 80'.format(limb), verifier)
+        self.assertIn("A single blue rectangle can satisfy the old torso-colour check", verifier)
+
     def test_smoke_captures_and_moves_both_default_alt_and_detailed_3d_models(self):
         self.assertIn('PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0', SCRIPT)
         self.assertIn('valle-cernego-alt.png', SCRIPT)
