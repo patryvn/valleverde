@@ -130,6 +130,29 @@ public class PlayerModelSpecTest {
             PlayerModelSpec.find("left-eye-white").z+PlayerModelSpec.find("left-eye-white").sz
                 > PlayerModelSpec.find("head").z+PlayerModelSpec.find("head").sz);
     }
+    @Test public void roundedCompatibilityModelKeepsSphericalHeadTorsoAndCapsuleLimbs() {
+        PlayerModelSpec.Part[] rounded=PlayerModelSpec.roundedFallbackParts();
+        assertEquals(11,rounded.length);
+        for(PlayerModelSpec.Part part:rounded) {
+            PlayerModelSpec.Part source=PlayerModelSpec.find(part.id);
+            assertNotNull(source);
+            assertEquals(source.shape,part.shape);
+            assertTrue(part.sx>0f && part.sy>0f && part.sz>0f);
+        }
+        assertEquals(PlayerModelSpec.Shape.SPHERE,findRounded(rounded,"head").shape);
+        assertEquals(PlayerModelSpec.Shape.SPHERE,findRounded(rounded,"torso").shape);
+        for(String id:new String[]{"left-arm","right-arm","left-leg","right-leg"}) {
+            assertEquals(PlayerModelSpec.Shape.LIMB,findRounded(rounded,id).shape);
+        }
+        assertEquals(PlayerModelSpec.Shape.BOX,findRounded(rounded,"left-boot").shape);
+        assertEquals(PlayerModelSpec.Shape.BOX,findRounded(rounded,"backpack").shape);
+    }
+
+    private static PlayerModelSpec.Part findRounded(PlayerModelSpec.Part[] parts,String id) {
+        for(PlayerModelSpec.Part part:parts) if(id.equals(part.id)) return part;
+        return null;
+    }
+
     @Test public void compatibilitySilhouetteContainsAllEssentialHumanParts() {
         PlayerModelSpec.Part[] fallback=PlayerModelSpec.fallbackParts();
         assertEquals(11,fallback.length);

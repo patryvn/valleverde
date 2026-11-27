@@ -167,6 +167,17 @@ public final class PlayerModelSpec {
             source.r, source.g, source.b, source.alpha, source.roll, source.followsBody);
     }
 
+    /** Rounded core humanoid used before the final box-only driver fallback. */
+    public static Part[] roundedFallbackParts() {
+        Part[] rounded = new Part[FALLBACK_PART_IDS.length];
+        for (int i=0;i<FALLBACK_PART_IDS.length;i++) {
+            Part source=find(FALLBACK_PART_IDS[i]);
+            if (source==null) throw new IllegalStateException("Missing rounded player part: "+FALLBACK_PART_IDS[i]);
+            rounded[i]=source;
+        }
+        return rounded;
+    }
+
     /** Core parts used by the independent low-feature GLES compatibility silhouette. */
     public static Part[] fallbackParts() {
         Part[] fallback = new Part[FALLBACK_PART_IDS.length];

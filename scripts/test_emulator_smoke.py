@@ -38,6 +38,12 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("Player movement or camera follow verification failed", SCRIPT)
         self.assertIn('exit 1', SCRIPT)
 
+    def test_smoke_exercises_and_captures_the_rounded_alt_humanoid(self):
+        self.assertIn('PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0', SCRIPT)
+        self.assertIn('valle-cernego-alt.png', SCRIPT)
+        self.assertIn('valle-cernego-alt-moving.png', SCRIPT)
+        self.assertIn('verify-player-motion.py "$alt_initial_telemetry" "$alt_moving_telemetry"', SCRIPT)
+
     def test_cpu_only_emulator_uses_a_longer_swipe_without_lowering_motion_floor(self):
         self.assertIn('swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000', SCRIPT)
         motion_script = Path(__file__).with_name("verify-player-motion.py").read_text(encoding="utf-8")

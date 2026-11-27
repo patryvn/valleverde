@@ -240,17 +240,19 @@ fi
 
 # Use the actual Hud View dimensions, not wm size: Android can inset or resize
 # the app surface independently of the physical display.
-read -r joy_x joy_y move_x < <(python3 - "$layout_line" <<'PY'
+read -r joy_x joy_y move_x render_x render_y < <(python3 - "$layout_line" <<'PY'
 import re, sys
 match = re.search(r"HUD_LAYOUT width=(\d+) height=(\d+) joy=([0-9.]+),([0-9.]+).*range=([0-9.]+)", sys.argv[1])
 if not match:
     raise SystemExit("Malformed HUD layout telemetry: " + sys.argv[1])
 width,height,jx,jy,rng = match.groups()
+width,height = int(width),int(height)
 jx,jy,rng = float(jx),float(jy),float(rng)
-print(round(jx),round(jy),round(jx+rng*.95))
+unit = min(height,width*.55)
+print(round(jx),round(jy),round(jx+rng*.95),round(width-unit*.10),round(unit*.25))
 PY
 )
-echo "Measured HUD joystick at $joy_x,$joy_y; drag target $move_x,$joy_y."
+echo "Measured HUD joystick at $joy_x,$joy_y; drag target $move_x,$joy_y; render-mode toggle at $render_x,$render_y."
 
 fresh_log_lines() {
   local last_line="$1"
@@ -315,9 +317,64 @@ if [[ "$movement_ok" != "1" ]]; then
 fi
 capture_moving_humanoid_frame "moving scene" emulator-output/valle-cernego-moving.png emulator-output/windows-before-moving-capture.txt
 
+# Exercise ALT: rounded geometry must succeed before the emergency cube silhouette.
+alt_mode_log_start="$(wc -l < emulator-output/renderer-live.log)"
+adb shell input tap "$render_x" "$render_y"
+alt_mode_line=""
+rounded_path_line=""
+alt_initial_line=""
+for attempt in $(seq 1 30); do
+  fresh_alt_lines="$(fresh_log_lines "$alt_mode_log_start")"
+  alt_mode_line="$(printf '%s\\n' "$fresh_alt_lines" | grep -F 'PLAYER_MODE user-selected=compatibility-11' | tail -n 1 || true)"
+  rounded_path_line="$(printf '%s\\n' "$fresh_alt_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0' | tail -n 1 || true)"
+  alt_initial_line="$(printf '%s\\n' "$fresh_alt_lines" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
+  if [[ -n "$alt_mode_line" && -n "$rounded_path_line" && -n "$alt_initial_line" ]]; then break; fi
+  sleep 1
+done
+if [[ -z "$alt_mode_line" || -z "$rounded_path_line" || -z "$alt_initial_line" ]]; then
+  echo "ALT mode did not complete the rounded 11-part humanoid path."
+  fresh_log_lines "$alt_mode_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE' | tail -n 60 || true
+  exit 1
+fi
+alt_initial_telemetry="$(printf '%s\\n' "$alt_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "rounded ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
+
+alt_movement_ok=0
+for attempt in $(seq 1 6); do
+  alt_gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"
+  adb shell input touchscreen -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000 || true
+  sleep 1
+  assert_game_alive "ALT joystick swipe $attempt" || exit 1
+  alt_new_lines="$(fresh_log_lines "$alt_gesture_log_start")"
+  alt_touch_down="$(printf '%s\\n' "$alt_new_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
+  alt_touch_move="$(printf '%s\\n' "$alt_new_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
+  if [[ -z "$alt_touch_down" || -z "$alt_touch_move" ]]; then continue; fi
+  alt_moving_line="$(printf '%s\\n' "$alt_new_lines" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
+  if [[ -z "$alt_moving_line" ]]; then
+    for telemetry_attempt in $(seq 1 8); do
+      sleep 1
+      alt_moving_line="$(fresh_log_lines "$alt_gesture_log_start" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
+      if [[ -n "$alt_moving_line" ]]; then break; fi
+    done
+  fi
+  if [[ -n "$alt_moving_line" ]]; then
+    alt_moving_telemetry="$(printf '%s\\n' "$alt_moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+    if python3 scripts/verify-player-motion.py "$alt_initial_telemetry" "$alt_moving_telemetry"; then
+      alt_movement_ok=1
+      break
+    fi
+  fi
+done
+if [[ "$alt_movement_ok" != "1" ]]; then
+  echo "Rounded ALT humanoid did not preserve all 11 parts and camera follow during movement."
+  grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
+  exit 1
+fi
+capture_moving_humanoid_frame "rounded ALT moving scene" emulator-output/valle-cernego-alt-moving.png emulator-output/windows-before-alt-moving-capture.txt
+
 adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
   echo "Fatal app or player OpenGL error detected."
   exit 1
 fi
-echo "Emulator smoke test completed: 60 player parts, GL_NO_ERROR, joystick movement and camera follow verified."
+echo "Emulator smoke test completed: detailed 60-part model and rounded 11-part ALT humanoid both rendered, moved and kept camera follow with GL_NO_ERROR."

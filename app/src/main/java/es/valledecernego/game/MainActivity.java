@@ -520,6 +520,8 @@ public class MainActivity extends Activity {
         // half-reset between GL frames.
         volatile PlayerRenderSnapshot renderSnapshot=PlayerRenderSnapshot.initial();
         final PlayerModelSpec.Part[] silhouetteParts=PlayerModelSpec.fallbackParts();
+        final PlayerModelSpec.Part[] roundedCompatibilityParts=PlayerModelSpec.roundedFallbackParts();
+        volatile boolean compatibilityGeometryLogged=false;
         volatile boolean debugTelemetry=false;
         long lastTelemetryNanos=0L;
         FloatBuffer sphereBuffer,capsuleBuffer;
@@ -555,6 +557,7 @@ public class MainActivity extends Activity {
 
         boolean togglePlayerRenderMode(){
             forceCompatibilityPlayerModel=!forceCompatibilityPlayerModel;
+            compatibilityGeometryLogged=false;
             android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="
                 +(forceCompatibilityPlayerModel?"compatibility-11":"detailed-60"));
             return forceCompatibilityPlayerModel;
@@ -573,6 +576,7 @@ public class MainActivity extends Activity {
             silhouetteReady=false;
             forceCompatibilityPlayerModel=false;
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
+            compatibilityGeometryLogged=false;
             GLES20.glClearColor(.56f,.72f,.83f,1);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
@@ -1049,10 +1053,9 @@ public class MainActivity extends Activity {
             boolean compatibility=PlayerRenderPolicy.shouldUseCompatibilityModel(
                 forceCompatibilityPlayerModel,rendererReady,silhouetteReady);
             boolean detailedComplete=false;
+            boolean roundedFallbackRendered=false;
 
             if(PlayerRenderPolicy.shouldDrawDetailedModel(rendererReady,forceCompatibilityPlayerModel)){
-                // The shadow belongs to the detailed path. A failure here is also a
-                // useful signal that this driver's sphere mesh path is not reliable.
                 GLES20.glEnable(GLES20.GL_BLEND);
                 GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
                 GLES20.glDepthMask(false);
@@ -1085,18 +1088,16 @@ public class MainActivity extends Activity {
                         submittedParts++;
                     }
                 }
-                // One GL error check per batch avoids a costly glGetError synchronization
-                // for every one of the 60 model parts on each mobile frame.
                 detailGlError=consumePlayerGlError();
-
                 detailedComplete=detailGlError==GLES20.GL_NO_ERROR
                     && submittedParts>=PlayerModelSpec.size();
                 if(!detailedComplete && PlayerRenderPolicy.shouldSwitchToCompatibility(
                         rendererReady,submittedParts,PlayerModelSpec.size(),detailGlError)){
                     if(!forceCompatibilityPlayerModel){
                         forceCompatibilityPlayerModel=true;
+                        compatibilityGeometryLogged=false;
                         android.util.Log.w("ValleCernego",
-                            "PLAYER_COMPATIBILITY switching to cube humanoid; detailedParts="
+                            "PLAYER_COMPATIBILITY switching to rounded humanoid; detailedParts="
                             +submittedParts+" GL=0x"+Integer.toHexString(detailGlError));
                     }
                     compatibility=true;
@@ -1104,18 +1105,33 @@ public class MainActivity extends Activity {
             }
 
             if(compatibility){
-                // Prefer the lit primary shader for the cube fallback. If that batch
-                // also fails, retry once with the independent minimal GLES shader.
-                fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,false);
-                fallbackGlError=lastSilhouetteGlError;
-                if((fallbackSubmitted<silhouetteParts.length
-                        || fallbackGlError!=GLES20.GL_NO_ERROR)
-                        && rendererReady && silhouetteReady){
-                    // If the lit shader itself rejects the cube fallback, retry once
-                    // with the independent position-only GLES shader.
-                    int flatFallback=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,true);
-                    fallbackSubmitted=flatFallback;
+                // Rounded head, torso and capsule limbs are attempted before the
+                // emergency cube silhouette, using the independent minimal GLES shader.
+                if(silhouetteReady){
+                    fallbackSubmitted=drawPlayerRoundedCompatibility();
                     fallbackGlError=lastSilhouetteGlError;
+                    roundedFallbackRendered=fallbackSubmitted>=roundedCompatibilityParts.length
+                        && fallbackGlError==GLES20.GL_NO_ERROR;
+                }else{
+                    fallbackGlError=GLES20.GL_INVALID_OPERATION;
+                }
+                if(!roundedFallbackRendered){
+                    fallbackSubmitted=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,false);
+                    fallbackGlError=lastSilhouetteGlError;
+                    if((fallbackSubmitted<silhouetteParts.length
+                            || fallbackGlError!=GLES20.GL_NO_ERROR)
+                            && rendererReady && silhouetteReady){
+                        int flatFallback=drawPlayerSilhouette(PlayerRenderPolicy.OPAQUE_BASE_ALPHA,true);
+                        fallbackSubmitted=flatFallback;
+                        fallbackGlError=lastSilhouetteGlError;
+                    }
+                }
+                if(!compatibilityGeometryLogged
+                        && fallbackSubmitted>=silhouetteParts.length
+                        && fallbackGlError==GLES20.GL_NO_ERROR){
+                    android.util.Log.i("ValleCernego","PLAYER_COMPATIBILITY geometry="
+                        +(roundedFallbackRendered?"rounded-11":"cube-11")+" GL=0x0");
+                    compatibilityGeometryLogged=true;
                 }
             }
 
@@ -1124,16 +1140,11 @@ public class MainActivity extends Activity {
             if(detailedComplete){
                 glError=consumePlayerGlError();
             }else if(fallbackSubmitted>=silhouetteParts.length && fallbackGlError==GLES20.GL_NO_ERROR){
-                // A successful fallback is a valid frame even though the detailed
-                // sphere/capsule path failed; keep the HUD status useful and explicit.
                 glError=GLES20.GL_NO_ERROR;
             }else{
                 glError=fallbackGlError!=GLES20.GL_NO_ERROR?fallbackGlError:detailGlError;
-                if(glError==GLES20.GL_NO_ERROR){
-                    glError=GLES20.GL_INVALID_OPERATION;
-                }
+                if(glError==GLES20.GL_NO_ERROR)glError=GLES20.GL_INVALID_OPERATION;
             }
-
             playerDrawCalls=publishedDrawCalls;
             silhouetteDrawCalls=fallbackSubmitted;
             playerGlError=glError;
@@ -1141,6 +1152,49 @@ public class MainActivity extends Activity {
             int reportedDetailedParts=detailedComplete?submittedParts:0;
             renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,
                 compatibilityRenderer,reportedDetailedParts,fallbackSubmitted,glError,playerFrameRendered);
+        }
+
+        int drawPlayerRoundedCompatibility(){
+            int submitted=0;
+            lastSilhouetteGlError=GLES20.GL_NO_ERROR;
+            if(!silhouetteReady || sphereBuffer==null || capsuleBuffer==null || vb==null){
+                lastSilhouetteGlError=GLES20.GL_INVALID_OPERATION;
+                return 0;
+            }
+            clearPlayerGlErrors();
+            GLES20.glEnable(GLES20.GL_BLEND);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            GLES20.glDepthMask(false);
+            drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,
+                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
+                .035f,.045f,.03f,.26f,playerFacing,0f,0f);
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+
+            float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            for(PlayerModelSpec.Part part:roundedCompatibilityParts){
+                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                    px,py,pz,playerFacing,bob,part,playerPartAngle(part));
+                FloatBuffer mesh=vb;
+                int vertexCount=36;
+                float sy=pose.sy;
+                if(part.shape==PlayerModelSpec.Shape.SPHERE){
+                    mesh=sphereBuffer;
+                    vertexCount=sphereVertexCount;
+                }else if(part.shape==PlayerModelSpec.Shape.LIMB){
+                    mesh=capsuleBuffer;
+                    vertexCount=capsuleVertexCount;
+                    sy*=.5f;
+                }
+                if(!drawSilhouetteMesh(mesh,vertexCount,pose.x,pose.y,pose.z,
+                        pose.sx,sy,pose.sz,part.r,part.g,part.b,1f,
+                        pose.yaw,pose.pitch,pose.roll))break;
+                submitted++;
+            }
+            lastSilhouetteGlError=consumePlayerGlError();
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+            return submitted;
         }
 
         float playerPartAngle(PlayerModelSpec.Part part){
