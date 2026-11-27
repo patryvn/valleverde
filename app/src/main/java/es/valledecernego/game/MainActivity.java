@@ -1081,7 +1081,6 @@ public class MainActivity extends Activity {
         String getPlayerGpuDiagnostic(){
             return PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel);
         }
-        }
 
         // The full 60-part humanoid can run through either the lit material shader or
         // a deliberately small GLES shader. Mali-G615 devices start on the latter;
