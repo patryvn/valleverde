@@ -22,6 +22,17 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
         self.assertIn('ACTIVITY_CLASS="es.valledecernego.game.MainActivity"', SCRIPT)
         self.assertIn('am start -n "$APP_ID/$ACTIVITY_CLASS"', SCRIPT)
+        self.assertIn('--ez smoke_test_mode true', SCRIPT)
+
+    def test_smoke_scene_uses_the_real_player_renderer_but_skips_full_world_draws(self):
+        activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
+        source = activity.read_text(encoding="utf-8")
+        self.assertIn('getBooleanExtra("smoke_test_mode", false)', source)
+        self.assertIn('renderer.setSmokeTestMode(smokeTestMode)', source)
+        self.assertIn('if(smokeTestMode)', source)
+        self.assertIn('drawSmokeTestEnvironment()', source)
+        self.assertIn('drawPlayer()', source)
+        self.assertIn('SMOKE_SCENE enabled=', source)
 
     def test_smoke_test_still_requires_joystick_handler_events(self):
         self.assertIn("HUD_TOUCH DOWN .*mode=1", SCRIPT)
