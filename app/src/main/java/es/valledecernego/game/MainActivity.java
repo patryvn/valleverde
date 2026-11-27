@@ -431,10 +431,11 @@ public class MainActivity extends Activity {
             float jumpX=w-unit*.355f, jumpY=h-unit*.15f, jumpR=unit*.098f;
             button(c,actionX,actionY,actionR,"HACER",0xff6d8c55);
             button(c,jumpX,jumpY,jumpR,"SALTAR",0xff6b7e9b);
-            boolean compatibilityMode=renderer!=null && renderer.isCompatibilityModeForced();
+            boolean boxMode=renderer!=null && renderer.isBoxCompatibilityActive();
+            String renderModeLabel=renderer==null?"3D":renderer.getPlayerRenderModeButtonLabel();
             float renderModeX=w-unit*.10f, renderModeY=unit*.25f, renderModeR=unit*.07f;
-            button(c,renderModeX,renderModeY,renderModeR,compatibilityMode?"ALT":"3D",
-                compatibilityMode?0xffad7b43:0xff527b91);
+            button(c,renderModeX,renderModeY,renderModeR,renderModeLabel,
+                boxMode?0xffad7b43:0xff527b91);
             String hint=renderer==null?"":renderer.getInteractionHint();
             if(!hint.isEmpty()){
                 p.setColor(0xdd172018);p.setTextAlign(Paint.Align.CENTER);
@@ -475,8 +476,10 @@ public class MainActivity extends Activity {
                 if(PlayerRenderPolicy.isRenderModeButtonHit(x,y,w,h)){
                     touchMode=5;
                     boolean compatibility=renderer.togglePlayerRenderMode();
-                    toast((compatibility?"Modelo 3D compatible · 60 piezas":"Modelo 3D detallado · 60 piezas")
-                        +" · "+renderer.getPlayerGpuDiagnostic());
+                    String selected=renderer.getPlayerRenderModeButtonLabel();
+                    String description="BOX".equals(selected)?"Modelo BOX60 · 60 piezas"
+                        :(compatibility?"Modelo 3D compatible · 60 piezas":"Modelo 3D detallado · 60 piezas");
+                    toast(description+" · "+renderer.getPlayerGpuDiagnostic());
                     logTouch("RENDER_MODE",x,y);invalidate();return true;
                 }
                 touchMode=2;renderer.startLook(x,y);logTouch("LOOK_DOWN",x,y);return true;
@@ -518,6 +521,9 @@ public class MainActivity extends Activity {
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
         volatile boolean forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE;
+        // Manual BOX60 override is independent of GPU-name detection, for devices whose
+        // GLES driver reports a generic or vendor-specific renderer string.
+        volatile boolean forceBoxCompatibilityPlayerModel=false;
         // A manual choice or a runtime fallback is preserved across EGL context recreation.
         volatile boolean playerModePinned=false;
         volatile String playerGpuRenderer="unknown";
@@ -583,16 +589,26 @@ public class MainActivity extends Activity {
 
         boolean togglePlayerRenderMode(){
             forceCompatibilityPlayerModel=!forceCompatibilityPlayerModel;
+            // The visible fallback button explicitly requests BOX60, even if the
+            // physical GPU name is not recognized by the automatic policy.
+            forceBoxCompatibilityPlayerModel=forceCompatibilityPlayerModel;
             playerModePinned=true;
             compatibilityGeometryLogged=false;
-            String selectedMode=!forceCompatibilityPlayerModel?"detailed-60"
-                :((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
-                    ?"box-only-shader-60":"simple-shader-60");
+            String selectedMode=!forceCompatibilityPlayerModel?"detailed-60":"box-only-shader-60";
             android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="+selectedMode);
             return forceCompatibilityPlayerModel;
         }
 
         boolean isCompatibilityModeForced(){return forceCompatibilityPlayerModel;}
+
+        boolean isBoxCompatibilityActive(){
+            return PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
+                forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest);
+        }
+
+        String getPlayerRenderModeButtonLabel(){
+            return isBoxCompatibilityActive()?"BOX":(forceCompatibilityPlayerModel?"ALT":"3D");
+        }
 
         public void onSurfaceCreated(GL10 gl,EGLConfig cfg){
             renderSnapshot=PlayerRenderSnapshot.initial();
@@ -614,18 +630,22 @@ public class MainActivity extends Activity {
             playerGpuRenderer=String.valueOf(GLES20.glGetString(GLES20.GL_RENDERER));
             if(forceBoxCompatibilityForTest){
                 forceCompatibilityPlayerModel=true;
+                forceBoxCompatibilityPlayerModel=true;
                 playerModePinned=true;
             }else if(!playerModePinned){
                 forceCompatibilityPlayerModel=PlayerGpuPolicy.shouldPreferSimpleShader(playerGpuRenderer);
+                forceBoxCompatibilityPlayerModel=false;
             }
             android.util.Log.i("ValleCernego","PLAYER_GPU_PROFILE renderer="+playerGpuRenderer
                 +" policy="+PlayerGpuPolicy.profileName(playerGpuRenderer)
                 +" selected="+(forceCompatibilityPlayerModel
-                    ?((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
+                    ?(PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
+                        forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest)
                         ?"box-only-shader-60":"simple-shader-60")
                     :"detailed-60"));
             String contextMode=!forceCompatibilityPlayerModel?"detailed-60"
-                :((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
+                :(PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
+                    forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest)
                     ?"box-only-shader-60":"simple-shader-60");
             android.util.Log.i("ValleCernego","PLAYER_MODE context-created="+contextMode);
             if(debugTelemetry){
@@ -1113,7 +1133,8 @@ public class MainActivity extends Activity {
 
         String getPlayerGpuDiagnostic(){
             return PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,
-                forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer));
+                PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
+                    forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest));
         }
 
         // The full 60-part humanoid can run through the lit material shader, a simple
@@ -1203,8 +1224,8 @@ public class MainActivity extends Activity {
                 // sphere/capsule rasterization while retaining every clothing/accessory
                 // piece and the same articulated transforms. Other GPUs use the full
                 // sphere/capsule model on the independent minimal shader.
-                boolean useBoxOnly=forceBoxCompatibilityForTest
-                    || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer);
+                boolean useBoxOnly=PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
+                    forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest);
                 if(silhouetteReady && useBoxOnly){
                     fallbackSubmitted=drawPlayerBoxCompatibility();
                     fallbackGlError=lastSilhouetteGlError;

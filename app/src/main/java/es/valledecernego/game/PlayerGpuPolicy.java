@@ -18,7 +18,16 @@ public final class PlayerGpuPolicy {
     }
 
     public static boolean shouldUseBoxOnlyGeometry(String glRenderer) {
-        return shouldPreferSimpleShader(glRenderer);
+        return shouldUseBoxOnlyGeometry(glRenderer, false);
+    }
+
+    /**
+     * Explicit user override takes precedence over renderer-name heuristics.
+     * Some Android vendors expose generic renderer strings, so a manual BOX60
+     * selection must not depend on identifying the GPU family correctly.
+     */
+    public static boolean shouldUseBoxOnlyGeometry(String glRenderer, boolean forceBoxOnly) {
+        return forceBoxOnly || shouldPreferSimpleShader(glRenderer);
     }
 
     public static String profileName(String glRenderer) {

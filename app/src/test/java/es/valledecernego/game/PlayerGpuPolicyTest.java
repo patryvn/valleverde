@@ -15,6 +15,14 @@ public class PlayerGpuPolicyTest {
         assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("arm mali-g615 mc6"));
     }
 
+    @Test public void manualBox60OverrideWorksWhenAndroidReportsAnUnknownOrGenericGpu() {
+        assertTrue(PlayerGpuPolicy.shouldUseBoxOnlyGeometry("Qualcomm Adreno 740", true));
+        assertTrue(PlayerGpuPolicy.shouldUseBoxOnlyGeometry(null, true));
+        assertFalse(PlayerGpuPolicy.shouldUseBoxOnlyGeometry("Qualcomm Adreno 740", false));
+        assertEquals("GPU Qualcomm Adreno 740 · BOX60",
+            PlayerGpuPolicy.diagnosticLabel("Qualcomm Adreno 740", true, true));
+    }
+
     @Test public void swiftshaderKeepsTheDetailedLitRendererForCi() {
         assertFalse(PlayerGpuPolicy.shouldPreferSimpleShader("Google SwiftShader"));
         assertFalse(PlayerGpuPolicy.shouldUseBoxOnlyGeometry("Google SwiftShader"));
