@@ -28,8 +28,8 @@ public class PlayerRenderSnapshotTest {
 
     @Test public void detailedModelCanStillReportFallbackWhenItWasActuallyNeeded() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
-            true, true, false, DETAILED_PARTS, FALLBACK_PARTS, 0, true);
-        assertEquals("3D OK · 60 piezas · respaldo humanoide 11 · GL OK",
+            true, true, false, DETAILED_PARTS, FALLBACK_PARTS, 0, true, true);
+        assertEquals("3D OK · 60 piezas · humanoide redondeado 11 · GL OK",
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
@@ -42,15 +42,15 @@ public class PlayerRenderSnapshotTest {
 
     @Test public void independentHumanoidFallbackReportsItsElevenParts() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
-            false, true, false, 0, FALLBACK_PARTS, 0, true);
-        assertEquals("3D COMPATIBLE · 11 piezas humanoides · GL OK",
+            false, true, false, 0, FALLBACK_PARTS, 0, true, true);
+        assertEquals("3D COMPATIBLE · 11 piezas · humanoide redondeado · GL OK",
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
     @Test public void runtimeGeometryFallbackReportsTheVisibleElevenPartModelNotAttemptedDrawCalls() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
-            true, true, false, 0, FALLBACK_PARTS, 0, true);
-        assertEquals("3D COMPATIBLE · 11 piezas humanoides · GL OK",
+            true, true, false, 0, FALLBACK_PARTS, 0, true, false);
+        assertEquals("3D COMPATIBLE · 11 piezas · respaldo cúbico · GL OK",
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
