@@ -1041,7 +1041,6 @@ public class MainActivity extends Activity {
                     .52f,.035f,.34f,.045f,.055f,.045f,.28f,playerFacing,0f);
                 GLES20.glDepthMask(true);
                 GLES20.glDisable(GLES20.GL_BLEND);
-                detailGlError=consumePlayerGlError();
 
                 if(detailGlError==GLES20.GL_NO_ERROR){
                     float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
@@ -1063,15 +1062,13 @@ public class MainActivity extends Activity {
                             submitted=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
                                 part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
                         }
-                        int partError=consumePlayerGlError();
-                        if(partError!=GLES20.GL_NO_ERROR){
-                            detailGlError=partError;
-                            break;
-                        }
                         if(!submitted)break;
                         submittedParts++;
                     }
                 }
+                // One GL error check per batch avoids a costly glGetError synchronization
+                // for every one of the 60 model parts on each mobile frame.
+                detailGlError=consumePlayerGlError();
 
                 detailedComplete=detailGlError==GLES20.GL_NO_ERROR
                     && submittedParts>=PlayerModelSpec.size();
@@ -1159,14 +1156,10 @@ public class MainActivity extends Activity {
                     partDrawn=drawMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,
                         part.r,part.g,part.b,alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle);
                 }
-                int partError=consumePlayerGlError();
-                if(partError!=GLES20.GL_NO_ERROR){
-                    lastSilhouetteGlError=partError;
-                    break;
-                }
                 if(!partDrawn)break;
                 submitted++;
             }
+            lastSilhouetteGlError=consumePlayerGlError();
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
             return submitted;
