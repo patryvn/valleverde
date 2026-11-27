@@ -215,6 +215,18 @@ assert_game_alive "debug launch" || exit 1
 wait_for_clear_windows "post-launch before initial ALT capture" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
+shader_plan_line=""
+for attempt in $(seq 1 30); do
+  shader_plan_line="$(grep -F 'PLAYER_SHADER_PLAN ' emulator-output/renderer-live.log | grep -F 'roundedFallback=true' | tail -n 1 || true)"
+  if [[ -n "$shader_plan_line" ]]; then break; fi
+  sleep 1
+done
+if [[ -z "$shader_plan_line" ]]; then
+  echo "Renderer did not retain a usable rounded-player shader after GLES initialization."
+  grep -E 'PLAYER_SHADER_PLAN|PLAYER_MODE|PLAYER_COMPATIBILITY' emulator-output/renderer-live.log | tail -n 60 || true
+  exit 1
+fi
+
 alt_geometry_line=""
 initial_line=""
 for attempt in $(seq 1 60); do
