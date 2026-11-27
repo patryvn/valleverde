@@ -39,7 +39,7 @@ Artefactos de la ejecución: [Debug](https://github.com/patryvn/valleverde/actio
 
 ## Qué demuestra y qué no demuestra
 
-Esta ejecución demuestra que el código de 0.28.7 dibuja una figura humanoide en **ese emulador** y que el personaje y la cámara se desplazan de forma coherente. No demuestra que la GPU Adreno del Poco X6 Pro se comporte igual, ni que el rectángulo azul comunicado por la usuaria esté resuelto en el teléfono físico.
+Esta ejecución demuestra que el código de 0.28.7 dibuja una figura humanoide en **ese emulador** y que el personaje y la cámara se desplazan de forma coherente. No demuestra que la GPU Mali-G615 MC6 del Poco X6 Pro se comporte igual, ni que el rectángulo azul comunicado por la usuaria esté resuelto en el teléfono físico.
 
 El personaje utiliza geometría procedural (esferas, cápsulas y cajas), materiales por color y variación procedural de iluminación. Todavía no usa mapas UV ni texturas fotográficas. El análisis de capturas verifica grupos de color y extensión de la figura, pero no certifica por sí solo la calidad de cada ciclo de animación ni las sombras en una GPU física.
 
