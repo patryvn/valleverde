@@ -27,7 +27,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.29.1"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.29.2"', manifest.read_text(encoding="utf-8"))
 
     def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
         root = Path(__file__).parents[1]
