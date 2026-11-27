@@ -37,7 +37,7 @@ Las pruebas unitarias validan geometría declarativa, materiales, accesorios tra
 
 El workflow de esta rama ejecuta las pruebas unitarias, compila APK debug y release-test, verifica ambas firmas y ejecuta una prueba de escena en un emulador Android API 35. La captura inicial se analiza por grupos de color de piel, chaqueta, botas y extremidades, además de comprobar la separación vertical entre cabeza y pies. Tras el movimiento, el test exige telemetría de desplazamiento, 60 piezas, GL_NO_ERROR y error de seguimiento de cámara dentro de tolerancia. Intenta además una segunda captura de píxeles; solo la omite si detecta una ventana visible de ANR de SystemUI (no un ANR del juego ni otra superposición). El emulador usa Google SwiftShader y puede sufrir ese ANR externo bajo carga; el resultado no representa la GPU física del Poco X6 Pro.
 
-El personaje principal tiene 60 piezas procedurales y una base humana opaca de 11 piezas para compatibilidad. Las piezas usan materiales de color e iluminación por normales; todavía no hay mapas UV ni texturas fotográficas. La animación de caminar y el balanceo de reposo se calculan por separado de la cámara, que sigue la posición del jugador.
+El personaje principal tiene 60 piezas procedurales. La silueta de 11 piezas se conserva como ruta de emergencia cuando el shader principal no inicializa o una tanda detallada queda incompleta; no se dibuja debajo del modelo completo. Las piezas usan materiales de color e iluminación por normales; todavía no hay mapas UV ni texturas fotográficas. La animación de caminar y el balanceo de reposo se calculan por separado de la cámara, que sigue la posición del jugador.
 
 ## Validación física pendiente
 
@@ -76,3 +76,31 @@ Validación física pendiente en Android:
 6. Confirmar que la nueva geometría no produce parpadeo, errores GL ni pérdida de rendimiento en el dispositivo.
 
 La prueba de emulador valida compilación, lógica unitaria, escena y movimiento; no sustituye la comprobación de visibilidad, rendimiento y guardado en el Poco X6 Pro.
+
+
+## Corrección del aspecto del personaje en 0.27.8
+
+La inspección de la captura de CI de 0.27.7 mostró que el personaje sí se dibujaba como humanoide: la captura inicial tenía grupos de píxeles de piel, chaqueta, botas y extremidades; la prueba de movimiento confirmó 60 piezas, 0,28 m de desplazamiento y 0,00 m de error de seguimiento de cámara. El problema visual restante era la política de respaldo: el renderizador dibujaba siempre una silueta opaca de 11 cajas antes del modelo completo. Esa capa quedaba debajo de la cabeza y del torso y hacía que la figura pareciese un bloque azul, aunque las 60 piezas detalladas se enviaran correctamente.
+
+En 0.27.8:
+
+- El modelo detallado de 60 piezas se dibuja sin la silueta de cajas cuando el shader principal está disponible.
+- La silueta de compatibilidad solo se usa si el renderizador principal no puede inicializarse; si una tanda detallada queda incompleta, el respaldo se dibuja después, no debajo.
+- El torso de la chaqueta pasa de caja a elipsoide 3D con las mismas dimensiones exteriores (0,52 × 0,64 × 0,32 m).
+- Se conserva el sombreado por normales, el material de tela, la sombra elíptica, los canales de animación de brazos/piernas y el seguimiento de cámara.
+- El HUD diferencia el camino normal (modelo detallado) del respaldo humanoide.
+
+Las pruebas unitarias cubren la política de respaldo, la forma y dimensiones del torso, las dimensiones del torso en el fallback y los estados del HUD. GitHub Actions debe volver a comprobar la captura inicial y durante el movimiento; el criterio visual sigue siendo más importante que el número de llamadas GL.
+
+### Validación física pendiente en Android
+
+En el Poco X6 Pro o en otro Android físico, comprobar con la APK 0.27.8:
+
+1. Que la cabeza y el torso se vean redondeados y no como un rectángulo azul.
+2. Que se distingan cuello, brazos, manos, dos piernas y botas desde atrás y al girar la cámara.
+3. Que caminar, detenerse y girar mantengan las extremidades articuladas sin deformación ni parpadeo.
+4. Que la cámara siga al personaje en las cuatro direcciones y después de saltar.
+5. Que la sombra permanezca debajo de los pies sin oscurecerlos.
+6. Que pausar/reanudar y volver a abrir el juego no pierda la escena ni la partida.
+
+El test de CI usa un emulador API 35 con Google SwiftShader a 720 × 405; demuestra el comportamiento de esa configuración, no el de la GPU Adreno del teléfono. No hay todavía validación física ni firma persistente de distribución. La APK release-test continúa firmada con la clave debug temporal de GitHub Actions y no es una release apta para Google Play.
