@@ -104,3 +104,23 @@ En el Poco X6 Pro o en otro Android físico, comprobar con la APK 0.27.8:
 6. Que pausar/reanudar y volver a abrir el juego no pierda la escena ni la partida.
 
 El test de CI usa un emulador API 35 con Google SwiftShader a 720 × 405; demuestra el comportamiento de esa configuración, no el de la GPU Adreno del teléfono. No hay todavía validación física ni firma persistente de distribución. La APK release-test continúa firmada con la clave debug temporal de GitHub Actions y no es una release apta para Google Play.
+
+
+## Ajuste de proporciones y escena de diagnóstico en 0.28.5
+
+La revisión de la ruta de compatibilidad encontró dos problemas de diseño que las pruebas de cantidad de piezas no detectaban: la cabeza tenía casi la misma anchura que el torso y la mochila estaba desplazada hacia el lado izquierdo, fuera del eje de sus correas. En 0.28.5:
+
+- La cabeza se reduce a 0,38 m de anchura y 0,44 m de altura; la gorra queda más estrecha y no envuelve toda la cabeza.
+- Los brazos se separan del torso y se afinan; las piernas conservan sus pivotes y el movimiento alterno.
+- La mochila queda centrada en la espalda y las dos correas se alinean con ella.
+- La chaqueta pasa de azul uniforme a tono óxido/marrón rojizo; se conserva la camiseta turquesa y el detalle naranja, además de piel, pantalón oscuro, botas y cuero.
+- El modelo detallado conserva 60 piezas; el modo de compatibilidad mantiene 11 piezas redondeadas y auxiliares.
+
+Se ha añadido un modo de escena aislada activado únicamente por el extra de lanzamiento `smoke_test_mode=true`. Conserva el mismo renderizador OpenGL ES, la cámara, el jugador, el shader de terreno y los controles, pero omite la granja, cultivos, animales, aldeanos y objetos lejanos. Su objetivo es evitar que SwiftShader (renderizado por CPU en CI) deje sin tiempo de CPU a SystemUI. No cambia la escena normal del juego.
+
+### Validación pendiente
+
+- GitHub Actions debe obtener capturas sin ventana ANR y superar el análisis de píxeles en modo redondeado y modo detallado, tanto en reposo como después de moverse.
+- El emulador no representa la GPU Adreno del Poco X6 Pro; la prueba física debe confirmar que la chaqueta no vuelve a aparecer como un bloque, que se distinguen cabeza, hombros, brazos, cintura y piernas, y que mochila y correas quedan centradas.
+- Verificar en el Poco el giro de cámara, caminar en cuatro direcciones, salto, reposo, reanudación desde segundo plano, rendimiento térmico y persistencia.
+- Las texturas continúan siendo materiales procedurales por color e iluminación; no hay mapas UV ni texturas fotográficas. La APK de CI es de prueba y no usa firma persistente de distribución.
