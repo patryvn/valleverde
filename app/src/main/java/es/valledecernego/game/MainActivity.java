@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
         debugTelemetry = getIntent().getBooleanExtra("debug_telemetry", false);
+        boolean smokeTestMode = getIntent().getBooleanExtra("smoke_test_mode", false);
         getWindow().getDecorView().setSystemUiVisibility(WindowModePolicy.flags(debugTelemetry));
         preferences = getSharedPreferences("valle_de_cernego_save", MODE_PRIVATE);
         wood = preferences.getInt("wood", 0);
@@ -50,6 +51,7 @@ public class MainActivity extends Activity {
         surface.setPreserveEGLContextOnPause(true);
         renderer=new GameRenderer();
         renderer.setDebugTelemetry(debugTelemetry);
+        renderer.setSmokeTestMode(smokeTestMode);
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
@@ -523,6 +525,7 @@ public class MainActivity extends Activity {
         final PlayerModelSpec.Part[] roundedCompatibilityParts=PlayerModelSpec.roundedFallbackParts();
         volatile boolean compatibilityGeometryLogged=false;
         volatile boolean debugTelemetry=false;
+        volatile boolean smokeTestMode=false;
         long lastTelemetryNanos=0L;
         FloatBuffer sphereBuffer,capsuleBuffer;
         int sphereVertexCount,capsuleVertexCount;
@@ -554,6 +557,10 @@ public class MainActivity extends Activity {
         }
 
         void setDebugTelemetry(boolean enabled){debugTelemetry=enabled;}
+        void setSmokeTestMode(boolean enabled){
+            smokeTestMode=enabled;
+            android.util.Log.i("ValleCernego","SMOKE_SCENE enabled="+enabled);
+        }
 
         boolean togglePlayerRenderMode(){
             forceCompatibilityPlayerModel=!forceCompatibilityPlayerModel;
@@ -781,7 +788,7 @@ public class MainActivity extends Activity {
             long now=System.nanoTime();
             float deltaSeconds=lastFrameNanos==0?0f:Math.max(0f,Math.min(.05f,(now-lastFrameNanos)/1000000000f));
             long delta=(long)(deltaSeconds*1000f);
-            if(lastFrameNanos!=0){
+            if(lastFrameNanos!=0 && !smokeTestMode){
                 seasons.update(delta);
                 crops.update(delta, seasons.getSeason(), seasons.getWeather());
                 animals.update(delta, seasons.getSeason(), seasons.getWeather());
@@ -811,6 +818,14 @@ public class MainActivity extends Activity {
             if(jumping){py+=vy;vy-=.008f;if(py<=0){py=0;jumping=false;}}
             ThirdPersonCamera.Pose camera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
             Matrix.setLookAtM(view,0,camera.x(),camera.y(),camera.z(),px,camera.targetY(),pz,0,1,0);
+            // CI-only scene: keep the real player meshes, camera, lighting and touch path.
+            // Skip the full farm so CPU-only SwiftShader cannot starve Android SystemUI.
+            if(smokeTestMode){
+                drawSmokeTestEnvironment();
+                drawPlayer();
+                logPlayerState(now);
+                return;
+            }
 
             // Cúpula de cielo con degradado vertical, dibujada primero.
             drawMesh(sphereBuffer,sphereVertexCount,camera.x(),camera.y(),camera.z(),
@@ -943,13 +958,30 @@ public class MainActivity extends Activity {
             draw(7,.7f,-7,3.5f,1.5f,3,.56f,.43f,.29f);
             draw(7,1.75f,-7,4,.7f,3.4f,.35f,.18f,.14f);
             drawPlayer();
-            if(debugTelemetry && now-lastTelemetryNanos>=1_000_000_000L){
-                ThirdPersonCamera.Pose debugCamera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
-                android.util.Log.i("ValleCernego",String.format(Locale.US,
-                    "PLAYER_STATE POS=%.2f,%.2f CAM=%.2f,%.2f PARTS=%d FALLBACK=%d GL=0x%04x",
-                    px,pz,debugCamera.x(),debugCamera.z(),playerDrawCalls,silhouetteDrawCalls,playerGlError));
-                lastTelemetryNanos=now;
+            logPlayerState(now);
+        }
+
+        void logPlayerState(long now){
+            if(!debugTelemetry || now-lastTelemetryNanos<1_000_000_000L)return;
+            ThirdPersonCamera.Pose debugCamera=ThirdPersonCamera.follow(px,pz,py,yaw,pitch);
+            android.util.Log.i("ValleCernego",String.format(Locale.US,
+                "PLAYER_STATE POS=%.2f,%.2f CAM=%.2f,%.2f PARTS=%d FALLBACK=%d GL=0x%04x",
+                px,pz,debugCamera.x(),debugCamera.z(),playerDrawCalls,silhouetteDrawCalls,playerGlError));
+            lastTelemetryNanos=now;
+        }
+
+        void drawSmokeTestEnvironment(){
+            drawMesh(vb,36,0f,PlayerModelSpec.GROUND_LEVEL-.25f,0f,
+                100f,.5f,100f,.25f,.42f,.23f,1f,0f,0f,0f,WorldMaterialSpec.TERRAIN);
+            for(int side=-1;side<=1;side+=2){
+                float x=side*4.0f;
+                float z=12.0f+(side>0?2.0f:0.0f);
+                drawMesh(vb,36,x,.68f,z,.34f,1.26f,.34f,.34f,.23f,.13f,1f,0f,0f);
+                drawMesh(sphereBuffer,sphereVertexCount,x,1.72f,z,1.15f,1.25f,1.15f,
+                    .18f,.36f,.16f,1f,0f,0f);
             }
+            drawMesh(vb,36,0f,PlayerModelSpec.GROUND_LEVEL+.02f,17f,
+                2.8f,.04f,7f,.48f,.40f,.31f,1f,0f,0f);
         }
 
         void drawRuralLandmarks(){
