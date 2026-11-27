@@ -7,13 +7,30 @@ public class PlayerModelSpecTest {
     @Test public void modelContainsACompleteRecognizableHumanSilhouette() {
         assertTrue("model should contain a detailed low-poly silhouette and rear accessories",PlayerModelSpec.size()>=60);
         assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("head").shape);
-        assertEquals(PlayerModelSpec.Shape.BOX,PlayerModelSpec.find("torso").shape);
+        assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("torso").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("left-arm").shape);
         assertEquals(PlayerModelSpec.Shape.LIMB,PlayerModelSpec.find("right-arm").shape);
         assertEquals(PlayerModelSpec.Motion.LEFT_LEG,PlayerModelSpec.find("left-leg").motion);
         assertEquals(PlayerModelSpec.Motion.RIGHT_LEG,PlayerModelSpec.find("right-leg").motion);
         assertNotNull(PlayerModelSpec.find("backpack"));
         assertNotNull(PlayerModelSpec.find("cap"));
+    }
+
+    @Test public void jacketTorsoIsRoundedWithoutChangingItsOuterDimensions() {
+        PlayerModelSpec.Part torso=PlayerModelSpec.find("torso");
+        assertEquals(PlayerModelSpec.Shape.SPHERE,torso.shape);
+        assertEquals(.26f,torso.sx,0.0001f);
+        assertEquals(.32f,torso.sy,0.0001f);
+        assertEquals(.16f,torso.sz,0.0001f);
+
+        PlayerModelSpec.Part fallbackTorso=null;
+        for(PlayerModelSpec.Part part:PlayerModelSpec.fallbackParts()) {
+            if("torso".equals(part.id)) fallbackTorso=part;
+        }
+        assertNotNull(fallbackTorso);
+        assertEquals(.52f,fallbackTorso.sx,0.0001f);
+        assertEquals(.64f,fallbackTorso.sy,0.0001f);
+        assertEquals(.32f,fallbackTorso.sz,0.0001f);
     }
 
     @Test public void explorerReferenceHasItsSignatureClothingAndAccessories() {
