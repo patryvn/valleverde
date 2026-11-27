@@ -79,7 +79,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
         self.assertIn("mali-g615", policy)
         self.assertIn("drawPlayerSimpleShaderCompatibility()", activity)
-        self.assertIn("for(PlayerModelSpec.Part part:PlayerModelSpec.parts())", activity)
+        self.assertIn("for(PlayerModelSpec.Part part:simpleShaderParts)", activity)
 
     def test_promoted_fallback_shader_keeps_rounded_humanoid_available(self):
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
