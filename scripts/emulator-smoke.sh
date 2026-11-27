@@ -33,12 +33,27 @@ assert_game_alive() {
   return 1
 }
 
+keep_emulator_awake() {
+  # SwiftShader captures can take longer than Android's default display timeout.
+  # Keep the virtual display on while USB/AC-powered and explicitly wake it.
+  adb shell settings put global stay_on_while_plugged_in 7 >/dev/null 2>&1 || true
+  adb shell settings put system screen_off_timeout 1800000 >/dev/null 2>&1 || true
+  adb shell svc power stayon true >/dev/null 2>&1 || true
+  adb shell input keyevent 224 >/dev/null 2>&1 || true
+}
+
 wait_for_clear_windows() {
   local stage="$1"
   local dump_path="$2"
   for attempt in $(seq 1 20); do
+    keep_emulator_awake
     adb shell dumpsys window windows > "$dump_path" 2>&1 || true
-    if python3 scripts/verify-window-state.py "$dump_path"; then return 0; fi
+    if python3 scripts/verify-window-state.py "$dump_path"; then
+      if python3 scripts/verify-window-state.py --app-visible "$dump_path" "$APP_ID"; then return 0; fi
+      echo "Game window is not visible during $stage; waking the AVD and retrying ($attempt/20)."
+      sleep 1
+      continue
+    fi
     if python3 scripts/verify-window-state.py --retryable-systemui-anr "$dump_path"; then
       echo "SystemUI ANR overlay during $stage; waiting for Android UI recovery ($attempt/20)."
       assert_game_alive "$stage while waiting for SystemUI recovery" || return 1
@@ -61,8 +76,10 @@ wait_for_clear_windows() {
     python3 scripts/verify-window-state.py "$dump_path"
     return 1
   done
-  echo "SystemUI ANR overlay did not clear during $stage after 40 seconds."
-  python3 scripts/verify-window-state.py "$dump_path"
+  echo "Blocking overlay or hidden game surface did not clear during $stage after 40 seconds."
+  python3 scripts/verify-window-state.py "$dump_path" || true
+  python3 scripts/verify-window-state.py --app-visible "$dump_path" "$APP_ID" || true
+  return 1
 }
 
 
@@ -83,6 +100,12 @@ capture_humanoid_frame() {
     # Check window state after screencap as well as before it. SystemUI can
     # surface an ANR in the narrow interval between the pre-check and capture.
     adb shell dumpsys window windows > "$windows_path" 2>&1 || true
+    if ! python3 scripts/verify-window-state.py --app-visible "$windows_path" "$APP_ID"; then
+      echo "Game surface became hidden during $stage capture; waking and retrying."
+      keep_emulator_awake
+      sleep 1
+      continue
+    fi
     local pixels_valid=0
     if python3 scripts/verify-player-screenshot.py "$image_path"; then
       pixels_valid=1
@@ -129,6 +152,8 @@ capture_moving_humanoid_frame() {
   local stage="$1"
   local image_path="$2"
   local windows_path="$3"
+  keep_emulator_awake
+  wait_for_clear_windows "$stage before capture" "$windows_path" || return 1
   adb shell dumpsys window windows > "$windows_path" 2>&1 || true
   assert_game_alive "$stage pre-capture" || return 1
   if python3 scripts/verify-window-state.py --retryable-systemui-anr "$windows_path"; then
@@ -147,6 +172,10 @@ capture_moving_humanoid_frame() {
   fi
   adb shell dumpsys window windows > "$windows_path" 2>&1 || true
   assert_game_alive "$stage post-capture" || return 1
+  if ! python3 scripts/verify-window-state.py --app-visible "$windows_path" "$APP_ID"; then
+    echo "Game surface was hidden during $stage capture."
+    return 1
+  fi
   if python3 scripts/verify-window-state.py --retryable-systemui-anr "$windows_path"; then
     echo "WARNING: moving screenshot was covered by a visible SystemUI ANR; initial pixels and moving renderer/camera telemetry already passed."
     return 0
@@ -175,6 +204,9 @@ for attempt in $(seq 1 90); do
 done
 if [[ "$package_ready" != "1" ]]; then echo "PackageManager did not become ready after Android boot."; exit 1; fi
 
+# Prevent Android's default screen timeout from blanking long SwiftShader captures.
+keep_emulator_awake
+
 # SystemUI can finish its first-run service initialization after boot_completed.
 # Give it time before launching the game; otherwise a transient SystemUI ANR can
 # cover the player even though the game's GL thread and input remain healthy.
@@ -195,7 +227,7 @@ for attempt in $(seq 1 5); do
 done
 if [[ "$install_ok" != "1" ]]; then echo "Release-test APK installation failed after five attempts."; exit 1; fi
 
-adb shell input keyevent 224 || true
+keep_emulator_awake
 adb shell am force-stop "$APP_ID" || true
 adb logcat -v time -s ValleCernego:I > emulator-output/renderer-live.log 2>&1 &
 LOGCAT_PID=$!

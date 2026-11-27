@@ -34,6 +34,34 @@ def visible_blocking_windows(dump: str) -> list[str]:
     return found
 
 
+
+def app_window_is_visible(dump: str, package: str) -> bool:
+    """Require the target app's own window to have a visible, drawn surface."""
+    if not package.strip():
+        return False
+    title: str | None = None
+    block: list[str] = []
+
+    def matches_visible_app() -> bool:
+        if title is None or package not in title:
+            return False
+        content = "\n".join(block)
+        return (
+            "mViewVisibility=0x0" in content
+            and "mHasSurface=true" in content
+            and "Surface: shown=true" in content
+        )
+
+    for line in dump.splitlines():
+        if WINDOW_HEADER.match(line):
+            if matches_visible_app():
+                return True
+            title = line
+            block = [line]
+        elif title is not None:
+            block.append(line)
+    return matches_visible_app()
+
 def is_retryable_systemui_anr(dump: str) -> bool:
     """Only a visible SystemUI ANR is retryable; immersive prompts remain fatal."""
     blockers = visible_blocking_windows(dump)
@@ -78,6 +106,15 @@ def main() -> int:
         print("Capture decision: " + decision)
         return {"accept": 0, "retry": 1, "fatal": 2}[decision]
 
+    if len(sys.argv) == 4 and sys.argv[1] == "--app-visible":
+        dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
+        package = sys.argv[3]
+        if app_window_is_visible(dump, package):
+            print(f"Visible app surface confirmed for {package}.")
+            return 0
+        print(f"No visible, drawn app surface found for {package}.")
+        return 1
+
     if len(sys.argv) == 3 and sys.argv[1] == "--retryable-systemui-anr":
         dump = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
         if is_retryable_systemui_anr(dump):
@@ -91,7 +128,8 @@ def main() -> int:
             "Usage: verify-window-state.py WINDOWS_DUMP | "
             "verify-window-state.py --retryable-systemui-anr WINDOWS_DUMP | "
             "verify-window-state.py --capture-decision WINDOWS_DUMP PIXELS_VALID(0|1) | "
-            "verify-window-state.py --dismiss-point WINDOWS_DUMP WIDTH HEIGHT",
+            "verify-window-state.py --dismiss-point WINDOWS_DUMP WIDTH HEIGHT | "
+            "verify-window-state.py --app-visible WINDOWS_DUMP PACKAGE",
             file=sys.stderr,
         )
         return 2

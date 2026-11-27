@@ -5,6 +5,17 @@ SCRIPT = Path(__file__).with_name("emulator-smoke.sh").read_text(encoding="utf-8
 
 
 class EmulatorSmokeInputTest(unittest.TestCase):
+    def test_avd_display_is_kept_awake_for_long_swiftshader_captures(self):
+        self.assertIn("settings put global stay_on_while_plugged_in 7", SCRIPT)
+        self.assertIn("settings put system screen_off_timeout 1800000", SCRIPT)
+        self.assertIn("svc power stayon true", SCRIPT)
+        self.assertIn("input keyevent 224", SCRIPT)
+
+    def test_capture_requires_the_games_own_visible_surface(self):
+        self.assertIn('--app-visible "$dump_path" "$APP_ID"', SCRIPT)
+        self.assertIn('--app-visible "$windows_path" "$APP_ID"', SCRIPT)
+        self.assertIn("Game window is not visible during", SCRIPT)
+
     def test_primary_touchscreen_swipe_targets_primary_display(self):
         self.assertIn("input touchscreen -d 0 swipe", SCRIPT)
 

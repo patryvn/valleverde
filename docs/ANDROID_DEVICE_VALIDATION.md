@@ -378,3 +378,19 @@ La APK preview pasa a 0.28.3 (versionCode 44). La validación de SwiftShader sig
 - El verificador de capturas exige píxeles independientes de ambos brazos y ambas piernas, además de cabeza, torso y botas. Así evita aceptar una captura que solo contenga un bloque azul central.
 - La versión de prueba pasa a 0.28.4 (versionCode 45). La comprobación automática en SwiftShader sigue siendo una prueba de emulador; el Poco X6 Pro requiere validación física para confirmar su controlador gráfico.
 - La versión 0.28.3 no tuvo una ejecución CI válida asociada al commit de documentación. El smoke test de 0.28.2 verificó el modo detallado, pero no el ALT inicial. Por ello, no se atribuye a 0.28.3 una validación visual que todavía no se ha obtenido.
+
+
+## Incidencia de CI 0.28.7: pantalla del AVD en suspensión (27-11-2026)
+
+La ejecución [45996535562](https://github.com/patryvn/valleverde/actions/runs/45996535562) pasó la validación de scripts, `testDebugUnitTest`, `assembleDebug`, `assembleRelease` y la verificación de firma/paquete. El smoke test no obtuvo una captura válida. El artefacto contiene una imagen PNG 720×405 completamente negra; el registro `renderer-live.log` confirma que el shader principal estaba listo, se enviaban 60 piezas y `GL_NO_ERROR`, pero eso no prueba que los píxeles llegaran a una ventana visible.
+
+El diagnóstico del propio AVD es concluyente: `logcat` registra `Sleep timeout! Sleeping now.` a las 13:45:28 UTC; `dumpsys activity` muestra `isSleeping=true`, la actividad en estado `STOPPED` y `mVisible=false`; `dumpsys window` muestra `mViewVisibility=0x8`, `mHasSurface=false` y ninguna superficie visible de la aplicación. La captura negra se produjo porque Android había suspendido la pantalla mientras SwiftShader seguía generando telemetría. No es evidencia de un fallo del shader ni permite juzgar la geometría del personaje.
+
+La corrección del arnés:
+- activa `stay_on_while_plugged_in=7`, amplía `screen_off_timeout` y ejecuta `svc power stayon true`;
+- envía una orden explícita de despertar antes de lanzar y antes de las esperas/capturas;
+- añade `--app-visible` a `verify-window-state.py`, que exige la ventana de la aplicación correcta, `mViewVisibility=0x0`, `mHasSurface=true` y `Surface: shown=true`;
+- reintenta si la pantalla o la superficie de la aplicación vuelven a ocultarse, en lugar de aceptar una captura negra o clasificarla como un fallo del renderizador;
+- incorpora pruebas Python para ventana visible/oculta y para las protecciones de pantalla del smoke test.
+
+La siguiente ejecución debe producir capturas reales de la APK release-test antes de evaluar el modelo detallado y el modo ALT, y después verificar desplazamiento y seguimiento de cámara. La prueba física en el Poco X6 Pro continúa pendiente: SwiftShader no reproduce el controlador Adreno ni permite confirmar el rectángulo azul observado en ese teléfono.
