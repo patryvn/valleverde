@@ -27,15 +27,16 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.9"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.29.0"', manifest.read_text(encoding="utf-8"))
 
     def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
         root = Path(__file__).parents[1]
         policy = (root / "app/src/main/java/es/valledecernego/game/PlayerGpuPolicy.java").read_text(encoding="utf-8")
         activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
-        self.assertIn("diagnosticLabel(String glRenderer, boolean simpleShaderSelected)", policy)
+        self.assertIn("diagnosticLabel(String glRenderer, boolean simpleShaderSelected,", policy)
+        self.assertIn("BOX60", policy)
         self.assertIn("getPlayerGpuDiagnostic()", activity)
-        self.assertIn("PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel)", activity)
+        self.assertIn("PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,", activity)
         self.assertIn("PLAYER_GPU_PROFILE renderer=", activity)
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
@@ -43,12 +44,15 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('ACTIVITY_CLASS="es.valledecernego.game.MainActivity"', SCRIPT)
         self.assertIn('am start -n "$APP_ID/$ACTIVITY_CLASS"', SCRIPT)
         self.assertIn('--ez smoke_test_mode true', SCRIPT)
+        self.assertIn('--ez force_box_compatibility true', SCRIPT)
 
     def test_smoke_scene_uses_the_real_player_renderer_but_skips_full_world_draws(self):
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
         source = activity.read_text(encoding="utf-8")
         self.assertIn('getBooleanExtra("smoke_test_mode", false)', source)
         self.assertIn('renderer.setSmokeTestMode(smokeTestMode)', source)
+        self.assertIn('renderer.setForceBoxCompatibilityForTest(forceBoxCompatibility)', source)
+        self.assertIn('forceBoxCompatibilityForTest=enabled && smokeTestMode', source)
         self.assertIn('if(smokeTestMode)', source)
         self.assertIn('drawSmokeTestEnvironment()', source)
         self.assertIn('drawPlayer()', source)
@@ -87,8 +91,9 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         policy = (root / "app/src/main/java/es/valledecernego/game/PlayerGpuPolicy.java").read_text(encoding="utf-8")
         activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
         self.assertIn("mali-g615", policy)
-        self.assertIn("drawPlayerSimpleShaderCompatibility()", activity)
-        self.assertIn("for(PlayerModelSpec.Part part:simpleShaderParts)", activity)
+        self.assertIn("drawPlayerBoxCompatibility()", activity)
+        self.assertIn("PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer)", activity)
+        self.assertIn("boxCompatibilityParts=PlayerModelSpec.boxCompatibilityParts()", activity)
 
     def test_promoted_fallback_shader_keeps_rounded_humanoid_available(self):
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
@@ -108,6 +113,10 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('valle-cernego-detailed.png', SCRIPT)
         self.assertIn('valle-cernego-detailed-moving.png', SCRIPT)
         self.assertIn('PLAYER_MODE user-selected=simple-shader-60', SCRIPT)
+        self.assertIn('PLAYER_MODE context-created=box-only-shader-60', SCRIPT)
+        self.assertIn('PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0', SCRIPT)
+        self.assertIn('valle-cernego-box60.png', SCRIPT)
+        self.assertIn('valle-cernego-box60-moving.png', SCRIPT)
         self.assertIn('PLAYER_COMPATIBILITY geometry=simple-shader-detailed-60 GL=0x0', SCRIPT)
         self.assertIn('PLAYER_STATE .*PARTS=60 FALLBACK=60', SCRIPT)
         self.assertIn('valle-cernego-alt.png', SCRIPT)
