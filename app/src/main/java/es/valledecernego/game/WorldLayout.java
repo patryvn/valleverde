@@ -16,10 +16,10 @@ public final class WorldLayout {
     public static final int BULL = 11;
     public static final int FIRE_PREVENTION_BOARD = 12;
 
-    public static final float FIREBREAK_START_X = 14f;
+    public static final float FIREBREAK_START_X = 8f;
     public static final float FIREBREAK_CENTER_Z = 12.5f;
-    public static final float FIRE_PREVENTION_BOARD_X = 14f;
-    public static final float FIRE_PREVENTION_BOARD_Z = 9.6f;
+    public static final float FIRE_PREVENTION_BOARD_X = 8f;
+    public static final float FIRE_PREVENTION_BOARD_Z = 11.5f;
 
     // Shared world coordinates keep feeding, rendering and interaction aligned.
     public static final float COW_X = 4f;
