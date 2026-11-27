@@ -120,6 +120,11 @@ class EmulatorSmokeInputTest(unittest.TestCase):
             self.assertIn('"{}": 80'.format(limb), verifier)
         self.assertIn("A single blue rectangle can satisfy the old torso-colour check", verifier)
 
+    def test_box60_smoke_requires_the_textured_60_part_material_path(self):
+        self.assertIn('PLAYER_BOX_MATERIALS frame=textured parts=60', SCRIPT)
+        self.assertIn('manual_box_texture_line', SCRIPT)
+        self.assertIn('box_texture_line', SCRIPT)
+
     def test_smoke_captures_and_moves_detailed_default_then_manual_box60_model(self):
         self.assertIn("PLAYER_STATE .*PARTS=60 FALLBACK=0", SCRIPT)
         self.assertIn('valle-cernego-detailed.png', SCRIPT)

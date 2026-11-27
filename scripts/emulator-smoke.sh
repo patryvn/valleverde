@@ -401,11 +401,12 @@ for attempt in $(seq 1 45); do
   manual_box_mode_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_MODE user-selected=box-only-shader-60' | tail -n 1 || true)"
   manual_box_geometry_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0' | tail -n 1 || true)"
   manual_box_initial_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
-  if [[ -n "$manual_box_mode_line" && -n "$manual_box_geometry_line" && -n "$manual_box_initial_line" ]]; then break; fi
+  manual_box_texture_line="$(printf '%s\n' "$fresh_manual_box_lines" | grep -F 'PLAYER_BOX_MATERIALS frame=textured parts=60' | tail -n 1 || true)"
+  if [[ -n "$manual_box_mode_line" && -n "$manual_box_geometry_line" && -n "$manual_box_initial_line" && -n "$manual_box_texture_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$manual_box_mode_line" || -z "$manual_box_geometry_line" || -z "$manual_box_initial_line" ]]; then
-  echo "The manual BOX60 humanoid did not complete all 60 parts with GL_NO_ERROR."
+if [[ -z "$manual_box_mode_line" || -z "$manual_box_geometry_line" || -z "$manual_box_initial_line" || -z "$manual_box_texture_line" ]]; then
+  echo "The manual textured BOX60 humanoid did not complete all 60 parts with GL_NO_ERROR."
   fresh_log_lines "$manual_box_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
   exit 1
 fi
@@ -440,11 +441,12 @@ for attempt in $(seq 1 60); do
   box_mode_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_MODE context-created=box-only-shader-60' | tail -n 1 || true)"
   box_geometry_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=box-only-60 GL=0x0' | tail -n 1 || true)"
   box_initial_line="$(printf '%s\n' "$fresh_box_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
-  if [[ -n "$box_mode_line" && -n "$box_geometry_line" && -n "$box_initial_line" ]]; then break; fi
+  box_texture_line="$(printf '%s\n' "$fresh_box_lines" | grep -F 'PLAYER_BOX_MATERIALS frame=textured parts=60' | tail -n 1 || true)"
+  if [[ -n "$box_mode_line" && -n "$box_geometry_line" && -n "$box_initial_line" && -n "$box_texture_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$box_mode_line" || -z "$box_geometry_line" || -z "$box_initial_line" ]]; then
-  echo "The cube-only 60-part humanoid did not complete with GL_NO_ERROR."
+if [[ -z "$box_mode_line" || -z "$box_geometry_line" || -z "$box_initial_line" || -z "$box_texture_line" ]]; then
+  echo "The textured cube-only 60-part humanoid did not complete with GL_NO_ERROR."
   fresh_log_lines "$box_restart_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|PLAYER_BOX_COMPATIBILITY_TEST' | tail -n 80 || true
   exit 1
 fi

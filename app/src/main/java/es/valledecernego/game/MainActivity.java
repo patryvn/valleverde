@@ -519,6 +519,9 @@ public class MainActivity extends Activity {
         FloatBuffer vb;
         int program,pos,normalAttr,color,mvp,normalMatrixUniform,materialStyleUniform,modelMatrixUniform;
         int silhouetteProgram,silhouettePos,silhouetteColor,silhouetteMvp;
+        int boxMaterialProgram,boxMaterialPos,boxMaterialNormal,boxMaterialUv;
+        int boxMaterialColor,boxMaterialMvp,boxMaterialNormalMatrix,boxMaterialTile,boxMaterialSampler;
+        int boxMaterialTexture=0;
         volatile boolean rendererReady=false,silhouetteReady=false,compatibilityRenderer=false;
         volatile boolean forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE;
         // Manual BOX60 override is independent of GPU-name detection, for devices whose
@@ -540,11 +543,14 @@ public class MainActivity extends Activity {
         // nothing per frame while drawing all 60 components on mobile GPUs.
         final PlayerModelSpec.Part[] simpleShaderParts=PlayerModelSpec.parts();
         volatile boolean compatibilityGeometryLogged=false;
+        volatile boolean boxMaterialReady=false;
+        volatile boolean boxMaterialFrameTextured=false;
+        boolean boxMaterialFrameLogged=false;
         volatile boolean debugTelemetry=false;
         volatile boolean smokeTestMode=false;
         volatile boolean forceBoxCompatibilityForTest=false;
         long lastTelemetryNanos=0L;
-        FloatBuffer sphereBuffer,capsuleBuffer,shadowBuffer;
+        FloatBuffer sphereBuffer,capsuleBuffer,shadowBuffer,boxTextureBuffer;
         int sphereVertexCount,capsuleVertexCount,shadowVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
         float[] normalTransform=new float[16],normalMatrixM=new float[16];
@@ -620,6 +626,11 @@ public class MainActivity extends Activity {
             rendererReady=false;
             compatibilityRenderer=false;
             silhouetteReady=false;
+            boxMaterialReady=false;
+            boxMaterialFrameTextured=false;
+            boxMaterialFrameLogged=false;
+            boxMaterialTexture=0;
+            boxTextureBuffer=null;
             // Preserve a manual/runtime choice; otherwise choose a conservative path
             // for the Mali-G615 family used by the Poco X6 Pro.
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
@@ -697,6 +708,22 @@ public class MainActivity extends Activity {
                 silhouetteReady=silhouettePos>=0 && silhouetteColor>=0 && silhouetteMvp>=0;
             }
             if(!silhouetteReady) android.util.Log.w("ValleCernego","Silueta de compatibilidad no disponible.");
+            // Dedicated GLES2 material path for BOX60: cube normals plus a tiny procedural atlas.
+            // If this shader or texture is unavailable, the existing flat BOX60 path remains intact.
+            String boxVs="attribute vec3 aPos; attribute vec3 aNormal; attribute vec2 aUv; uniform mat4 uMVP; uniform mat4 uNormalMatrix; uniform float uMaterialTile; varying float vLight; varying vec2 vUv; void main(){vec3 n=normalize(mat3(uNormalMatrix)*aNormal);vec3 lightDir=normalize(vec3(-0.35,0.82,0.44));vLight=0.60+0.40*max(dot(n,lightDir),0.0);vUv=vec2((uMaterialTile+0.08+aUv.x*0.84)/6.0,0.08+aUv.y*0.84);gl_Position=uMVP*vec4(aPos,1.0);} ";
+            String boxFs="precision mediump float; uniform vec4 uColor; uniform sampler2D uAtlas; varying float vLight; varying vec2 vUv; void main(){vec3 texel=texture2D(uAtlas,vUv).rgb;gl_FragColor=vec4(uColor.rgb*texel*vLight,uColor.a);} ";
+            boxMaterialProgram=buildProgram(boxVs,boxFs);
+            boxMaterialPos=boxMaterialNormal=boxMaterialUv=boxMaterialColor=boxMaterialMvp=boxMaterialNormalMatrix=boxMaterialTile=boxMaterialSampler=-1;
+            if(boxMaterialProgram!=0){
+                boxMaterialPos=GLES20.glGetAttribLocation(boxMaterialProgram,"aPos");
+                boxMaterialNormal=GLES20.glGetAttribLocation(boxMaterialProgram,"aNormal");
+                boxMaterialUv=GLES20.glGetAttribLocation(boxMaterialProgram,"aUv");
+                boxMaterialColor=GLES20.glGetUniformLocation(boxMaterialProgram,"uColor");
+                boxMaterialMvp=GLES20.glGetUniformLocation(boxMaterialProgram,"uMVP");
+                boxMaterialNormalMatrix=GLES20.glGetUniformLocation(boxMaterialProgram,"uNormalMatrix");
+                boxMaterialTile=GLES20.glGetUniformLocation(boxMaterialProgram,"uMaterialTile");
+                boxMaterialSampler=GLES20.glGetUniformLocation(boxMaterialProgram,"uAtlas");
+            }
             PlayerShaderPlan shaderPlan=PlayerShaderPlan.resolve(
                 rendererReady,compatibilityRenderer,silhouetteReady);
             if(shaderPlan.promoteSilhouette){
@@ -739,6 +766,14 @@ public class MainActivity extends Activity {
                 vb.put(faceNormals[face][0]).put(faceNormals[face][1]).put(faceNormals[face][2]);
             }
             vb.position(0);
+            boxTextureBuffer=createBoxTextureBuffer(cube,faceNormals);
+            boxMaterialTexture=createPlayerMaterialTexture();
+            boxMaterialReady=boxMaterialProgram!=0 && boxMaterialPos>=0 && boxMaterialNormal>=0
+                && boxMaterialUv>=0 && boxMaterialColor>=0 && boxMaterialMvp>=0
+                && boxMaterialNormalMatrix>=0 && boxMaterialTile>=0 && boxMaterialSampler>=0
+                && boxMaterialTexture!=0 && boxTextureBuffer!=null;
+            android.util.Log.i("ValleCernego","PLAYER_BOX_MATERIALS texture="+(boxMaterialReady?"ready":"flat-fallback")
+                +" tiles="+PlayerMaterialAtlas.TILE_COUNT+" tileSize="+PlayerMaterialAtlas.TILE_SIZE);
             sphereBuffer=createSphereBuffer(24,32);
             sphereVertexCount=sphereBuffer.limit()/6;
             capsuleBuffer=createCapsuleBuffer(10,24);
@@ -748,6 +783,46 @@ public class MainActivity extends Activity {
             renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,compatibilityRenderer,
                 0,0,GLES20.GL_NO_ERROR,false);
             android.util.Log.i("ValleCernego","Render 3D listo; personaje procedural con "+PlayerModelSpec.size()+" piezas.");
+        }
+
+        FloatBuffer createBoxTextureBuffer(float[] cube,float[][] faceNormals){
+            float[][] uv={{0f,0f},{1f,0f},{1f,1f},{0f,0f},{1f,1f},{0f,1f}};
+            FloatBuffer buffer=ByteBuffer.allocateDirect((cube.length/3)*8*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+            for(int vertex=0;vertex<cube.length/3;vertex++){
+                int face=vertex/6, corner=vertex%6;
+                buffer.put(cube[vertex*3]).put(cube[vertex*3+1]).put(cube[vertex*3+2]);
+                buffer.put(faceNormals[face][0]).put(faceNormals[face][1]).put(faceNormals[face][2]);
+                buffer.put(uv[corner][0]).put(uv[corner][1]);
+            }
+            buffer.position(0);
+            return buffer;
+        }
+
+        int createPlayerMaterialTexture(){
+            clearPlayerGlErrors();
+            int[] pixels=PlayerMaterialAtlas.pixels();
+            ByteBuffer rgba=ByteBuffer.allocateDirect(PlayerMaterialAtlas.WIDTH*PlayerMaterialAtlas.HEIGHT*4).order(ByteOrder.nativeOrder());
+            for(int pixel:pixels){
+                rgba.put((byte)((pixel>>16)&255)).put((byte)((pixel>>8)&255)).put((byte)(pixel&255)).put((byte)255);
+            }
+            rgba.position(0);
+            int[] texture=new int[1];
+            GLES20.glGenTextures(1,texture,0);
+            if(texture[0]==0)return 0;
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,texture[0]);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MIN_FILTER,GLES20.GL_NEAREST);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MAG_FILTER,GLES20.GL_NEAREST);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_S,GLES20.GL_CLAMP_TO_EDGE);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_T,GLES20.GL_CLAMP_TO_EDGE);
+            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0,GLES20.GL_RGBA,PlayerMaterialAtlas.WIDTH,PlayerMaterialAtlas.HEIGHT,0,GLES20.GL_RGBA,GLES20.GL_UNSIGNED_BYTE,rgba);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,0);
+            int error=GLES20.glGetError();
+            if(error!=GLES20.GL_NO_ERROR){
+                GLES20.glDeleteTextures(1,texture,0);
+                android.util.Log.w("ValleCernego","PLAYER_BOX_MATERIALS upload failed GL=0x"+Integer.toHexString(error));
+                return 0;
+            }
+            return texture[0];
         }
 
         FloatBuffer createSphereBuffer(int stacks,int slices){
@@ -1133,9 +1208,10 @@ public class MainActivity extends Activity {
         }
 
         String getPlayerGpuDiagnostic(){
-            return PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,
+            String label=PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,
                 PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
                     forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest));
+            return boxMaterialFrameTextured?label+" · TEX":label;
         }
 
         // The full 60-part humanoid can run through the lit material shader, a simple
@@ -1313,15 +1389,31 @@ public class MainActivity extends Activity {
             GLES20.glDisable(GLES20.GL_BLEND);
 
             float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            boxMaterialFrameTextured=false;
+            boolean textured=boxMaterialReady;
             for(PlayerModelSpec.Part part:boxCompatibilityParts){
-                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
-                    px,py,pz,playerFacing,bob,part,playerPartAngle(part));
-                if(!drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,
-                        pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
-                        pose.yaw,pose.pitch,pose.roll))break;
+                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(px,py,pz,playerFacing,bob,part,playerPartAngle(part));
+                boolean drawn=textured
+                    ?drawBoxMaterialMesh(pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll,part.materialStyle)
+                    :drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll);
+                if(!drawn)break;
                 submitted++;
             }
             lastSilhouetteGlError=consumePlayerGlError();
+            if(textured && (submitted<boxCompatibilityParts.length || lastSilhouetteGlError!=GLES20.GL_NO_ERROR)){
+                android.util.Log.w("ValleCernego","PLAYER_BOX_MATERIALS draw failed; retrying flat BOX60 GL=0x"+Integer.toHexString(lastSilhouetteGlError));
+                clearPlayerGlErrors();
+                submitted=0;
+                for(PlayerModelSpec.Part part:boxCompatibilityParts){
+                    PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(px,py,pz,playerFacing,bob,part,playerPartAngle(part));
+                    if(!drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,pose.yaw,pose.pitch,pose.roll))break;
+                    submitted++;
+                }
+                lastSilhouetteGlError=consumePlayerGlError();
+            }else if(textured && submitted==boxCompatibilityParts.length){
+                boxMaterialFrameTextured=true;
+                if(!boxMaterialFrameLogged){android.util.Log.i("ValleCernego","PLAYER_BOX_MATERIALS frame=textured parts="+submitted);boxMaterialFrameLogged=true;}
+            }
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
             return submitted;
@@ -1462,6 +1554,37 @@ public class MainActivity extends Activity {
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
             return submitted;
+        }
+
+        boolean drawBoxMaterialMesh(float x,float y,float z,float sx,float sy,float sz,float r,float g,float b,float alpha,
+                                    float angle,float localRotationX,float localRotationZ,int materialStyle){
+            if(!boxMaterialReady || boxTextureBuffer==null || sx==0f || sy==0f || sz==0f)return false;
+            Matrix.setIdentityM(model,0); Matrix.translateM(model,0,x,y,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(angle),0f,1f,0f);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(localRotationZ),0f,0f,1f);
+            Matrix.scaleM(model,0,sx,sy,sz);
+            Matrix.multiplyMM(modelViewMatrix,0,view,0,model,0); Matrix.multiplyMM(mvpM,0,proj,0,modelViewMatrix,0);
+            Matrix.setIdentityM(normalTransform,0);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(angle),0f,1f,0f);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationX),1f,0f,0f);
+            Matrix.rotateM(normalTransform,0,(float)Math.toDegrees(localRotationZ),0f,0f,1f);
+            Matrix.scaleM(normalTransform,0,1f/sx,1f/sy,1f/sz);
+            Matrix.multiplyMM(normalMatrixM,0,view,0,normalTransform,0);
+            GLES20.glUseProgram(boxMaterialProgram);
+            GLES20.glUniformMatrix4fv(boxMaterialMvp,1,false,mvpM,0);
+            GLES20.glUniformMatrix4fv(boxMaterialNormalMatrix,1,false,normalMatrixM,0);
+            GLES20.glUniform4f(boxMaterialColor,r,g,b,alpha);
+            GLES20.glUniform1f(boxMaterialTile,PlayerMaterialAtlas.tileForStyle(materialStyle));
+            GLES20.glUniform1i(boxMaterialSampler,0); GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,boxMaterialTexture);
+            GLES20.glEnableVertexAttribArray(boxMaterialPos); GLES20.glEnableVertexAttribArray(boxMaterialNormal); GLES20.glEnableVertexAttribArray(boxMaterialUv);
+            boxTextureBuffer.position(0); GLES20.glVertexAttribPointer(boxMaterialPos,3,GLES20.GL_FLOAT,false,8*4,boxTextureBuffer);
+            boxTextureBuffer.position(3); GLES20.glVertexAttribPointer(boxMaterialNormal,3,GLES20.GL_FLOAT,false,8*4,boxTextureBuffer);
+            boxTextureBuffer.position(6); GLES20.glVertexAttribPointer(boxMaterialUv,2,GLES20.GL_FLOAT,false,8*4,boxTextureBuffer);
+            boxTextureBuffer.position(0); GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,36);
+            GLES20.glDisableVertexAttribArray(boxMaterialPos); GLES20.glDisableVertexAttribArray(boxMaterialNormal); GLES20.glDisableVertexAttribArray(boxMaterialUv);
+            return true;
         }
 
         boolean drawSilhouetteMesh(FloatBuffer mesh,int vertexCount,float x,float y,float z,

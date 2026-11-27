@@ -54,7 +54,7 @@ public final class PlayerRenderSnapshot {
                 + " · " + reported + "/" + expected;
         }
         if (compatibilityRenderer && rendererReady && detailedParts >= expectedDetailedParts) {
-            return "3D COMPATIBLE · " + detailedParts + " piezas · shader GLES plano · GL OK";
+            return "3D COMPATIBLE · " + detailedParts + " piezas · shader GLES compatible · GL OK";
         }
         if (rendererReady && detailedParts >= expectedDetailedParts) {
             String modelPath = fallbackParts >= expectedFallbackParts
