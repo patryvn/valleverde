@@ -252,8 +252,8 @@ if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed 
 wait_for_clear_windows "post-launch" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
-# New sessions use the full 60-part character. The rounded 11-part humanoid
-# remains selectable and is also the automatic fallback after a runtime GL error.
+# New sessions use the full 60-part character on SwiftShader. ALT exercises the
+# same 60 parts through the minimal GLES shader before any reduced silhouette.
 wait_for_clear_windows "post-launch before initial detailed capture" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
@@ -387,8 +387,8 @@ run_motion_for_mode "detailed 3D" 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' 
   "$detailed_initial_telemetry" emulator-output/valle-cernego-detailed-moving.png \
   emulator-output/windows-before-detailed-moving-capture.txt
 
-# Switch to the rounded 11-part humanoid and validate it independently.
-wait_for_clear_windows "before rounded ALT mode toggle" emulator-output/windows-before-alt-toggle.txt
+# Switch to the full 60-part humanoid on the independent simple GLES shader.
+wait_for_clear_windows "before simple-shader ALT mode toggle" emulator-output/windows-before-alt-toggle.txt
 assert_game_alive "before rounded ALT mode toggle" || exit 1
 alt_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
 adb shell input -d 0 tap "$render_x" "$render_y"
@@ -397,22 +397,22 @@ alt_geometry_line=""
 alt_initial_line=""
 for attempt in $(seq 1 45); do
   fresh_alt_lines="$(fresh_log_lines "$alt_toggle_log_start")"
-  alt_mode_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_MODE user-selected=compatibility-11' | tail -n 1 || true)"
-  alt_geometry_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0' | tail -n 1 || true)"
-  alt_initial_line="$(printf '%s\n' "$fresh_alt_lines" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
+  alt_mode_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_MODE user-selected=simple-shader-60' | tail -n 1 || true)"
+  alt_geometry_line="$(printf '%s\n' "$fresh_alt_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=simple-shader-detailed-60 GL=0x0' | tail -n 1 || true)"
+  alt_initial_line="$(printf '%s\n' "$fresh_alt_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' | tail -n 1 || true)"
   if [[ -n "$alt_mode_line" && -n "$alt_geometry_line" && -n "$alt_initial_line" ]]; then break; fi
   sleep 1
 done
 if [[ -z "$alt_mode_line" || -z "$alt_geometry_line" || -z "$alt_initial_line" ]]; then
-  echo "The rounded ALT humanoid did not complete all 11 parts with GL_NO_ERROR."
+  echo "The simple-shader ALT humanoid did not complete all 60 parts with GL_NO_ERROR."
   fresh_log_lines "$alt_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
   exit 1
 fi
 alt_initial_telemetry="$(printf '%s\n' "$alt_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-capture_humanoid_frame "rounded ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
+capture_humanoid_frame "simple-shader ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
 
 # Exercise movement and camera follow on the rounded fallback path as well.
-run_motion_for_mode "rounded ALT" 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' \
+run_motion_for_mode "simple-shader ALT" 'PLAYER_STATE .*PARTS=60 FALLBACK=60 GL=0x0*0' \
   "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
   emulator-output/windows-before-alt-moving-capture.txt
 
@@ -421,4 +421,4 @@ if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego
   echo "Fatal app or player OpenGL error detected."
   exit 1
 fi
-echo "Emulator smoke test completed: default rounded 11-part ALT and detailed 60-part 3D models both rendered, moved and kept camera follow with GL_NO_ERROR."
+echo "Emulator smoke test completed: detailed 60-part and simple-shader 60-part humanoids both rendered, moved and kept camera follow with GL_NO_ERROR."
