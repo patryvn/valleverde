@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         debugTelemetry = getIntent().getBooleanExtra("debug_telemetry", false);
         boolean smokeTestMode = getIntent().getBooleanExtra("smoke_test_mode", false);
+        boolean forceBoxCompatibility = getIntent().getBooleanExtra("force_box_compatibility", false);
         getWindow().getDecorView().setSystemUiVisibility(WindowModePolicy.flags(debugTelemetry));
         preferences = getSharedPreferences("valle_de_cernego_save", MODE_PRIVATE);
         wood = preferences.getInt("wood", 0);
@@ -52,6 +53,7 @@ public class MainActivity extends Activity {
         renderer=new GameRenderer();
         renderer.setDebugTelemetry(debugTelemetry);
         renderer.setSmokeTestMode(smokeTestMode);
+        renderer.setForceBoxCompatibilityForTest(forceBoxCompatibility);
         renderer.loadFarm(preferences.getString("farm", ""));
         renderer.loadAnimals(preferences.getString("animals", ""));
         renderer.loadBuildings(preferences.getString("buildings", ""));
@@ -527,15 +529,17 @@ public class MainActivity extends Activity {
         volatile PlayerRenderSnapshot renderSnapshot=PlayerRenderSnapshot.initial();
         final PlayerModelSpec.Part[] silhouetteParts=PlayerModelSpec.fallbackParts();
         final PlayerModelSpec.Part[] roundedCompatibilityParts=PlayerModelSpec.roundedFallbackParts();
+        final PlayerModelSpec.Part[] boxCompatibilityParts=PlayerModelSpec.boxCompatibilityParts();
         // Parts are immutable; cache the full array so the compatibility path allocates
         // nothing per frame while drawing all 60 components on mobile GPUs.
         final PlayerModelSpec.Part[] simpleShaderParts=PlayerModelSpec.parts();
         volatile boolean compatibilityGeometryLogged=false;
         volatile boolean debugTelemetry=false;
         volatile boolean smokeTestMode=false;
+        volatile boolean forceBoxCompatibilityForTest=false;
         long lastTelemetryNanos=0L;
-        FloatBuffer sphereBuffer,capsuleBuffer;
-        int sphereVertexCount,capsuleVertexCount;
+        FloatBuffer sphereBuffer,capsuleBuffer,shadowBuffer;
+        int sphereVertexCount,capsuleVertexCount,shadowVertexCount;
         float[] proj=new float[16],view=new float[16],model=new float[16],mvpM=new float[16];
         float[] normalTransform=new float[16],normalMatrixM=new float[16];
         volatile float moveX,moveY,px=0,pz=5,yaw=0,pitch=0;
@@ -568,13 +572,23 @@ public class MainActivity extends Activity {
             smokeTestMode=enabled;
             android.util.Log.i("ValleCernego","SMOKE_SCENE enabled="+enabled);
         }
+        void setForceBoxCompatibilityForTest(boolean enabled){
+            forceBoxCompatibilityForTest=enabled && smokeTestMode;
+            if(forceBoxCompatibilityForTest){
+                forceCompatibilityPlayerModel=true;
+                playerModePinned=true;
+            }
+            android.util.Log.i("ValleCernego","PLAYER_BOX_COMPATIBILITY_TEST enabled="+forceBoxCompatibilityForTest);
+        }
 
         boolean togglePlayerRenderMode(){
             forceCompatibilityPlayerModel=!forceCompatibilityPlayerModel;
             playerModePinned=true;
             compatibilityGeometryLogged=false;
-            android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="
-                +(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
+            String selectedMode=!forceCompatibilityPlayerModel?"detailed-60"
+                :((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
+                    ?"box-only-shader-60":"simple-shader-60");
+            android.util.Log.i("ValleCernego","PLAYER_MODE user-selected="+selectedMode);
             return forceCompatibilityPlayerModel;
         }
 
@@ -598,14 +612,19 @@ public class MainActivity extends Activity {
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);
             GLES20.glDisable(GLES20.GL_CULL_FACE);
             playerGpuRenderer=String.valueOf(GLES20.glGetString(GLES20.GL_RENDERER));
-            if(!playerModePinned){
+            if(forceBoxCompatibilityForTest){
+                forceCompatibilityPlayerModel=true;
+                playerModePinned=true;
+            }else if(!playerModePinned){
                 forceCompatibilityPlayerModel=PlayerGpuPolicy.shouldPreferSimpleShader(playerGpuRenderer);
             }
             android.util.Log.i("ValleCernego","PLAYER_GPU_PROFILE renderer="+playerGpuRenderer
                 +" policy="+PlayerGpuPolicy.profileName(playerGpuRenderer)
                 +" selected="+(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
-            android.util.Log.i("ValleCernego","PLAYER_MODE context-created="
-                +(forceCompatibilityPlayerModel?"simple-shader-60":"detailed-60"));
+            String contextMode=!forceCompatibilityPlayerModel?"detailed-60"
+                :((forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer))
+                    ?"box-only-shader-60":"simple-shader-60");
+            android.util.Log.i("ValleCernego","PLAYER_MODE context-created="+contextMode);
             if(debugTelemetry){
                 int[] depthBits=new int[1];
                 GLES20.glGetIntegerv(GLES20.GL_DEPTH_BITS,depthBits,0);
@@ -700,6 +719,8 @@ public class MainActivity extends Activity {
             sphereVertexCount=sphereBuffer.limit()/6;
             capsuleBuffer=createCapsuleBuffer(10,24);
             capsuleVertexCount=capsuleBuffer.limit()/6;
+            shadowBuffer=createShadowBuffer(32);
+            shadowVertexCount=shadowBuffer.limit()/6;
             renderSnapshot=new PlayerRenderSnapshot(rendererReady,silhouetteReady,compatibilityRenderer,
                 0,0,GLES20.GL_NO_ERROR,false);
             android.util.Log.i("ValleCernego","Render 3D listo; personaje procedural con "+PlayerModelSpec.size()+" piezas.");
@@ -783,6 +804,15 @@ public class MainActivity extends Activity {
 
         FloatBuffer createCapsuleBuffer(int hemisphereStacks,int slices){
             float[] vertices=CapsuleMeshSpec.buildInterleaved(hemisphereStacks,slices);
+            FloatBuffer buffer=ByteBuffer.allocateDirect(vertices.length*4)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
+            buffer.put(vertices);
+            buffer.position(0);
+            return buffer;
+        }
+
+        FloatBuffer createShadowBuffer(int slices){
+            float[] vertices=PlayerShadowMeshSpec.buildInterleaved(slices);
             FloatBuffer buffer=ByteBuffer.allocateDirect(vertices.length*4)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
             buffer.put(vertices);
@@ -1079,7 +1109,8 @@ public class MainActivity extends Activity {
         }
 
         String getPlayerGpuDiagnostic(){
-            return PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel);
+            return PlayerGpuPolicy.diagnosticLabel(playerGpuRenderer,forceCompatibilityPlayerModel,
+                forceBoxCompatibilityForTest || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer));
         }
 
         // The full 60-part humanoid can run through either the lit material shader or
@@ -1111,14 +1142,15 @@ public class MainActivity extends Activity {
                 forceCompatibilityPlayerModel,rendererReady,silhouetteReady);
             boolean detailedComplete=false;
             boolean simpleShaderModelRendered=false;
+            boolean boxOnlyModelRendered=false;
             boolean roundedFallbackRendered=false;
 
             if(PlayerRenderPolicy.shouldDrawDetailedModel(rendererReady,forceCompatibilityPlayerModel)){
                 GLES20.glEnable(GLES20.GL_BLEND);
                 GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
                 GLES20.glDepthMask(false);
-                drawMesh(sphereBuffer,sphereVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,
-                    .52f,.035f,.34f,.045f,.055f,.045f,.28f,playerFacing,0f);
+                drawMesh(shadowBuffer,shadowVertexCount,px,PlayerModelSpec.GROUND_LEVEL+.018f,pz,
+                    .52f,.01f,.34f,.035f,.045f,.03f,.26f,playerFacing,0f);
                 GLES20.glDepthMask(true);
                 GLES20.glDisable(GLES20.GL_BLEND);
 
@@ -1164,10 +1196,19 @@ public class MainActivity extends Activity {
             }
 
             if(compatibility){
-                // First retry all 60 parts with the independent minimal shader. It keeps
-                // the face, jacket, accessories and articulated limbs without the
-                // complex lighting/material shader that may misbehave on mobile drivers.
-                if(silhouetteReady){
+                // Mali-G615 can use a cube-only 60-part model. This avoids depending on
+                // sphere/capsule rasterization while retaining every clothing/accessory
+                // piece and the same articulated transforms. Other GPUs use the full
+                // sphere/capsule model on the independent minimal shader.
+                boolean useBoxOnly=forceBoxCompatibilityForTest
+                    || PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer);
+                if(silhouetteReady && useBoxOnly){
+                    fallbackSubmitted=drawPlayerBoxCompatibility();
+                    fallbackGlError=lastSilhouetteGlError;
+                    simpleShaderModelRendered=fallbackSubmitted>=PlayerModelSpec.size()
+                        && fallbackGlError==GLES20.GL_NO_ERROR;
+                    boxOnlyModelRendered=simpleShaderModelRendered;
+                }else if(silhouetteReady){
                     fallbackSubmitted=drawPlayerSimpleShaderCompatibility();
                     fallbackGlError=lastSilhouetteGlError;
                     simpleShaderModelRendered=fallbackSubmitted>=PlayerModelSpec.size()
@@ -1197,7 +1238,8 @@ public class MainActivity extends Activity {
                 }
                 if(!compatibilityGeometryLogged && fallbackGlError==GLES20.GL_NO_ERROR
                         && (simpleShaderModelRendered || fallbackSubmitted>=silhouetteParts.length)){
-                    String geometry=simpleShaderModelRendered?"simple-shader-detailed-60"
+                    String geometry=simpleShaderModelRendered
+                        ?(boxOnlyModelRendered?"box-only-60":"simple-shader-detailed-60")
                         :(roundedFallbackRendered?"rounded-11":"cube-11");
                     android.util.Log.i("ValleCernego","PLAYER_COMPATIBILITY geometry="
                         +geometry+" GL=0x0");
@@ -1228,6 +1270,38 @@ public class MainActivity extends Activity {
                 silhouetteDrawCalls,glError,playerFrameRendered,roundedFallbackRendered);
         }
 
+        int drawPlayerBoxCompatibility(){
+            int submitted=0;
+            lastSilhouetteGlError=GLES20.GL_NO_ERROR;
+            if(!silhouetteReady || vb==null || shadowBuffer==null){
+                lastSilhouetteGlError=GLES20.GL_INVALID_OPERATION;
+                return 0;
+            }
+            clearPlayerGlErrors();
+            GLES20.glEnable(GLES20.GL_BLEND);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            GLES20.glDepthMask(false);
+            drawSilhouetteMesh(shadowBuffer,shadowVertexCount,px,
+                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.01f,.34f,
+                .035f,.045f,.03f,.26f,playerFacing,0f,0f);
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+
+            float bob=VillagerAnimationSystem.bodyBob(playerWalkPhase,playerMoving);
+            for(PlayerModelSpec.Part part:boxCompatibilityParts){
+                PlayerModelTransform.Pose pose=PlayerModelTransform.partPose(
+                    px,py,pz,playerFacing,bob,part,playerPartAngle(part));
+                if(!drawSilhouetteMesh(vb,36,pose.x,pose.y,pose.z,
+                        pose.sx,pose.sy,pose.sz,part.r,part.g,part.b,part.alpha,
+                        pose.yaw,pose.pitch,pose.roll))break;
+                submitted++;
+            }
+            lastSilhouetteGlError=consumePlayerGlError();
+            GLES20.glDepthMask(true);
+            GLES20.glDisable(GLES20.GL_BLEND);
+            return submitted;
+        }
+
         int drawPlayerSimpleShaderCompatibility(){
             int submitted=0;
             lastSilhouetteGlError=GLES20.GL_NO_ERROR;
@@ -1239,8 +1313,8 @@ public class MainActivity extends Activity {
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
             GLES20.glDepthMask(false);
-            drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,
-                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
+            drawSilhouetteMesh(shadowBuffer,shadowVertexCount,px,
+                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.01f,.34f,
                 .035f,.045f,.03f,.26f,playerFacing,0f,0f);
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
@@ -1282,8 +1356,8 @@ public class MainActivity extends Activity {
             GLES20.glEnable(GLES20.GL_BLEND);
             GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA,GLES20.GL_ONE_MINUS_SRC_ALPHA);
             GLES20.glDepthMask(false);
-            drawSilhouetteMesh(sphereBuffer,sphereVertexCount,px,
-                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.035f,.34f,
+            drawSilhouetteMesh(shadowBuffer,shadowVertexCount,px,
+                PlayerModelSpec.GROUND_LEVEL+.018f,pz,.52f,.01f,.34f,
                 .035f,.045f,.03f,.26f,playerFacing,0f,0f);
             GLES20.glDepthMask(true);
             GLES20.glDisable(GLES20.GL_BLEND);
