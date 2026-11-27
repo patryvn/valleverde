@@ -277,9 +277,9 @@ El terreno recibe variación procedural de baja frecuencia y grano fino en el sh
 La revisión del código encontró un defecto verificable en la selección del respaldo: `drawMesh()` devolvía `true` inmediatamente después de `glDrawArrays()`, sin comprobar el error de esa llamada. `drawPlayer()` podía contabilizar las 60 piezas como enviadas y comprobar `glGetError()` solo al final; aunque el controlador rechazase una esfera o cápsula, el recuento completo impedía activar la silueta de compatibilidad. Este comportamiento no demuestra que sea la causa concreta del rectángulo visto en el Poco X6 Pro, pero sí era una ruta de fallo que el código no cubría.
 
 En 0.27.9:
-- Se consume y comprueba el error GLES después de la sombra y de cada pieza detallada.
+- Se comprueba el error GLES al terminar el lote detallado; no se sincroniza la GPU con `glGetError()` en cada una de las 60 piezas.
 - Si una pieza devuelve error o no se puede enviar, se abandona el lote detallado y se activa el modelo humanoide de compatibilidad de 11 piezas.
-- Si el shader principal sigue disponible, el respaldo usa ese shader iluminado y el búfer de cubo ya empleado por el terreno y las construcciones; solo recurre al shader GLES mínimo cuando el principal no pudo inicializarse.
+- Si el shader principal sigue disponible, el respaldo usa ese shader iluminado y el búfer de cubo ya empleado por el terreno y las construcciones; si el propio respaldo falla, se reintenta una vez con el shader GLES mínimo independiente.
 - La selección se mantiene durante el contexto OpenGL actual para evitar alternar entre geometrías en cada fotograma.
 - El registro `PLAYER_COMPATIBILITY` identifica el cambio y conserva el código de error que motivó el respaldo.
 - Se añaden pruebas unitarias para lote completo, error GLES aunque se hayan intentado todas las llamadas, lote incompleto y persistencia del modo compatible.
@@ -300,3 +300,7 @@ La ruta de respaldo reduce la dependencia de esferas/cápsulas si el controlador
 - qué ruta muestra el HUD: `modelo detallado` o `11 piezas humanoides`.
 
 Una ejecución verde de SwiftShader valida únicamente el emulador. No sustituye la comprobación del controlador EGL/GPU del teléfono. La APK release-test sigue firmada con la clave de pruebas y no es una firma de distribución de Google Play.
+
+### Comprobación aislada previa a CI
+
+El verificador de movimiento y sus siete pruebas de regresión se ejecutaron localmente en un entorno aislado: 7/7 pasaron, incluyendo el modo humanoide de 11 piezas y el rechazo de cambios de geometría durante el desplazamiento. Esto no sustituye `testDebugUnitTest`, `assembleDebug`, `assembleRelease` ni el smoke test Android; esos resultados deben confirmarse en la ejecución de GitHub Actions de la versión 0.27.9 antes de publicar la APK.
