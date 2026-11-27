@@ -1230,6 +1230,8 @@ public class MainActivity extends Activity {
         }
 
         void drawPlayer(){
+            // Clear the per-frame material indicator before any render path is selected.
+            boxMaterialFrameTextured=false;
             if(!rendererReady && !silhouetteReady){
                 renderSnapshot=PlayerRenderSnapshot.initial();
                 return;
