@@ -1026,12 +1026,12 @@ public class MainActivity extends Activity {
         }
 
         // Personaje compuesto por primitivas 3D; brazos y piernas usan cápsulas redondeadas.
-        // The detailed 60-part model is the normal path. The box-only 11-part silhouette
-        // is reserved for shader fallback or an incomplete detailed batch, never drawn
-        // underneath a healthy model where it would flatten the rounded head and torso.
-        // The detailed model is preferred, but runtime GLES errors switch this context
-        // to a complete cube-only humanoid instead of reporting 60 submitted calls for
-        // geometry that the device driver did not actually accept.
+        // New sessions use the rounded 11-part humanoid and its minimal GLES shader.
+        // The detailed 60-part model remains selectable from the HUD. A cube-only
+        // silhouette is reserved for the final emergency fallback, never drawn under
+        // a healthy model where it would flatten the rounded head and torso.
+        // Runtime GLES errors keep the rounded compatibility path active for this
+        // context instead of trusting submitted draw-call counts.
         void clearPlayerGlErrors(){
             for(int i=0;i<8;i++){
                 if(GLES20.glGetError()==GLES20.GL_NO_ERROR)break;
