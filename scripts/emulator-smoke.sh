@@ -210,21 +210,26 @@ if [[ "$app_ready" != "1" ]]; then echo "MainActivity did not reach the resumed 
 wait_for_clear_windows "post-launch" emulator-output/windows-after-launch.txt
 assert_game_alive "debug launch" || exit 1
 
-# Logcat telemetry replaces repeated UiAutomator dumps on the CPU-only AVD.
+# The rounded 11-part humanoid is the default path for new sessions. Require the
+# explicit geometry marker as well as a complete draw snapshot before accepting pixels.
+wait_for_clear_windows "post-launch before initial ALT capture" emulator-output/windows-after-launch.txt
+assert_game_alive "debug launch" || exit 1
+
+alt_geometry_line=""
 initial_line=""
 for attempt in $(seq 1 60); do
-  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
-  if [[ -n "$initial_line" ]]; then break; fi
+  alt_geometry_line="$(grep -F 'PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  initial_line="$(grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' emulator-output/renderer-live.log | tail -n 1 || true)"
+  if [[ -n "$alt_geometry_line" && -n "$initial_line" ]]; then break; fi
   sleep 1
 done
-if [[ -z "$initial_line" ]]; then
-  echo "Renderer did not report the detailed model or the 11-part humanoid fallback with GL_NO_ERROR."
-  tail -n 80 emulator-output/renderer-live.log || true
+if [[ -z "$alt_geometry_line" || -z "$initial_line" ]]; then
+  echo "Default rounded ALT humanoid did not complete all 11 parts with GL_NO_ERROR."
+  grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 80 || true
   exit 1
 fi
-initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-assert_game_alive "initial scene capture" || exit 1
-capture_humanoid_frame "initial scene" emulator-output/valle-cernego-initial.png emulator-output/windows-before-initial-capture.txt
+alt_initial_telemetry="$(printf '%s\n' "$initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "default rounded ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
 
 layout_line=""
 for attempt in $(seq 1 30); do
@@ -259,122 +264,110 @@ fresh_log_lines() {
   tail -n +"$((last_line + 1))" emulator-output/renderer-live.log
 }
 
-movement_ok=0
-moving_line=""
-moving_telemetry=""
-for attempt in $(seq 1 8); do
-  # Capture a log offset before every gesture. Never let a previous attempt's
-  # HUD_TOUCH lines satisfy this attempt's input-delivery check.
-  gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"
-  state_log_start="$gesture_log_start"
+run_motion_for_mode() {
+  local mode_label="$1"
+  local state_pattern="$2"
+  local initial_telemetry="$3"
+  local moving_image="$4"
+  local windows_path="$5"
+  local movement_ok=0
+  local moving_line=""
+  local moving_telemetry=""
 
-  # The CPU-only SwiftShader AVD delivers fewer frames than a physical phone.
-  # A 4 s drag gives the renderer enough active frames to clear the 0.25 m
-  # movement floor without weakening the displacement/camera assertions.
-  if ! adb shell input touchscreen -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000; then
-    echo "Explicit display-0 touchscreen gesture command failed; trying the default input source."
-  fi
-  sleep 1
-  assert_game_alive "joystick swipe $attempt" || exit 1
-  new_log_lines="$(fresh_log_lines "$gesture_log_start")"
-  touch_down_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
-  touch_move_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
-  if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
+  for attempt in $(seq 1 8); do
+    wait_for_clear_windows "$mode_label before gesture $attempt" emulator-output/windows-before-gesture.txt || return 1
+    local gesture_log_start
     gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"
-    adb shell input -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000 || true
+    local state_log_start="$gesture_log_start"
+
+    if ! adb shell input touchscreen -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000; then
+      echo "Explicit display-0 touchscreen gesture failed; trying the default input source."
+    fi
     sleep 1
+    assert_game_alive "$mode_label joystick swipe $attempt" || return 1
+    local new_log_lines
     new_log_lines="$(fresh_log_lines "$gesture_log_start")"
+    local touch_down_line
+    local touch_move_line
     touch_down_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
     touch_move_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
-  fi
-  if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
-    echo "Fresh display-0 swipe did not reach the joystick handler (down=\${touch_down_line:+yes}, move=\${touch_move_line:+yes})."
-    continue
-  fi
-
-  # Read only renderer states emitted after this gesture began, not the last
-  # pre-existing PLAYER_STATE line from the initial scene.
-  moving_line=""
-  for telemetry_attempt in $(seq 1 10); do
-    moving_line="$(fresh_log_lines "$state_log_start" | grep -E 'PLAYER_STATE .*PARTS=(60|11) FALLBACK=(0|11) GL=0x0*0' | tail -n 1 || true)"
-    if [[ -n "$moving_line" ]]; then break; fi
-    sleep 1
-  done
-  if [[ -z "$moving_line" ]]; then
-    echo "No fresh renderer telemetry arrived after joystick swipe $attempt."
-    continue
-  fi
-  moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-  if python3 scripts/verify-player-motion.py "$initial_telemetry" "$moving_telemetry"; then
-    movement_ok=1
-    break
-  fi
-done
-if [[ "$movement_ok" != "1" ]]; then
-  echo "Player movement or camera follow verification failed after eight fresh display-0 touchscreen gestures."
-  grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
-  exit 1
-fi
-capture_moving_humanoid_frame "moving scene" emulator-output/valle-cernego-moving.png emulator-output/windows-before-moving-capture.txt
-
-# Exercise ALT: rounded geometry must succeed before the emergency cube silhouette.
-alt_mode_log_start="$(wc -l < emulator-output/renderer-live.log)"
-adb shell input tap "$render_x" "$render_y"
-alt_mode_line=""
-rounded_path_line=""
-alt_initial_line=""
-for attempt in $(seq 1 30); do
-  fresh_alt_lines="$(fresh_log_lines "$alt_mode_log_start")"
-  alt_mode_line="$(printf '%s\\n' "$fresh_alt_lines" | grep -F 'PLAYER_MODE user-selected=compatibility-11' | tail -n 1 || true)"
-  rounded_path_line="$(printf '%s\\n' "$fresh_alt_lines" | grep -F 'PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0' | tail -n 1 || true)"
-  alt_initial_line="$(printf '%s\\n' "$fresh_alt_lines" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
-  if [[ -n "$alt_mode_line" && -n "$rounded_path_line" && -n "$alt_initial_line" ]]; then break; fi
-  sleep 1
-done
-if [[ -z "$alt_mode_line" || -z "$rounded_path_line" || -z "$alt_initial_line" ]]; then
-  echo "ALT mode did not complete the rounded 11-part humanoid path."
-  fresh_log_lines "$alt_mode_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE' | tail -n 60 || true
-  exit 1
-fi
-alt_initial_telemetry="$(printf '%s\\n' "$alt_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-capture_humanoid_frame "rounded ALT scene" emulator-output/valle-cernego-alt.png emulator-output/windows-before-alt-capture.txt
-
-alt_movement_ok=0
-for attempt in $(seq 1 6); do
-  alt_gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"
-  adb shell input touchscreen -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000 || true
-  sleep 1
-  assert_game_alive "ALT joystick swipe $attempt" || exit 1
-  alt_new_lines="$(fresh_log_lines "$alt_gesture_log_start")"
-  alt_touch_down="$(printf '%s\\n' "$alt_new_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
-  alt_touch_move="$(printf '%s\\n' "$alt_new_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
-  if [[ -z "$alt_touch_down" || -z "$alt_touch_move" ]]; then continue; fi
-  alt_moving_line="$(printf '%s\\n' "$alt_new_lines" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
-  if [[ -z "$alt_moving_line" ]]; then
-    for telemetry_attempt in $(seq 1 8); do
+    if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
+      gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"
+      state_log_start="$gesture_log_start"
+      adb shell input -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000 || true
       sleep 1
-      alt_moving_line="$(fresh_log_lines "$alt_gesture_log_start" | grep -E 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' | tail -n 1 || true)"
-      if [[ -n "$alt_moving_line" ]]; then break; fi
+      new_log_lines="$(fresh_log_lines "$gesture_log_start")"
+      touch_down_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
+      touch_move_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
+    fi
+    if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
+      echo "Fresh display-0 swipe did not reach the joystick handler during $mode_label (attempt $attempt)."
+      continue
+    fi
+
+    moving_line=""
+    for telemetry_attempt in $(seq 1 10); do
+      moving_line="$(fresh_log_lines "$state_log_start" | grep -E "$state_pattern" | tail -n 1 || true)"
+      if [[ -n "$moving_line" ]]; then break; fi
+      sleep 1
     done
-  fi
-  if [[ -n "$alt_moving_line" ]]; then
-    alt_moving_telemetry="$(printf '%s\\n' "$alt_moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
-    if python3 scripts/verify-player-motion.py "$alt_initial_telemetry" "$alt_moving_telemetry"; then
-      alt_movement_ok=1
+    if [[ -z "$moving_line" ]]; then
+      echo "No fresh $mode_label renderer telemetry arrived after gesture $attempt."
+      continue
+    fi
+    moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+    if python3 scripts/verify-player-motion.py "$initial_telemetry" "$moving_telemetry"; then
+      movement_ok=1
       break
     fi
+  done
+
+  if [[ "$movement_ok" != "1" ]]; then
+    echo "$mode_label movement or camera-follow verification failed after eight fresh gestures."
+    grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
+    return 1
   fi
+  capture_moving_humanoid_frame "$mode_label moving scene" "$moving_image" "$windows_path"
+}
+
+# Validate movement and camera tracking while the default rounded model is active.
+run_motion_for_mode "rounded ALT" 'PLAYER_STATE .*PARTS=11 FALLBACK=11 GL=0x0*0' \
+  "$alt_initial_telemetry" emulator-output/valle-cernego-alt-moving.png \
+  emulator-output/windows-before-alt-moving-capture.txt
+
+# The previous CI run left a visible SystemUI ANR over the game after the swipe.
+# Wait for the overlay to disappear (the helper can send BACK) before touching
+# the in-game toggle; otherwise the tap is consumed by SystemUI and no mode event
+# reaches Hud.onTouchEvent.
+wait_for_clear_windows "before detailed mode toggle" emulator-output/windows-before-detailed-toggle.txt
+assert_game_alive "before detailed mode toggle" || exit 1
+detailed_toggle_log_start="$(wc -l < emulator-output/renderer-live.log)"
+adb shell input -d 0 tap "$render_x" "$render_y"
+detailed_mode_line=""
+detailed_initial_line=""
+for attempt in $(seq 1 45); do
+  fresh_detailed_lines="$(fresh_log_lines "$detailed_toggle_log_start")"
+  detailed_mode_line="$(printf '%s\n' "$fresh_detailed_lines" | grep -F 'PLAYER_MODE user-selected=detailed-60' | tail -n 1 || true)"
+  detailed_initial_line="$(printf '%s\n' "$fresh_detailed_lines" | grep -E 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' | tail -n 1 || true)"
+  if [[ -n "$detailed_mode_line" && -n "$detailed_initial_line" ]]; then break; fi
+  sleep 1
 done
-if [[ "$alt_movement_ok" != "1" ]]; then
-  echo "Rounded ALT humanoid did not preserve all 11 parts and camera follow during movement."
-  grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
+if [[ -z "$detailed_mode_line" || -z "$detailed_initial_line" ]]; then
+  echo "The 3D toggle did not activate the detailed 60-part model after SystemUI recovery."
+  fresh_log_lines "$detailed_toggle_log_start" | grep -E 'PLAYER_MODE|PLAYER_COMPATIBILITY|PLAYER_STATE|HUD_TOUCH' | tail -n 80 || true
   exit 1
 fi
-capture_moving_humanoid_frame "rounded ALT moving scene" emulator-output/valle-cernego-alt-moving.png emulator-output/windows-before-alt-moving-capture.txt
+detailed_initial_telemetry="$(printf '%s\n' "$detailed_initial_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+capture_humanoid_frame "detailed 3D scene" emulator-output/valle-cernego-detailed.png emulator-output/windows-before-detailed-capture.txt
+
+# Exercise movement and camera follow on the detailed 60-part path as well.
+run_motion_for_mode "detailed 3D" 'PLAYER_STATE .*PARTS=60 FALLBACK=0 GL=0x0*0' \
+  "$detailed_initial_telemetry" emulator-output/valle-cernego-detailed-moving.png \
+  emulator-output/windows-before-detailed-moving-capture.txt
 
 adb logcat -d -v time > emulator-output/logcat.txt
 if grep -E "FATAL EXCEPTION.*Process: $APP_ID|Fatal signal.*$APP_ID|ValleCernego.*OpenGL 0x" emulator-output/logcat.txt; then
   echo "Fatal app or player OpenGL error detected."
   exit 1
 fi
-echo "Emulator smoke test completed: detailed 60-part model and rounded 11-part ALT humanoid both rendered, moved and kept camera follow with GL_NO_ERROR."
+echo "Emulator smoke test completed: default rounded 11-part ALT and detailed 60-part 3D models both rendered, moved and kept camera follow with GL_NO_ERROR."
