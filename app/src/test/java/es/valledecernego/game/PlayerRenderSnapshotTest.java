@@ -40,6 +40,13 @@ public class PlayerRenderSnapshotTest {
             snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
     }
 
+    @Test public void simpleShaderCompatibilityCanReportAllSixtyDetailedParts() {
+        PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
+            true, true, true, DETAILED_PARTS, DETAILED_PARTS, 0, true, false);
+        assertEquals("3D COMPATIBLE · 60 piezas · shader GLES plano · GL OK",
+            snapshot.summary(DETAILED_PARTS, FALLBACK_PARTS));
+    }
+
     @Test public void independentHumanoidFallbackReportsItsElevenParts() {
         PlayerRenderSnapshot snapshot = new PlayerRenderSnapshot(
             false, true, false, 0, FALLBACK_PARTS, 0, true, true);
