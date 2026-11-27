@@ -602,8 +602,9 @@ public class MainActivity extends Activity {
         boolean isCompatibilityModeForced(){return forceCompatibilityPlayerModel;}
 
         boolean isBoxCompatibilityActive(){
-            return PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
-                forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest);
+            return forceCompatibilityPlayerModel
+                && PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,
+                    forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest);
         }
 
         String getPlayerRenderModeButtonLabel(){

@@ -94,6 +94,8 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("drawPlayerBoxCompatibility()", activity)
         self.assertIn("PlayerGpuPolicy.shouldUseBoxOnlyGeometry(playerGpuRenderer,", activity)
         self.assertIn("forceBoxCompatibilityPlayerModel || forceBoxCompatibilityForTest", activity)
+        self.assertIn("return forceCompatibilityPlayerModel", activity)
+        self.assertIn("forceCompatibilityPlayerModel\n                && PlayerGpuPolicy.shouldUseBoxOnlyGeometry", activity)
         self.assertIn("boxCompatibilityParts=PlayerModelSpec.boxCompatibilityParts()", activity)
 
     def test_manual_box60_override_does_not_depend_on_gpu_renderer_name(self):
