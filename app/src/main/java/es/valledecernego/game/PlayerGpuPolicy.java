@@ -17,9 +17,13 @@ public final class PlayerGpuPolicy {
         return glRenderer.toLowerCase(Locale.US).contains("mali-g615");
     }
 
+    public static boolean shouldUseBoxOnlyGeometry(String glRenderer) {
+        return shouldPreferSimpleShader(glRenderer);
+    }
+
     public static String profileName(String glRenderer) {
-        return shouldPreferSimpleShader(glRenderer)
-            ? "mali-g615-simple-shader-60"
+        return shouldUseBoxOnlyGeometry(glRenderer)
+            ? "mali-g615-box-only-60"
             : "default-lit-shader-60";
     }
     
@@ -28,10 +32,17 @@ public final class PlayerGpuPolicy {
      * This lets device testers report the GPU without ADB or logcat.
      */
     public static String diagnosticLabel(String glRenderer, boolean simpleShaderSelected) {
+        return diagnosticLabel(glRenderer, simpleShaderSelected,
+            simpleShaderSelected && shouldUseBoxOnlyGeometry(glRenderer));
+    }
+
+    public static String diagnosticLabel(String glRenderer, boolean simpleShaderSelected,
+                                         boolean boxOnlySelected) {
         String renderer = glRenderer == null ? "" : glRenderer.trim().replaceAll("\\s+", " ");
         if (renderer.isEmpty() || "null".equalsIgnoreCase(renderer)
                 || "unknown".equalsIgnoreCase(renderer)) renderer = "desconocida";
         if (renderer.length() > 22) renderer = renderer.substring(0, 22);
-        return "GPU " + renderer + " · " + (simpleShaderSelected ? "SIMPLE60" : "LIT60");
+        String mode = !simpleShaderSelected ? "LIT60" : (boxOnlySelected ? "BOX60" : "SIMPLE60");
+        return "GPU " + renderer + " · " + mode;
     }
 }
