@@ -189,7 +189,7 @@ adb shell input keyevent 224 || true
 adb shell am force-stop "$APP_ID" || true
 adb logcat -v time -s ValleCernego:I > emulator-output/renderer-live.log 2>&1 &
 LOGCAT_PID=$!
-adb shell am start -n "$APP_ID/$ACTIVITY_CLASS" --ez debug_telemetry true
+adb shell am start -n "$APP_ID/$ACTIVITY_CLASS" --ez debug_telemetry true --ez smoke_test_mode true
 
 app_ready=0
 for attempt in $(seq 1 30); do
