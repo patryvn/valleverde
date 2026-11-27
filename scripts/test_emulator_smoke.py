@@ -16,7 +16,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.6"', manifest.read_text(encoding="utf-8"))
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
         self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
@@ -59,6 +59,13 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         source = activity.read_text(encoding="utf-8")
         self.assertIn("forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE", source)
         self.assertNotIn("forceCompatibilityPlayerModel=false;", source)
+
+    def test_promoted_fallback_shader_keeps_rounded_humanoid_available(self):
+        activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
+        source = activity.read_text(encoding="utf-8")
+        self.assertIn("PlayerShaderPlan.resolve(", source)
+        self.assertIn("silhouetteReady=shaderPlan.silhouetteReady;", source)
+        self.assertIn("PLAYER_SHADER_PLAN primary=", source)
 
     def test_pixel_verifier_requires_both_arms_and_both_legs_not_only_a_blue_torso(self):
         verifier = Path(__file__).with_name("verify-player-screenshot.py").read_text(encoding="utf-8")
