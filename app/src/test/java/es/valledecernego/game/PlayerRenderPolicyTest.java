@@ -4,6 +4,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class PlayerRenderPolicyTest {
+    @Test public void newSessionsPreferRoundedCompatibilityHumanoid() {
+        assertTrue(PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE);
+        assertTrue(PlayerRenderPolicy.shouldUseCompatibilityModel(
+            PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE,true,true));
+        assertFalse(PlayerRenderPolicy.shouldDrawDetailedModel(
+            true,PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE));
+    }
+
     @Test public void detailedRendererDoesNotDrawOpaqueCubeUnderlay() {
         assertFalse(PlayerRenderPolicy.shouldDrawOpaqueBase(true, false));
         assertFalse(PlayerRenderPolicy.shouldDrawOpaqueBase(true, true));
