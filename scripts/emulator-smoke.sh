@@ -275,15 +275,15 @@ for attempt in $(seq 1 8); do
   sleep 1
   assert_game_alive "joystick swipe $attempt" || exit 1
   new_log_lines="$(fresh_log_lines "$gesture_log_start")"
-  touch_down_line="$(printf '%s\\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
-  touch_move_line="$(printf '%s\\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
+  touch_down_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
+  touch_move_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
   if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
     gesture_log_start="$(wc -l < emulator-output/renderer-live.log)"
     adb shell input -d 0 swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000 || true
     sleep 1
     new_log_lines="$(fresh_log_lines "$gesture_log_start")"
-    touch_down_line="$(printf '%s\\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
-    touch_move_line="$(printf '%s\\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
+    touch_down_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH DOWN .*mode=1' | tail -n 1 || true)"
+    touch_move_line="$(printf '%s\n' "$new_log_lines" | grep -E 'HUD_TOUCH MOVE .*mode=1' | tail -n 1 || true)"
   fi
   if [[ -z "$touch_down_line" || -z "$touch_move_line" ]]; then
     echo "Fresh display-0 swipe did not reach the joystick handler (down=\${touch_down_line:+yes}, move=\${touch_move_line:+yes})."
@@ -302,12 +302,17 @@ for attempt in $(seq 1 8); do
     echo "No fresh renderer telemetry arrived after joystick swipe $attempt."
     continue
   fi
-  moving_telemetry="$(printf '%s\\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
+  moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
   if python3 scripts/verify-player-motion.py "$initial_telemetry" "$moving_telemetry"; then
     movement_ok=1
     break
   fi
 done
+if [[ "$movement_ok" != "1" ]]; then
+  echo "Player movement or camera follow verification failed after eight fresh display-0 touchscreen gestures."
+  grep -E 'HUD_LAYOUT|HUD_TOUCH|PLAYER_STATE' emulator-output/renderer-live.log | tail -n 100 || true
+  exit 1
+fi
 capture_moving_humanoid_frame "moving scene" emulator-output/valle-cernego-moving.png emulator-output/windows-before-moving-capture.txt
 
 adb logcat -d -v time > emulator-output/logcat.txt

@@ -29,6 +29,11 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('state_log_start="$gesture_log_start"', SCRIPT)
         self.assertIn('fresh_log_lines "$state_log_start"', SCRIPT)
 
+    def test_motion_failure_still_fails_the_smoke_job(self):
+        self.assertIn('if [[ "$movement_ok" != "1" ]]', SCRIPT)
+        self.assertIn("Player movement or camera follow verification failed", SCRIPT)
+        self.assertIn('exit 1', SCRIPT)
+
     def test_cpu_only_emulator_uses_a_longer_swipe_without_lowering_motion_floor(self):
         self.assertIn('swipe "$joy_x" "$joy_y" "$move_x" "$joy_y" 4000', SCRIPT)
         motion_script = Path(__file__).with_name("verify-player-motion.py").read_text(encoding="utf-8")
