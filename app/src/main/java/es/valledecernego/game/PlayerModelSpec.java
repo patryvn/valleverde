@@ -152,8 +152,8 @@ public final class PlayerModelSpec {
     /**
      * The compatibility silhouette deliberately uses only the cube mesh (vb).
      * Some mobile drivers can accept sphere/capsule draw calls yet fail to show
-     * them consistently. Converting the 11 core parts to boxes keeps a complete
-     * animated human visible using one well-tested vertex buffer and shader.
+     * them consistently. The full BOX60 model converts every part; the final
+     * 11-part fallback remains available if the full compatibility path fails.
      */
     private static Part asCompatibilityBox(Part source) {
         float sx = source.sx;
