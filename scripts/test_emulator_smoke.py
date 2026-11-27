@@ -38,7 +38,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_motion_failure_still_fails_the_smoke_job(self):
         self.assertIn('if [[ "$movement_ok" != "1" ]]', SCRIPT)
-        self.assertIn("Player movement or camera follow verification failed", SCRIPT)
+        self.assertIn("$mode_label movement or camera-follow verification failed after eight fresh gestures.", SCRIPT)
         self.assertIn('exit 1', SCRIPT)
 
     def test_new_session_defaults_to_rounded_alt_and_preserves_choice_across_egl_recreation(self):
