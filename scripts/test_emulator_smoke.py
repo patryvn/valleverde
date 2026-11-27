@@ -27,7 +27,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.7"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba 3D 0.28.8"', manifest.read_text(encoding="utf-8"))
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
         self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
@@ -69,7 +69,17 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("DEFAULT_COMPATIBILITY_MODE = false", policy.read_text(encoding="utf-8"))
         source = activity.read_text(encoding="utf-8")
         self.assertIn("forceCompatibilityPlayerModel=PlayerRenderPolicy.DEFAULT_COMPATIBILITY_MODE", source)
+        self.assertIn("playerModePinned=false", source)
+        self.assertIn("PlayerGpuPolicy.shouldPreferSimpleShader(playerGpuRenderer)", source)
         self.assertNotIn("forceCompatibilityPlayerModel=false;", source)
+
+    def test_poco_mali_g615_selects_full_simple_shader_humanoid(self):
+        root = Path(__file__).parents[1]
+        policy = (root / "app/src/main/java/es/valledecernego/game/PlayerGpuPolicy.java").read_text(encoding="utf-8")
+        activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
+        self.assertIn("mali-g615", policy)
+        self.assertIn("drawPlayerSimpleShaderCompatibility()", activity)
+        self.assertIn("for(PlayerModelSpec.Part part:PlayerModelSpec.parts())", activity)
 
     def test_promoted_fallback_shader_keeps_rounded_humanoid_available(self):
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
@@ -84,18 +94,19 @@ class EmulatorSmokeInputTest(unittest.TestCase):
             self.assertIn('"{}": 80'.format(limb), verifier)
         self.assertIn("A single blue rectangle can satisfy the old torso-colour check", verifier)
 
-    def test_smoke_captures_and_moves_detailed_default_then_rounded_alt_models(self):
+    def test_smoke_captures_and_moves_detailed_default_then_simple_shader_60_part_model(self):
         self.assertIn("PLAYER_STATE .*PARTS=60 FALLBACK=0", SCRIPT)
         self.assertIn('valle-cernego-detailed.png', SCRIPT)
         self.assertIn('valle-cernego-detailed-moving.png', SCRIPT)
-        self.assertIn('PLAYER_MODE user-selected=compatibility-11', SCRIPT)
-        self.assertIn('PLAYER_COMPATIBILITY geometry=rounded-11 GL=0x0', SCRIPT)
+        self.assertIn('PLAYER_MODE user-selected=simple-shader-60', SCRIPT)
+        self.assertIn('PLAYER_COMPATIBILITY geometry=simple-shader-detailed-60 GL=0x0', SCRIPT)
+        self.assertIn('PLAYER_STATE .*PARTS=60 FALLBACK=60', SCRIPT)
         self.assertIn('valle-cernego-alt.png', SCRIPT)
         self.assertIn('valle-cernego-alt-moving.png', SCRIPT)
         self.assertIn('verify-player-motion.py "$initial_telemetry" "$moving_telemetry"', SCRIPT)
 
     def test_smoke_waits_for_systemui_recovery_before_tapping_render_mode(self):
-        wait = SCRIPT.index('wait_for_clear_windows "before rounded ALT mode toggle"')
+        wait = SCRIPT.index('wait_for_clear_windows "before simple-shader ALT mode toggle"')
         tap = SCRIPT.index('adb shell input -d 0 tap "$render_x" "$render_y"')
         self.assertLess(wait, tap)
 
