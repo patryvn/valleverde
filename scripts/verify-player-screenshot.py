@@ -85,7 +85,7 @@ def verify(path):
                 counts["skin"] += 1
                 skin_y.append(y)
                 xs.append(x); ys.append(y)
-            jacket_pixel = b > r * 1.20 and b > g * 1.12 and r < 150 and g < 175 and b < 210
+            jacket_pixel = r > g * 1.30 and r > b * 1.30 and r < 165 and g < 115 and b < 100
             if jacket_top <= y < jacket_bottom and jacket_pixel:
                 counts["jacket"] += 1
                 xs.append(x); ys.append(y)
