@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 mkdir -p emulator-output
 APP_ID="es.valledecernego.game.preview3"
+EXPECTED_VERSION_CODE="60"
+EXPECTED_VERSION_NAME="0.29.9"
 ACTIVITY_CLASS="es.valledecernego.game.MainActivity"
 LOGCAT_PID=""
 
@@ -226,6 +228,23 @@ for attempt in $(seq 1 5); do
   sleep 10
 done
 if [[ "$install_ok" != "1" ]]; then echo "Release-test APK installation failed after five attempts."; exit 1; fi
+
+# Do not trust a stale launcher icon or an already-running preview package:
+# query PackageManager after install and require the exact release identity.
+installed_package_info="$(adb shell dumpsys package "$APP_ID" 2>/dev/null | tr -d '\\r' || true)"
+if [[ -z "$installed_package_info" ]] \
+    || ! grep -Eq "versionCode=${EXPECTED_VERSION_CODE}([[:space:]]|$)" <<< "$installed_package_info" \
+    || ! grep -Fq "versionName=${EXPECTED_VERSION_NAME}" <<< "$installed_package_info"; then
+  echo "Installed package identity does not match ${APP_ID} version ${EXPECTED_VERSION_NAME} (${EXPECTED_VERSION_CODE})."
+  printf '%s\\n' "$installed_package_info" | grep -E 'versionCode=|versionName=' || true
+  exit 1
+fi
+installed_apk_path="$(adb shell pm path "$APP_ID" 2>/dev/null | tr -d '\\r' | head -n 1)"
+if [[ -z "$installed_apk_path" ]]; then
+  echo "PackageManager did not return an installed APK path for $APP_ID."
+  exit 1
+fi
+echo "Installed release identity verified: $APP_ID $EXPECTED_VERSION_NAME ($EXPECTED_VERSION_CODE) at $installed_apk_path."
 
 keep_emulator_awake
 adb shell am force-stop "$APP_ID" || true
