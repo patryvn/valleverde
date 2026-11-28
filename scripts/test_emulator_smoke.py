@@ -27,7 +27,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.4"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.5"', manifest.read_text(encoding="utf-8"))
 
     def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
         root = Path(__file__).parents[1]
@@ -142,6 +142,17 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("sampleRegionScalesForHighResolutionLandscapePhonesAndSmallEmulators", tests)
         self.assertIn("PlayerPixelWatchdog.sampleWidth(surfaceWidth)", activity)
         self.assertIn("PlayerPixelWatchdog.sampleHeight(surfaceHeight)", activity)
+
+    def test_pixel_watchdog_requires_spatially_separated_arms_and_legs(self):
+        root = Path(__file__).parents[1]
+        watchdog = (root / "app/src/main/java/es/valledecernego/game/PlayerPixelWatchdog.java").read_text(encoding="utf-8")
+        tests = (root / "app/src/test/java/es/valledecernego/game/PlayerPixelWatchdogTest.java").read_text(encoding="utf-8")
+        self.assertIn("MIN_LEFT_ARM_PIXELS", watchdog)
+        self.assertIn("MIN_RIGHT_ARM_PIXELS", watchdog)
+        self.assertIn("MIN_LEFT_LEG_PIXELS", watchdog)
+        self.assertIn("MIN_RIGHT_LEG_PIXELS", watchdog)
+        self.assertIn("rejectsHumanoidColourDecoysOutsideThePlayerProjection", tests)
+        self.assertIn("bottom-up row order", watchdog)
 
     def test_pixel_watchdog_checks_rendered_humanoid_and_emergency_fallback(self):
         root = Path(__file__).parents[1]

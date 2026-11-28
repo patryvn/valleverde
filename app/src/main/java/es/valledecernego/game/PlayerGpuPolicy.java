@@ -14,18 +14,16 @@ public final class PlayerGpuPolicy {
 
     public static boolean shouldPreferSimpleShader(String glRenderer) {
         if (glRenderer == null) return false;
-        return glRenderer.toLowerCase(Locale.US).contains("mali-g615");
+        // Vendor strings vary ("Mali-G615 MC6", "ARM Mali G615", etc.).
+        String normalized = glRenderer.toLowerCase(Locale.US).replaceAll("[^a-z0-9]", "");
+        return normalized.contains("malig615");
     }
 
     public static boolean shouldUseBoxOnlyGeometry(String glRenderer) {
         return shouldUseBoxOnlyGeometry(glRenderer, false);
     }
 
-    /**
-     * Explicit user override takes precedence over renderer-name heuristics.
-     * Some Android vendors expose generic renderer strings, so a manual BOX60
-     * selection must not depend on identifying the GPU family correctly.
-     */
+    /** Explicit user override takes precedence over renderer-name heuristics. */
     public static boolean shouldUseBoxOnlyGeometry(String glRenderer, boolean forceBoxOnly) {
         return forceBoxOnly || shouldPreferSimpleShader(glRenderer);
     }
@@ -35,11 +33,7 @@ public final class PlayerGpuPolicy {
             ? "mali-g615-box-only-60"
             : "default-lit-shader-60";
     }
-    
-    /**
-     * Compact on-screen diagnostic for the actual GLES renderer and selected player path.
-     * This lets device testers report the GPU without ADB or logcat.
-     */
+
     public static String diagnosticLabel(String glRenderer, boolean simpleShaderSelected) {
         return diagnosticLabel(glRenderer, simpleShaderSelected,
             simpleShaderSelected && shouldUseBoxOnlyGeometry(glRenderer));

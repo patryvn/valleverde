@@ -11,8 +11,12 @@ public class PlayerGpuPolicyTest {
             PlayerGpuPolicy.profileName("ARM Mali-G615 MC6"));
     }
 
-    @Test public void rendererMatchingIsCaseInsensitive() {
+    @Test public void rendererMatchingIgnoresVendorPunctuationAndSpacing() {
         assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("arm mali-g615 mc6"));
+        assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("ARM Mali G615 MC6"));
+        assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("Mali_G615"));
+        assertTrue(PlayerGpuPolicy.shouldPreferSimpleShader("MaliG615 MC6"));
+        assertFalse(PlayerGpuPolicy.shouldPreferSimpleShader("Mali-G715"));
     }
 
     @Test public void manualBox60OverrideWorksWhenAndroidReportsAnUnknownOrGenericGpu() {

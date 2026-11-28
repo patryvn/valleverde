@@ -1175,7 +1175,8 @@ public class MainActivity extends Activity {
                 android.util.Log.i("ValleCernego","PLAYER_VISUAL_WATCHDOG state="
                     +(forceEmergencySilhouette?"fallback-humanoid":"humanoid")
                     +" skin="+result.skin+" jacket="+result.jacket+" boots="+result.boots
-                    +" dark="+result.dark+" attempts="+visualProbeAttempts);
+                    +" dark="+result.dark+" arms="+result.leftArm+"/"+result.rightArm
+                    +" legs="+result.leftLeg+"/"+result.rightLeg+" attempts="+visualProbeAttempts);
                 return;
             }
             if(!forceEmergencySilhouette && visualProbeAttempts>=3){
@@ -1188,7 +1189,8 @@ public class MainActivity extends Activity {
                 visualProbeLabel="VISUAL FALLBACK";
                 android.util.Log.w("ValleCernego","PLAYER_VISUAL_WATCHDOG fallback=flat-humanoid-11"
                     +" skin="+result.skin+" jacket="+result.jacket+" boots="+result.boots
-                    +" dark="+result.dark);
+                    +" dark="+result.dark+" arms="+result.leftArm+"/"+result.rightArm
+                    +" legs="+result.leftLeg+"/"+result.rightLeg);
                 return;
             }
             if(forceEmergencySilhouette && visualProbeAttempts>=3){
@@ -1196,7 +1198,8 @@ public class MainActivity extends Activity {
                 visualProbeLabel="VISUAL FAILED";
                 android.util.Log.e("ValleCernego","PLAYER_VISUAL_WATCHDOG state=failed-after-flat-fallback"
                     +" skin="+result.skin+" jacket="+result.jacket+" boots="+result.boots
-                    +" dark="+result.dark);
+                    +" dark="+result.dark+" arms="+result.leftArm+"/"+result.rightArm
+                    +" legs="+result.leftLeg+"/"+result.rightLeg);
                 return;
             }
             visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
