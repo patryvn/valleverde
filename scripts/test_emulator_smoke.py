@@ -27,7 +27,18 @@ class EmulatorSmokeInputTest(unittest.TestCase):
 
     def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
         manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.5"', manifest.read_text(encoding="utf-8"))
+        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.6"', manifest.read_text(encoding="utf-8"))
+
+    def test_runtime_visual_watchdog_rechecks_after_movement(self):
+        root = Path(__file__).parents[1]
+        activity = (root / "app/src/main/java/es/valledecernego/game/MainActivity.java").read_text(encoding="utf-8")
+        policy = (root / "app/src/main/java/es/valledecernego/game/PlayerVisualProbePolicy.java").read_text(encoding="utf-8")
+        self.assertIn("PlayerVisualProbePolicy.shouldReprobe(", activity)
+        self.assertIn("PLAYER_VISUAL_WATCHDOG recheck=player-motion", activity)
+        self.assertIn("POSITION_REPROBE_METERS", policy)
+        self.assertIn("MOVING_REPROBE_INTERVAL_NANOS", policy)
+        self.assertIn("PLAYER_VISUAL_WATCHDOG state=(humanoid|fallback-humanoid)", SCRIPT)
+        self.assertIn("No fresh player visual watchdog result after", SCRIPT)
 
     def test_hud_reports_the_actual_gpu_and_selected_player_shader(self):
         root = Path(__file__).parents[1]
