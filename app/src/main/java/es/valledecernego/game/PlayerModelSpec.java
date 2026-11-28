@@ -6,11 +6,12 @@ package es.valledecernego.game;
  */
 public final class PlayerModelSpec {
     public enum Shape { BOX, SPHERE, LIMB }
-    public enum Motion { NONE, LEFT_LEG, RIGHT_LEG, LEFT_ARM, RIGHT_ARM, LEFT_FOOT, RIGHT_FOOT }
+    public enum Motion { NONE, LEFT_LEG, RIGHT_LEG, LEFT_ARM, RIGHT_ARM, LEFT_FOOT, RIGHT_FOOT, LEFT_HAND, RIGHT_HAND }
 
     /** Height of the walkable ground plane; boot soles are authored to meet it. */
     public static final float GROUND_LEVEL = 0.05f;
     public static final float LEG_PIVOT_Y = 0.61f;
+    public static final float ARM_PIVOT_Y = 1.20f;
 
     public static final int MATERIAL_SOLID = 0;
     public static final int MATERIAL_FABRIC = 1;
@@ -77,8 +78,8 @@ public final class PlayerModelSpec {
         part("right-shoulder",Shape.SPHERE,Motion.NONE,.25f,1.20f,0f,.13f,.15f,.14f,.32f,.15f,.09f,true),
         part("left-arm",Shape.LIMB,Motion.LEFT_ARM,-.36f,1.20f,0f,.12f,.44f,.13f,.32f,.15f,.09f,true),
         part("right-arm",Shape.LIMB,Motion.RIGHT_ARM,.36f,1.20f,0f,.12f,.44f,.13f,.32f,.15f,.09f,true),
-        part("left-hand",Shape.SPHERE,Motion.NONE,-.37f,.82f,.025f,.075f,.09f,.075f,.75f,.54f,.38f,true),
-        part("right-hand",Shape.SPHERE,Motion.NONE,.37f,.82f,.025f,.075f,.09f,.075f,.75f,.54f,.38f,true),
+        part("left-hand",Shape.SPHERE,Motion.LEFT_HAND,-.37f,.82f,.025f,.075f,.09f,.075f,.75f,.54f,.38f,true),
+        part("right-hand",Shape.SPHERE,Motion.RIGHT_HAND,.37f,.82f,.025f,.075f,.09f,.075f,.75f,.54f,.38f,true),
         part("neck",Shape.BOX,Motion.NONE,0f,1.35f,.015f,.14f,.14f,.14f,.72f,.51f,.36f,true),
         part("head",Shape.SPHERE,Motion.NONE,0f,1.57f,.005f,.19f,.22f,.18f,.79f,.48f,.29f,true),
         part("left-ear",Shape.SPHERE,Motion.NONE,-.22f,1.57f,.005f,.05f,.075f,.055f,.72f,.51f,.36f,true),
@@ -127,8 +128,8 @@ public final class PlayerModelSpec {
         part("right-boot-lace-upper",Shape.BOX,Motion.RIGHT_FOOT,.13f,.18f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
         part("right-boot-lace-middle",Shape.BOX,Motion.RIGHT_FOOT,.13f,.145f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
         part("right-boot-lace-lower",Shape.BOX,Motion.RIGHT_FOOT,.13f,.11f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("left-sleeve-cuff",Shape.BOX,Motion.NONE,-.37f,.78f,.015f,.14f,.07f,.15f,.28f,.12f,.07f,true),
-        part("right-sleeve-cuff",Shape.BOX,Motion.NONE,.37f,.78f,.015f,.14f,.07f,.15f,.28f,.12f,.07f,true),
+        part("left-sleeve-cuff",Shape.BOX,Motion.LEFT_HAND,-.37f,.78f,.015f,.14f,.07f,.15f,.28f,.12f,.07f,true),
+        part("right-sleeve-cuff",Shape.BOX,Motion.RIGHT_HAND,.37f,.78f,.015f,.14f,.07f,.15f,.28f,.12f,.07f,true),
     };
 
     private static final String[] FALLBACK_PART_IDS = {
