@@ -80,18 +80,18 @@ class WindowStateTests(unittest.TestCase):
         self.assertEqual("fatal", MODULE.capture_decision(dump, False))
 
     def test_app_window_requires_a_real_visible_surface(self):
-        visible = """  Window #1 Window{abc u0 es.valledecernego.game.preview/es.valledecernego.game.MainActivity}:
+        visible = """  Window #1 Window{abc u0 es.valledecernego.game.preview2/es.valledecernego.game.MainActivity}:
     mViewVisibility=0x0 mHaveFrame=true
     mHasSurface=true isReadyForDisplay()=true
     Surface: shown=true      mDrawState=HAS_DRAWN
 """
-        sleeping = """  Window #1 Window{abc u0 es.valledecernego.game.preview/es.valledecernego.game.MainActivity}:
+        sleeping = """  Window #1 Window{abc u0 es.valledecernego.game.preview2/es.valledecernego.game.MainActivity}:
     mViewVisibility=0x8 mHaveFrame=true
     mHasSurface=false isReadyForDisplay()=false
     Surface: shown=false     mDrawState=NO_SURFACE
 """
-        self.assertTrue(MODULE.app_window_is_visible(visible, "es.valledecernego.game.preview"))
-        self.assertFalse(MODULE.app_window_is_visible(sleeping, "es.valledecernego.game.preview"))
+        self.assertTrue(MODULE.app_window_is_visible(visible, "es.valledecernego.game.preview2"))
+        self.assertFalse(MODULE.app_window_is_visible(sleeping, "es.valledecernego.game.preview2"))
 
     def test_app_window_does_not_accept_another_package_surface(self):
         dump = """  Window #1 Window{abc u0 com.android.launcher3/.Launcher}:
@@ -99,15 +99,15 @@ class WindowStateTests(unittest.TestCase):
     mHasSurface=true isReadyForDisplay()=true
     Surface: shown=true      mDrawState=HAS_DRAWN
 """
-        self.assertFalse(MODULE.app_window_is_visible(dump, "es.valledecernego.game.preview"))
+        self.assertFalse(MODULE.app_window_is_visible(dump, "es.valledecernego.game.preview2"))
 
     def test_app_visible_cli_accepts_only_the_visible_game_surface(self):
-        visible = """  Window #1 Window{abc u0 es.valledecernego.game.preview/es.valledecernego.game.MainActivity}:
+        visible = """  Window #1 Window{abc u0 es.valledecernego.game.preview2/es.valledecernego.game.MainActivity}:
     mViewVisibility=0x0 mHaveFrame=true
     mHasSurface=true isReadyForDisplay()=true
     Surface: shown=true      mDrawState=HAS_DRAWN
 """
-        sleeping = """  Window #1 Window{abc u0 es.valledecernego.game.preview/es.valledecernego.game.MainActivity}:
+        sleeping = """  Window #1 Window{abc u0 es.valledecernego.game.preview2/es.valledecernego.game.MainActivity}:
     mViewVisibility=0x8 mHaveFrame=true
     mHasSurface=false isReadyForDisplay()=false
     Surface: shown=false     mDrawState=NO_SURFACE
@@ -117,14 +117,14 @@ class WindowStateTests(unittest.TestCase):
             dump_path.write_text(visible, encoding="utf-8")
             accepted = subprocess.run(
                 [sys.executable, str(SCRIPT), "--app-visible", str(dump_path),
-                 "es.valledecernego.game.preview"],
+                 "es.valledecernego.game.preview2"],
                 text=True, capture_output=True, check=False,
             )
             self.assertEqual(0, accepted.returncode, accepted.stderr)
             dump_path.write_text(sleeping, encoding="utf-8")
             rejected = subprocess.run(
                 [sys.executable, str(SCRIPT), "--app-visible", str(dump_path),
-                 "es.valledecernego.game.preview"],
+                 "es.valledecernego.game.preview2"],
                 text=True, capture_output=True, check=False,
             )
             self.assertEqual(1, rejected.returncode, rejected.stderr)
