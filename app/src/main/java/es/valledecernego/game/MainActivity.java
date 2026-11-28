@@ -103,7 +103,7 @@ public class MainActivity extends Activity {
     }
 
     String statusText() {
-        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + "  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getSurvivalSummary() + "  •  " + renderer.getFirePreventionSummary() + "  •  " + renderer.getRenderStatus();
+        String text = "VALLE DE CERNEGO " + BuildConfig.VERSION_NAME + " · PREVIEW2  •  " + renderer.getSeasonSummary() + "  •  Madera " + wood + "  Piedra " + stone + "  •  Monedas " + renderer.getCoins() + "  •  " + renderer.getFarmSummary() + "  •  " + renderer.getAnimalSummary() + "  •  " + renderer.getBuildingSummary() + "  •  " + renderer.getHouseSummary() + "  •  " + renderer.getVillagerSummary() + "  •  " + renderer.getSurvivalSummary() + "  •  " + renderer.getFirePreventionSummary() + "  •  " + renderer.getRenderStatus();
         if (debugTelemetry) text += "  •  " + renderer.getDebugTelemetry();
         return text;
     }
