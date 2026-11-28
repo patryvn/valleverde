@@ -18,7 +18,7 @@ La lectura `glReadPixels` es síncrona y puede esperar a que termine la cola de 
 
 ## Animación de pies
 
-La revisión del modelo detectó que botas, suelas y cordones no compartían el canal de animación de las piernas: quedaban fijos mientras la pierna oscilaba. 0.29.7 añade canales `LEFT_FOOT`/`RIGHT_FOOT` y transforma cada pieza alrededor del pivote de cadera. La misma lógica se utiliza en LIT60, SIMPLE60, BOX60 y el fallback de 11 piezas.
+La revisión del modelo detectó que botas, suelas, cordones, manos y puños no compartían los canales de animación de sus extremidades: quedaban fijos mientras brazos y piernas oscilaban. 0.29.7 añade canales `LEFT_FOOT`/`RIGHT_FOOT` y `LEFT_HAND`/`RIGHT_HAND`; las piezas de pie giran alrededor del pivote de cadera y las manos/puños alrededor del hombro. La misma lógica se utiliza en LIT60, SIMPLE60, BOX60 y el fallback de 11 piezas.
 
 ## Pruebas
 
