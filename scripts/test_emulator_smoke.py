@@ -68,6 +68,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('versionCode=${EXPECTED_VERSION_CODE}', SCRIPT)
         self.assertIn('versionName=${EXPECTED_VERSION_NAME}', SCRIPT)
         self.assertIn('adb shell pm path "$APP_ID"', SCRIPT)
+        self.assertIn("tr -d '\\r'", SCRIPT)
         self.assertIn('Installed release identity verified:', SCRIPT)
 
     def test_smoke_scene_uses_the_real_player_renderer_but_skips_full_world_draws(self):
