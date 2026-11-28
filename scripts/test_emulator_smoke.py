@@ -61,6 +61,15 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn('--ez smoke_test_mode true', SCRIPT)
         self.assertIn('--ez force_box_compatibility true', SCRIPT)
 
+    def test_release_smoke_rejects_a_stale_or_wrongly_signed_preview_identity(self):
+        self.assertIn('EXPECTED_VERSION_CODE="60"', SCRIPT)
+        self.assertIn('EXPECTED_VERSION_NAME="0.29.9"', SCRIPT)
+        self.assertIn('adb shell dumpsys package "$APP_ID"', SCRIPT)
+        self.assertIn('versionCode=${EXPECTED_VERSION_CODE}', SCRIPT)
+        self.assertIn('versionName=${EXPECTED_VERSION_NAME}', SCRIPT)
+        self.assertIn('adb shell pm path "$APP_ID"', SCRIPT)
+        self.assertIn('Installed release identity verified:', SCRIPT)
+
     def test_smoke_scene_uses_the_real_player_renderer_but_skips_full_world_draws(self):
         activity = Path(__file__).parents[1] / "app/src/main/java/es/valledecernego/game/MainActivity.java"
         source = activity.read_text(encoding="utf-8")
