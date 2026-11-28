@@ -51,7 +51,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("PLAYER_GPU_PROFILE renderer=", activity)
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
-        self.assertIn('APP_ID="es.valledecernego.game.preview"', SCRIPT)
+        self.assertIn('APP_ID="es.valledecernego.game.preview2"', SCRIPT)
         self.assertIn('ACTIVITY_CLASS="es.valledecernego.game.MainActivity"', SCRIPT)
         self.assertIn('am start -n "$APP_ID/$ACTIVITY_CLASS"', SCRIPT)
         self.assertIn('--ez smoke_test_mode true', SCRIPT)
