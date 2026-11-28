@@ -93,6 +93,29 @@ public class PlayerModelTransformTest {
         }
     }
 
+    @Test public void handsAndSleeveCuffsFollowTheirArmShoulderPivot() {
+        String[] movingHands = {
+            "left-hand", "left-sleeve-cuff", "right-hand", "right-sleeve-cuff"
+        };
+        for (String id : movingHands) {
+            PlayerModelSpec.Part part = PlayerModelSpec.find(id);
+            assertNotNull(part);
+            boolean left = id.startsWith("left-");
+            assertEquals(left ? PlayerModelSpec.Motion.LEFT_HAND : PlayerModelSpec.Motion.RIGHT_HAND,
+                part.motion);
+            float angle = left ? -.34f : .34f;
+            PlayerModelTransform.Pose pose = PlayerModelTransform.partPose(
+                0f, 0f, 0f, 0f, .02f, part, angle);
+            float dy = part.y - PlayerModelSpec.ARM_PIVOT_Y;
+            float expectedY = PlayerModelSpec.ARM_PIVOT_Y + .02f
+                + dy * (float)Math.cos(angle) - part.z * (float)Math.sin(angle);
+            float expectedZ = dy * (float)Math.sin(angle) + part.z * (float)Math.cos(angle);
+            assertEquals(expectedY, pose.y, .0001f);
+            assertEquals(expectedZ, pose.z, .0001f);
+            assertEquals(angle, pose.pitch, .0001f);
+        }
+    }
+
     @Test public void movingThePlayerTranslatesEveryPartWithoutChangingItsScale() {
         PlayerModelSpec.Part part = PlayerModelSpec.find("head");
         PlayerModelTransform.Pose first = PlayerModelTransform.partPose(
