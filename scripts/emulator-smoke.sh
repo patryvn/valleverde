@@ -381,6 +381,16 @@ run_motion_for_mode() {
     fi
     moving_telemetry="$(printf '%s\n' "$moving_line" | sed -n 's/.*PLAYER_STATE /PLAYER_STATE /p' | tail -n 1)"
     if python3 scripts/verify-player-motion.py "$initial_telemetry" "$moving_telemetry"; then
+      local moving_visual_line=""
+      for visual_attempt in $(seq 1 10); do
+        moving_visual_line="$(fresh_log_lines "$gesture_log_start" | grep -E 'PLAYER_VISUAL_WATCHDOG state=(humanoid|fallback-humanoid) ' | tail -n 1 || true)"
+        if [[ -n "$moving_visual_line" ]]; then break; fi
+        sleep 1
+      done
+      if [[ -z "$moving_visual_line" ]]; then
+        echo "No fresh player visual watchdog result after $mode_label movement."
+        continue
+      fi
       movement_ok=1
       break
     fi
