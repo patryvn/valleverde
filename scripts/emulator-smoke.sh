@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 mkdir -p emulator-output
-APP_ID="es.valledecernego.game.preview"
+APP_ID="es.valledecernego.game.preview2"
 ACTIVITY_CLASS="es.valledecernego.game.MainActivity"
 LOGCAT_PID=""
 
