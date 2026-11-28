@@ -25,6 +25,16 @@ public final class PlayerModelTransform {
             localY = PlayerModelSpec.LEG_PIVOT_Y + dy * cosine - dz * sine;
             localZ = dy * sine + dz * cosine;
             localPitch = motionAngle;
+        } else if (part.motion == PlayerModelSpec.Motion.LEFT_HAND
+                || part.motion == PlayerModelSpec.Motion.RIGHT_HAND) {
+            float dy = part.y - PlayerModelSpec.ARM_PIVOT_Y;
+            float dz = part.z;
+            float cosine = (float) Math.cos(motionAngle);
+            float sine = (float) Math.sin(motionAngle);
+            localY = PlayerModelSpec.ARM_PIVOT_Y
+                + (part.followsBody ? bodyBob : 0f) + dy * cosine - dz * sine;
+            localZ = dy * sine + dz * cosine;
+            localPitch = motionAngle;
         } else if (part.motion != PlayerModelSpec.Motion.NONE) {
             // Motion is independent of mesh shape: the compatibility model uses
             // boxes for limbs but must keep the same upper-pivot walk animation.
