@@ -12,7 +12,7 @@ Este desajuste no demuestra por sí solo la causa del rectángulo azul en el Poc
 - Nombre de aplicación: `Valle de Cernego PREVIEW2 v0.29.8`.
 - HUD: muestra explícitamente `0.29.8 · PREVIEW2`.
 - Prueba JUnit para impedir que el nombre de versión vuelva a quedar desactualizado.
-- GitHub Actions comprueba el paquete de Release, el versionCode, el versionName y el nombre del icono con `aapt dump badging`.
+- GitHub Actions comprueba con `aapt dump badging` el paquete de Release, el versionCode y el versionName. La prueba Python de los scripts comprueba que el nombre del icono del manifiesto coincide con esa versión.
 - Se conserva el paquete `es.valledecernego.game.preview2`; no se cambia la identidad de instalación de esta línea preview.
 
 ## Evidencia disponible antes de 0.29.8
