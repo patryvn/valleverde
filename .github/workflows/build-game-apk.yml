@@ -20,6 +20,32 @@ jobs:
           packages: platform-tools
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Restore persistent preview signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: cernego-preview-signing-v1
+
+      - name: Initialize preview signing key if absent
+        run: |
+          mkdir -p ~/.android
+          if [[ ! -f ~/.android/debug.keystore ]]; then
+            keytool -genkeypair -v \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey
+
+      - name: Save persistent preview signing key
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: cernego-preview-signing-v1
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
