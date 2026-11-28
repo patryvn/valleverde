@@ -37,4 +37,6 @@ Al inspeccionar los APK de CI anteriores se comprobó que cada runner generaba u
 
 Por tanto, Android no puede instalar una sobre la otra como actualización. Se corrigió el workflow para restaurar/guardar `~/.android/debug.keystore` con una clave de caché fija (`cernego-preview-signing-v1`) en los workflows automático y manual. La primera ejecución que cree esa caché establece la identidad de firma para las siguientes ejecuciones mientras GitHub conserve la caché.
 
-La nueva clave no coincide con los certificados antiguos 0.29.5/0.29.6. Para pasar a la nueva preview habrá que desinstalar solo la preview antigua (paquete `es.valledecernego.game.preview`) o usar otro identificador de paquete; desinstalar borra sus partidas locales. No desinstalar la aplicación original. Para una publicación real se debe configurar una clave privada estable mediante GitHub Secrets/Play App Signing; la clave debug cacheada solo sirve para pruebas.
+Para evitar borrar datos o desinstalar la preview antigua, 0.29.7 cambia el identificador a `es.valledecernego.game.preview2`. Se instala en paralelo y deja intacta la app anterior `es.valledecernego.game.preview`, incluidas sus partidas; la nueva instalación empieza con una partida independiente. Los siguientes APK mantendrán `preview2` y la clave de caché, por lo que podrán actualizarse normalmente mientras GitHub conserve la caché.
+
+Para una publicación real se debe configurar una clave privada estable mediante GitHub Secrets/Play App Signing; la clave debug cacheada solo sirve para pruebas.
