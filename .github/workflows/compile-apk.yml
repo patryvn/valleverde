@@ -88,7 +88,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
           release_metadata="$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release.apk)"
-          printf '%s\n' "$release_metadata" | grep -F "package: name='es.valledecernego.game.preview2' versionCode='59' versionName='0.29.8'"
+          printf '%s\n' "$release_metadata" | grep -F "package: name='es.valledecernego.game.preview3' versionCode='60' versionName='0.29.9'"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

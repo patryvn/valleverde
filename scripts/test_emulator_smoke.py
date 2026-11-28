@@ -29,9 +29,9 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         root = Path(__file__).parents[1]
         manifest = (root / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
         gradle = (root / "app/build.gradle").read_text(encoding="utf-8")
-        self.assertIn('android:label="Valle de Cernego PREVIEW2 v0.29.8"', manifest)
-        self.assertIn("versionCode 59", gradle)
-        self.assertIn("versionName '0.29.8'", gradle)
+        self.assertIn('android:label="Valle de Cernego PREVIEW3 v0.29.9"', manifest)
+        self.assertIn("versionCode 60", gradle)
+        self.assertIn("versionName '0.29.9'", gradle)
 
     def test_runtime_visual_watchdog_rechecks_after_movement(self):
         root = Path(__file__).parents[1]
@@ -55,7 +55,7 @@ class EmulatorSmokeInputTest(unittest.TestCase):
         self.assertIn("PLAYER_GPU_PROFILE renderer=", activity)
 
     def test_release_smoke_uses_a_side_by_side_preview_package(self):
-        self.assertIn('APP_ID="es.valledecernego.game.preview2"', SCRIPT)
+        self.assertIn('APP_ID="es.valledecernego.game.preview3"', SCRIPT)
         self.assertIn('ACTIVITY_CLASS="es.valledecernego.game.MainActivity"', SCRIPT)
         self.assertIn('am start -n "$APP_ID/$ACTIVITY_CLASS"', SCRIPT)
         self.assertIn('--ez smoke_test_mode true', SCRIPT)
