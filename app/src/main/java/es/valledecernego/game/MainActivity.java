@@ -1660,10 +1660,12 @@ public class MainActivity extends Activity {
                     || part.motion==PlayerModelSpec.Motion.RIGHT_FOOT){
                 return VillagerAnimationSystem.legAngle(playerWalkPhase,playerMoving,false);
             }
-            if(part.motion==PlayerModelSpec.Motion.LEFT_ARM){
+            if(part.motion==PlayerModelSpec.Motion.LEFT_ARM
+                    || part.motion==PlayerModelSpec.Motion.LEFT_HAND){
                 return VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,true);
             }
-            if(part.motion==PlayerModelSpec.Motion.RIGHT_ARM){
+            if(part.motion==PlayerModelSpec.Motion.RIGHT_ARM
+                    || part.motion==PlayerModelSpec.Motion.RIGHT_HAND){
                 return VillagerAnimationSystem.armAngle(playerWalkPhase,playerMoving,false);
             }
             return 0f;
