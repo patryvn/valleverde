@@ -10,8 +10,10 @@ permissions:
   statuses: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Serialize automatic and manual builds so the first cached signing key
+  # cannot be generated concurrently by two runners.
+  group: valle-cernego-preview-signing
+  cancel-in-progress: false
 
 jobs:
   build:
