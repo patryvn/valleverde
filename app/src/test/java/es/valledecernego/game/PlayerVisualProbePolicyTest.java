@@ -11,14 +11,26 @@ public class PlayerVisualProbePolicyTest {
 
     @Test public void reprobesAfterMeaningfulPlayerTranslation() {
         assertTrue(PlayerVisualProbePolicy.shouldReprobe(true, false,
-            .65f, 5f, 0f, 1_100_000_000L, 0f, 5f, 0f, 1_000_000_000L));
+            .65f, 5f, 0f, 2_000_000_000L, 0f, 5f, 0f, 1_000_000_000L));
         assertFalse(PlayerVisualProbePolicy.shouldReprobe(true, false,
-            .64f, 5f, 0f, 1_100_000_000L, 0f, 5f, 0f, 1_000_000_000L));
+            .64f, 5f, 0f, 2_000_000_000L, 0f, 5f, 0f, 1_000_000_000L));
     }
 
     @Test public void reprobesAfterMeaningfulTurn() {
         assertTrue(PlayerVisualProbePolicy.shouldReprobe(true, false,
-            0f, 5f, .35f, 1_100_000_000L, 0f, 5f, 0f, 1_000_000_000L));
+            0f, 5f, .35f, 2_000_000_000L, 0f, 5f, 0f, 1_000_000_000L));
+    }
+
+    @Test public void movementAndTurnReadbacksAreLimitedToOnePerSecond() {
+        assertFalse(PlayerVisualProbePolicy.shouldReprobe(true, false,
+            .80f, 5f, .50f, 1_500_000_000L, 0f, 5f, 0f, 1_000_000_000L));
+        assertTrue(PlayerVisualProbePolicy.shouldReprobe(true, false,
+            .80f, 5f, .50f, 2_000_000_000L, 0f, 5f, 0f, 1_000_000_000L));
+    }
+
+    @Test public void backwardsMonotonicTimestampDoesNotCauseReadbackLoop() {
+        assertFalse(PlayerVisualProbePolicy.shouldReprobe(true, true,
+            2f, 5f, 1f, 900_000_000L, 0f, 5f, 0f, 1_000_000_000L));
     }
 
     @Test public void wrapsFacingDeltaAcrossPiWithoutFalsePositive() {
