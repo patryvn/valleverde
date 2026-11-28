@@ -25,9 +25,13 @@ class EmulatorSmokeInputTest(unittest.TestCase):
     def test_render_mode_tap_targets_primary_display(self):
         self.assertIn('input -d 0 tap "$render_x" "$render_y"', SCRIPT)
 
-    def test_preview_launcher_label_identifies_the_3d_diagnostic_build(self):
-        manifest = Path(__file__).parents[1] / "app/src/main/AndroidManifest.xml"
-        self.assertIn('android:label="Valle de Cernego · Prueba visual 3D 0.29.6"', manifest.read_text(encoding="utf-8"))
+    def test_preview_launcher_label_matches_the_current_preview_build(self):
+        root = Path(__file__).parents[1]
+        manifest = (root / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+        gradle = (root / "app/build.gradle").read_text(encoding="utf-8")
+        self.assertIn('android:label="Valle de Cernego PREVIEW2 v0.29.8"', manifest)
+        self.assertIn("versionCode 59", gradle)
+        self.assertIn("versionName '0.29.8'", gradle)
 
     def test_runtime_visual_watchdog_rechecks_after_movement(self):
         root = Path(__file__).parents[1]
