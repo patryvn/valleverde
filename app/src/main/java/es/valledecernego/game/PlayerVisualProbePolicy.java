@@ -8,6 +8,7 @@ package es.valledecernego.game;
 public final class PlayerVisualProbePolicy {
     public static final float POSITION_REPROBE_METERS = 0.65f;
     public static final float FACING_REPROBE_RADIANS = 0.35f;
+    public static final long MIN_REPROBE_INTERVAL_NANOS = 1_000_000_000L;
     public static final long MOVING_REPROBE_INTERVAL_NANOS = 2_000_000_000L;
 
     private PlayerVisualProbePolicy() { }
@@ -20,6 +21,13 @@ public final class PlayerVisualProbePolicy {
         if (!Float.isFinite(x) || !Float.isFinite(z) || !Float.isFinite(facing)
                 || !Float.isFinite(lastX) || !Float.isFinite(lastZ)
                 || !Float.isFinite(lastFacing)) return true;
+
+        // glReadPixels synchronizes the GL pipeline. Do not let a fast walk
+        // trigger several full-frame readbacks per second on mobile GPUs.
+        if (lastProbeNanos > 0L) {
+            if (nowNanos < lastProbeNanos) return false;
+            if (nowNanos - lastProbeNanos < MIN_REPROBE_INTERVAL_NANOS) return false;
+        }
 
         double distance = Math.hypot(x - lastX, z - lastZ);
         if (distance >= POSITION_REPROBE_METERS) return true;
