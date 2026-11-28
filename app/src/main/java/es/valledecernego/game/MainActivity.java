@@ -560,6 +560,8 @@ public class MainActivity extends Activity {
         volatile float lastVisualProbeX=0f,lastVisualProbeZ=0f,lastVisualProbeFacing=0f;
         int surfaceWidth=0,surfaceHeight=0;
         ByteBuffer visualProbeBuffer;
+        // Reuse the CPU readback array; allocating it on every probe caused avoidable GC.
+        byte[] visualProbePixels;
         long lastTelemetryNanos=0L;
         FloatBuffer sphereBuffer,capsuleBuffer,shadowBuffer,boxTextureBuffer;
         int sphereVertexCount,capsuleVertexCount,shadowVertexCount;
@@ -1192,10 +1194,12 @@ public class MainActivity extends Activity {
                 clearPlayerGlErrors();
                 return;
             }
-            byte[] pixels=new byte[byteCount];
+            if(visualProbePixels==null || visualProbePixels.length<byteCount){
+                visualProbePixels=new byte[byteCount];
+            }
             visualProbeBuffer.position(0);
-            visualProbeBuffer.get(pixels);
-            PlayerPixelWatchdog.Result result=PlayerPixelWatchdog.inspect(pixels,probeWidth,probeHeight);
+            visualProbeBuffer.get(visualProbePixels,0,byteCount);
+            PlayerPixelWatchdog.Result result=PlayerPixelWatchdog.inspect(visualProbePixels,probeWidth,probeHeight);
             visualProbeAttempts++;
             if(result.humanoid){
                 visualProbeComplete=true;
