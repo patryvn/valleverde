@@ -18,7 +18,7 @@ android {
     buildTypes {
         release {
             // Separate preview package lets testers keep the existing save-bearing app installed.
-            applicationIdSuffix ".preview"
+            applicationIdSuffix ".preview2"
             // The workflow restores a persistent CI debug key for preview updates.
             // This is not a Play Store signing key.
             signingConfig signingConfigs.debug
