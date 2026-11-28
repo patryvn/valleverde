@@ -14,9 +14,20 @@ public final class PlayerModelTransform {
         float localZ = part.z;
         float localPitch = 0f;
 
-        // Motion is independent of mesh shape: the compatibility model uses
-        // boxes for limbs but must keep the same upper-pivot walk animation.
-        if (part.motion != PlayerModelSpec.Motion.NONE) {
+        // Feet rotate around the same hip pivot as their leg. Treating boots
+        // as stationary parts made the legs swing underneath fixed footwear.
+        if (part.motion == PlayerModelSpec.Motion.LEFT_FOOT
+                || part.motion == PlayerModelSpec.Motion.RIGHT_FOOT) {
+            float dy = part.y - PlayerModelSpec.LEG_PIVOT_Y;
+            float dz = part.z;
+            float cosine = (float) Math.cos(motionAngle);
+            float sine = (float) Math.sin(motionAngle);
+            localY = PlayerModelSpec.LEG_PIVOT_Y + dy * cosine - dz * sine;
+            localZ = dy * sine + dz * cosine;
+            localPitch = motionAngle;
+        } else if (part.motion != PlayerModelSpec.Motion.NONE) {
+            // Motion is independent of mesh shape: the compatibility model uses
+            // boxes for limbs but must keep the same upper-pivot walk animation.
             float halfLength = part.sy * 0.5f;
             localY += VillagerAnimationSystem.limbCenterYOffset(halfLength, motionAngle);
             localZ += VillagerAnimationSystem.limbCenterZOffset(halfLength, motionAngle);
