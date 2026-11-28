@@ -268,7 +268,7 @@ La ejecución de GitHub Actions terminó en verde el 26-11-2026: validación de 
 
 ## Paquete paralelo y materiales del mundo (0.27.5)
 
-La versión release-test usa el identificador es.valledecernego.game.preview y la etiqueta «Valle de Cernego · Prueba». Se instala al lado de la aplicación anterior, sin pedir desinstalarla ni borrar su partida. La versión de desarrollo conserva el identificador principal; el paquete preview tiene su propio almacenamiento y empieza con una partida separada.
+La versión release-test usa el identificador es.valledecernego.game.preview2 y la etiqueta «Valle de Cernego · Prueba». Se instala al lado de la aplicación anterior, sin pedir desinstalarla ni borrar su partida. La versión de desarrollo conserva el identificador principal; el paquete preview tiene su propio almacenamiento y empieza con una partida separada.
 
 El terreno recibe variación procedural de baja frecuencia y grano fino en el shader OpenGL ES 2.0; el cielo usa una cúpula con degradado vertical derivado del color meteorológico actual. No se descargan texturas ni recursos externos. La prueba de captura exige ahora variedad de tonos verdes en el terreno además de la silueta humana, para detectar regresiones a un plano completamente uniforme. La validación física de rendimiento, temperatura, legibilidad del HUD y control táctil sigue pendiente.
 
@@ -337,7 +337,7 @@ En 0.28.1 se corrige el arnés, no se disimula el fallo:
 - El arrastre del AVD CPU-only pasa de 2,2 a 4,0 segundos para entregar más fotogramas útiles.
 - Se conserva el mínimo de desplazamiento de 0,25 m y la tolerancia de seguimiento de cámara de 0,15 m.
 - Se añaden pruebas para rechazar el desplazamiento aislado de 0,18 m, aceptar el acumulado de 0,36 m y evitar reutilizar eventos antiguos.
-- La etiqueta de la app preview cambia a «Valle de Cernego · Prueba 3D» para distinguirla de la instalación principal; el paquete sigue siendo `es.valledecernego.game.preview`.
+- La etiqueta de la app preview cambia a «Valle de Cernego · Prueba 3D» para distinguirla de la instalación principal; el paquete sigue siendo `es.valledecernego.game.preview2`.
 
 La versión de prueba pasa a 0.28.1 (versionCode 42). La nueva ejecución debe volver a demostrar captura inicial, eventos táctiles frescos, desplazamiento suficiente, estabilidad del número de piezas y seguimiento de cámara antes de considerar verde el smoke test.
 
