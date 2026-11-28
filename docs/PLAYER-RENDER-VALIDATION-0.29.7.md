@@ -16,8 +16,13 @@ La lectura `glReadPixels` es síncrona y puede esperar a que termine la cola de 
 - Se reutiliza el array RGBA de CPU; solo se amplía si cambia la resolución de la región de lectura.
 - El buffer directo de GLES también se mantiene reutilizable.
 
+## Animación de pies
+
+La revisión del modelo detectó que botas, suelas y cordones no compartían el canal de animación de las piernas: quedaban fijos mientras la pierna oscilaba. 0.29.7 añade canales `LEFT_FOOT`/`RIGHT_FOOT` y transforma cada pieza alrededor del pivote de cadera. La misma lógica se utiliza en LIT60, SIMPLE60, BOX60 y el fallback de 11 piezas.
+
 ## Pruebas
 
+- Botas, suelas y cordones siguen la pierna alrededor del pivote de cadera.
 - Relectura por desplazamiento y giro después del intervalo mínimo.
 - Supresión de relecturas antes de un segundo.
 - Comportamiento ante marcas de tiempo monotónicas regresivas.
