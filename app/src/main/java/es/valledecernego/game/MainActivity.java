@@ -555,6 +555,9 @@ public class MainActivity extends Activity {
         volatile boolean visualProbeComplete=false;
         volatile boolean visualProbeAvailable=true;
         int visualProbeAttempts=0;
+        // Recheck visibility after meaningful movement/turns and at a low cadence while walking.
+        volatile long lastVisualProbeNanos=0L;
+        volatile float lastVisualProbeX=0f,lastVisualProbeZ=0f,lastVisualProbeFacing=0f;
         int surfaceWidth=0,surfaceHeight=0;
         ByteBuffer visualProbeBuffer;
         long lastTelemetryNanos=0L;
@@ -612,6 +615,10 @@ public class MainActivity extends Activity {
             visualProbeAvailable=true;
             visualProbeAttempts=0;
             visualProbeBuffer=null;
+            lastVisualProbeNanos=0L;
+            lastVisualProbeX=px;
+            lastVisualProbeZ=pz;
+            lastVisualProbeFacing=playerFacing;
             visualProbeLabel="VISUAL CHECK";
             compatibilityGeometryLogged=false;
             String selectedMode=!forceCompatibilityPlayerModel?"detailed-60":"box-only-shader-60";
@@ -648,6 +655,10 @@ public class MainActivity extends Activity {
             visualProbeAvailable=true;
             visualProbeAttempts=0;
             visualProbeBuffer=null;
+            lastVisualProbeNanos=0L;
+            lastVisualProbeX=px;
+            lastVisualProbeZ=pz;
+            lastVisualProbeFacing=playerFacing;
             visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
             boxMaterialTexture=0;
             boxTextureBuffer=null;
@@ -945,6 +956,10 @@ public class MainActivity extends Activity {
             visualProbeAvailable=true;
             visualProbeAttempts=0;
             visualProbeBuffer=null;
+            lastVisualProbeNanos=0L;
+            lastVisualProbeX=px;
+            lastVisualProbeZ=pz;
+            lastVisualProbeFacing=playerFacing;
             visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
             GLES20.glViewport(0,0,w,h);
             Matrix.perspectiveM(proj,0,62,(float)w/h,.1f,120f);
@@ -1139,8 +1154,21 @@ public class MainActivity extends Activity {
         }
 
         void probePlayerVisuals(){
+            long probeNanos=System.nanoTime();
+            if(visualProbeComplete && PlayerVisualProbePolicy.shouldReprobe(
+                    visualProbeAvailable,playerMoving,px,pz,playerFacing,probeNanos,
+                    lastVisualProbeX,lastVisualProbeZ,lastVisualProbeFacing,lastVisualProbeNanos)){
+                visualProbeComplete=false;
+                visualProbeAttempts=0;
+                visualProbeLabel=forceEmergencySilhouette?"VISUAL FALLBACK CHECK":"VISUAL CHECK";
+                android.util.Log.i("ValleCernego","PLAYER_VISUAL_WATCHDOG recheck=player-motion");
+            }
             if(visualProbeComplete || !visualProbeAvailable || !silhouetteReady
                     || surfaceWidth<64 || surfaceHeight<64) return;
+            lastVisualProbeNanos=probeNanos;
+            lastVisualProbeX=px;
+            lastVisualProbeZ=pz;
+            lastVisualProbeFacing=playerFacing;
             int probeWidth=PlayerPixelWatchdog.sampleWidth(surfaceWidth);
             int probeHeight=PlayerPixelWatchdog.sampleHeight(surfaceHeight);
             int probeX=(surfaceWidth-probeWidth)/2;
