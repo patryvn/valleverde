@@ -69,6 +69,30 @@ public class PlayerModelTransformTest {
         }
     }
 
+    @Test public void bootsSolesAndLacesFollowTheirLegAroundTheHipPivot() {
+        String[] movingFeet = {
+            "left-boot", "left-boot-sole", "left-boot-lace-upper",
+            "right-boot", "right-boot-sole", "right-boot-lace-upper"
+        };
+        for (String id : movingFeet) {
+            PlayerModelSpec.Part part = PlayerModelSpec.find(id);
+            assertNotNull(part);
+            boolean left = id.startsWith("left-");
+            assertEquals(left ? PlayerModelSpec.Motion.LEFT_FOOT : PlayerModelSpec.Motion.RIGHT_FOOT,
+                part.motion);
+            float angle = left ? .48f : -.48f;
+            PlayerModelTransform.Pose pose = PlayerModelTransform.partPose(
+                0f, 0f, 0f, 0f, 0f, part, angle);
+            float dy = part.y - PlayerModelSpec.LEG_PIVOT_Y;
+            float expectedY = PlayerModelSpec.LEG_PIVOT_Y
+                + dy * (float)Math.cos(angle) - part.z * (float)Math.sin(angle);
+            float expectedZ = dy * (float)Math.sin(angle) + part.z * (float)Math.cos(angle);
+            assertEquals(expectedY, pose.y, .0001f);
+            assertEquals(expectedZ, pose.z, .0001f);
+            assertEquals(angle, pose.pitch, .0001f);
+        }
+    }
+
     @Test public void movingThePlayerTranslatesEveryPartWithoutChangingItsScale() {
         PlayerModelSpec.Part part = PlayerModelSpec.find("head");
         PlayerModelTransform.Pose first = PlayerModelTransform.partPose(
