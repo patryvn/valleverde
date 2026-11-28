@@ -14,6 +14,8 @@ public class PlayerModelSpecTest {
         assertEquals(PlayerModelSpec.Motion.RIGHT_LEG,PlayerModelSpec.find("right-leg").motion);
         assertEquals(PlayerModelSpec.Motion.LEFT_FOOT,PlayerModelSpec.find("left-boot").motion);
         assertEquals(PlayerModelSpec.Motion.RIGHT_FOOT,PlayerModelSpec.find("right-boot").motion);
+        assertEquals(PlayerModelSpec.Motion.LEFT_HAND,PlayerModelSpec.find("left-hand").motion);
+        assertEquals(PlayerModelSpec.Motion.RIGHT_HAND,PlayerModelSpec.find("right-hand").motion);
         assertNotNull(PlayerModelSpec.find("backpack"));
         assertNotNull(PlayerModelSpec.find("cap"));
     }
@@ -172,6 +174,8 @@ public class PlayerModelSpecTest {
         assertEquals(PlayerModelSpec.Motion.RIGHT_LEG,findBoxPart(boxes,"right-leg").motion);
         assertEquals(PlayerModelSpec.Motion.LEFT_FOOT,findBoxPart(boxes,"left-boot").motion);
         assertEquals(PlayerModelSpec.Motion.RIGHT_FOOT,findBoxPart(boxes,"right-boot").motion);
+        assertEquals(PlayerModelSpec.Motion.LEFT_HAND,findBoxPart(boxes,"left-hand").motion);
+        assertEquals(PlayerModelSpec.Motion.RIGHT_HAND,findBoxPart(boxes,"right-hand").motion);
         assertEquals(PlayerModelSpec.Shape.SPHERE,PlayerModelSpec.find("head").shape);
         assertEquals(PlayerModelSpec.Shape.BOX,findBoxPart(boxes,"head").shape);
         assertEquals(PlayerModelSpec.find("head").sx*2f,findBoxPart(boxes,"head").sx,.0001f);
