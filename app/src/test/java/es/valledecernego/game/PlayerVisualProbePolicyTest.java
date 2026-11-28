@@ -34,8 +34,10 @@ public class PlayerVisualProbePolicyTest {
     }
 
     @Test public void wrapsFacingDeltaAcrossPiWithoutFalsePositive() {
+        // The one-second readback cooldown has elapsed, so this assertion
+        // exercises angular wrapping rather than the rate limiter.
         assertFalse(PlayerVisualProbePolicy.shouldReprobe(true, false,
-            0f, 5f, -3.12f, 1_100_000_000L, 0f, 5f, 3.12f, 1_000_000_000L));
+            0f, 5f, -3.12f, 2_100_000_000L, 0f, 5f, 3.12f, 1_000_000_000L));
     }
 
     @Test public void movingPlayerIsSampledAtTwoSecondIntervals() {
