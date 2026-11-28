@@ -6,10 +6,11 @@ package es.valledecernego.game;
  */
 public final class PlayerModelSpec {
     public enum Shape { BOX, SPHERE, LIMB }
-    public enum Motion { NONE, LEFT_LEG, RIGHT_LEG, LEFT_ARM, RIGHT_ARM }
+    public enum Motion { NONE, LEFT_LEG, RIGHT_LEG, LEFT_ARM, RIGHT_ARM, LEFT_FOOT, RIGHT_FOOT }
 
     /** Height of the walkable ground plane; boot soles are authored to meet it. */
     public static final float GROUND_LEVEL = 0.05f;
+    public static final float LEG_PIVOT_Y = 0.61f;
 
     public static final int MATERIAL_SOLID = 0;
     public static final int MATERIAL_FABRIC = 1;
@@ -61,8 +62,8 @@ public final class PlayerModelSpec {
     }
 
     private static final Part[] PARTS = {
-        part("left-boot",Shape.BOX,Motion.NONE,-.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
-        part("right-boot",Shape.BOX,Motion.NONE,.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
+        part("left-boot",Shape.BOX,Motion.LEFT_FOOT,-.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
+        part("right-boot",Shape.BOX,Motion.RIGHT_FOOT,.13f,.14f,.10f,.25f,.17f,.38f,.82f,.43f,.06f,false),
         part("left-leg",Shape.LIMB,Motion.LEFT_LEG,-.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
         part("right-leg",Shape.LIMB,Motion.RIGHT_LEG,.13f,.61f,0f,.18f,.52f,.19f,.075f,.065f,.06f,false),
         // Rounded ellipsoid keeps the jacket's original 0.52 x 0.64 x 0.32 m bounds.
@@ -118,14 +119,14 @@ public final class PlayerModelSpec {
         part("cap-band",Shape.BOX,Motion.NONE,0f,1.77f,.005f,.48f,.05f,.44f,.16f,.145f,.13f,true),
         part("hair-fringe",Shape.SPHERE,Motion.NONE,0f,1.66f,.15f,.17f,.045f,.07f,.095f,.052f,.028f,true),
         // Boot soles, pale laces and olive sleeve cuffs make the silhouette read at phone scale.
-        part("left-boot-sole",Shape.BOX,Motion.NONE,-.13f,.055f,.11f,.27f,.04f,.40f,.76f,.65f,.46f,false),
-        part("right-boot-sole",Shape.BOX,Motion.NONE,.13f,.055f,.11f,.27f,.04f,.40f,.76f,.65f,.46f,false),
-        part("left-boot-lace-upper",Shape.BOX,Motion.NONE,-.13f,.18f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("left-boot-lace-middle",Shape.BOX,Motion.NONE,-.13f,.145f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("left-boot-lace-lower",Shape.BOX,Motion.NONE,-.13f,.11f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("right-boot-lace-upper",Shape.BOX,Motion.NONE,.13f,.18f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("right-boot-lace-middle",Shape.BOX,Motion.NONE,.13f,.145f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
-        part("right-boot-lace-lower",Shape.BOX,Motion.NONE,.13f,.11f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
+        part("left-boot-sole",Shape.BOX,Motion.LEFT_FOOT,-.13f,.055f,.11f,.27f,.04f,.40f,.76f,.65f,.46f,false),
+        part("right-boot-sole",Shape.BOX,Motion.RIGHT_FOOT,.13f,.055f,.11f,.27f,.04f,.40f,.76f,.65f,.46f,false),
+        part("left-boot-lace-upper",Shape.BOX,Motion.LEFT_FOOT,-.13f,.18f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
+        part("left-boot-lace-middle",Shape.BOX,Motion.LEFT_FOOT,-.13f,.145f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
+        part("left-boot-lace-lower",Shape.BOX,Motion.LEFT_FOOT,-.13f,.11f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
+        part("right-boot-lace-upper",Shape.BOX,Motion.RIGHT_FOOT,.13f,.18f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
+        part("right-boot-lace-middle",Shape.BOX,Motion.RIGHT_FOOT,.13f,.145f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
+        part("right-boot-lace-lower",Shape.BOX,Motion.RIGHT_FOOT,.13f,.11f,.298f,.12f,.018f,.014f,.92f,.84f,.65f,false),
         part("left-sleeve-cuff",Shape.BOX,Motion.NONE,-.37f,.78f,.015f,.14f,.07f,.15f,.28f,.12f,.07f,true),
         part("right-sleeve-cuff",Shape.BOX,Motion.NONE,.37f,.78f,.015f,.14f,.07f,.15f,.28f,.12f,.07f,true),
     };
