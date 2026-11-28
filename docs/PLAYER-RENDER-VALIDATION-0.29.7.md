@@ -28,6 +28,13 @@ La lectura `glReadPixels` es síncrona y puede esperar a que termine la cola de 
 
 El smoke test usa Android Emulator con Google SwiftShader. No sustituye una prueba en la GPU Mali-G615 MC6 del Poco X6 Pro. En el dispositivo físico aún hay que verificar el modo seleccionado, el estado `VISUAL` al inicio y tras caminar/girar, que no aparezca el rectángulo azul, la estabilidad de cámara y el rendimiento/temperatura.
 
-## Distribución
+## Firma de preview y actualización
 
-La APK release-test sigue firmada con la clave debug efímera del runner de CI. No es una clave persistente de distribución. Si la firma cambia entre ejecuciones, Android puede rechazar la actualización sobre una preview anterior; no desinstalar la aplicación original ni borrar partidas sin copia.
+Al inspeccionar los APK de CI anteriores se comprobó que cada runner generaba una clave debug distinta:
+
+- 0.29.5: certificado SHA-256 `36:A8:EE:B5:29:FA:1C:10:87:B0:45:FC:4A:19:C1:A8:A1:F5:B3:A3:F7:A7:80:C6:01:83:EE:A3:09:C9:ED:64`.
+- 0.29.6: certificado SHA-256 `01:46:73:68:4E:B8:9E:51:D6:19:10:72:4C:51:E9:4F:7B:85:A1:6D:D2:A6:41:B7:30:E8:FC:88:0C:74:43:BA`.
+
+Por tanto, Android no puede instalar una sobre la otra como actualización. Se corrigió el workflow para restaurar/guardar `~/.android/debug.keystore` con una clave de caché fija (`cernego-preview-signing-v1`) en los workflows automático y manual. La primera ejecución que cree esa caché establece la identidad de firma para las siguientes ejecuciones mientras GitHub conserve la caché.
+
+La nueva clave no coincide con los certificados antiguos 0.29.5/0.29.6. Para pasar a la nueva preview habrá que desinstalar solo la preview antigua (paquete `es.valledecernego.game.preview`) o usar otro identificador de paquete; desinstalar borra sus partidas locales. No desinstalar la aplicación original. Para una publicación real se debe configurar una clave privada estable mediante GitHub Secrets/Play App Signing; la clave debug cacheada solo sirve para pruebas.
